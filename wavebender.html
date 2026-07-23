@@ -163,6 +163,23 @@
     flex-shrink: 0;
   }
   .play-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .export-btn {
+    padding: 0 16px; height: 40px; border-radius: 20px; border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #0d1117; font-size: 12.5px; font-weight: 800; letter-spacing: 0.02em;
+    cursor: pointer; margin-left: auto; flex-shrink: 0;
+  }
+  .export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .download-row {
+    display: none; align-items: center; gap: 10px; margin-top: 14px;
+    padding: 10px 14px; background: var(--panel); border: 1px solid #313847;
+    border-radius: 10px; font-size: 12.5px; color: var(--sub);
+  }
+  .download-row.show { display: flex; }
+  .download-row a {
+    color: #0d1117; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 12.5px;
+  }
   .progress-wrap { flex: 1; }
   .progress-bar {
     height: 6px;
@@ -234,6 +251,12 @@
           <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
           <div class="time" id="timeLabel">0:00 / 0:00</div>
         </div>
+        <button class="export-btn" id="exportBtn" disabled>EXPORT WAV</button>
+      </div>
+
+      <div class="download-row" id="downloadRow">
+        <span>Export ready (WAV, lossless)</span>
+        <a id="downloadLink" download="wavebender-export.wav">Download</a>
       </div>
 
       <div class="hint" id="hintText">
@@ -268,6 +291,9 @@
   const progressFill = root.querySelector('#progressFill');
   const timeLabel = root.querySelector('#timeLabel');
   const hintText = root.querySelector('#hintText');
+  const exportBtn = root.querySelector('#exportBtn');
+  const downloadRow = root.querySelector('#downloadRow');
+  const downloadLink = root.querySelector('#downloadLink');
 
   const rateSlider = root.querySelector('#rate');
   const depthSlider = root.querySelector('#depth');
@@ -281,9 +307,9 @@
   const semitoneVal = root.querySelector('#semitoneVal');
 
   const hints = {
-    phaser: 'フェイザーは「シュワシュワ」した揺れが特徴です。スライダーを動かすと再生中でも音が変わります。',
-    flanger: 'フランジャーは「ジェット機」っぽい金属的な揺れが特徴です。フィードバックを上げるとより強く響きます。',
-    pitch: 'ピッチシフトは、再生スピードを変えずに音の高さだけを変えるエフェクトです。スライダーはギターのペダルのようになめらかに動き、大きく変えるほど少しロボットっぽい響きが混ざります。'
+    phaser: 'フェイザーは「シュワシュワ」した揺れが特徴です。スライダーを動かすと再生中でも音が変わります。「EXPORT WAV」で今の設定のまま無劣化のWAVとして保存できます。',
+    flanger: 'フランジャーは「ジェット機」っぽい金属的な揺れが特徴です。フィードバックを上げるとより強く響きます。「EXPORT WAV」で今の設定のまま無劣化のWAVとして保存できます。',
+    pitch: 'ピッチシフトは、再生スピードを変えずに音の高さだけを変えるエフェクトです。スライダーはギターのペダルのようになめらかに動き、大きく変えるほど少しロボットっぽい響きが混ざります。「EXPORT WAV」で今の設定のまま無劣化のWAVとして保存できます。'
   };
 
   function setModeUI() {
@@ -334,6 +360,7 @@
     audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
     panel.style.display = 'block';
     playBtn.disabled = false;
+    exportBtn.disabled = false;
     pauseOffset = 0;
     updateTimeLabel(0);
     buildGraph();
@@ -626,6 +653,159 @@
   mixSlider.addEventListener('input', () => {
     mixVal.textContent = mixSlider.value + '%';
     applyMix();
+  });
+
+  // ---------- Export: render the whole track offline with the CURRENT
+  // settings, and hand back a lossless WAV (no waiting for real-time
+  // playback, no lossy recording codec). ----------
+  function buildOfflineGraph(ctx, currentMode, params) {
+    const dryGain = ctx.createGain();
+    const wetGain = ctx.createGain();
+    const outGain = ctx.createGain();
+    outGain.connect(ctx.destination);
+    dryGain.connect(outGain);
+    wetGain.connect(outGain);
+    let effectInput;
+
+    if (currentMode === 'phaser' || currentMode === 'flanger') {
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = params.rate;
+
+      if (currentMode === 'phaser') {
+        const freqs = [300, 800, 1500, 2500];
+        const allpassChain = [];
+        let prev = null;
+        freqs.forEach(f => {
+          const ap = ctx.createBiquadFilter();
+          ap.type = 'allpass'; ap.frequency.value = f;
+          allpassChain.push(ap);
+          if (prev) prev.connect(ap);
+          prev = ap;
+        });
+        const lfoDepthGain = ctx.createGain();
+        lfoDepthGain.gain.value = (params.depth / 100) * 1200;
+        lfo.connect(lfoDepthGain);
+        allpassChain.forEach(ap => lfoDepthGain.connect(ap.frequency));
+        lfo.start();
+
+        const fb = ctx.createGain();
+        fb.gain.value = params.feedback / 100 * 0.9;
+        allpassChain[allpassChain.length - 1].connect(fb);
+        fb.connect(allpassChain[0]);
+
+        allpassChain[allpassChain.length - 1].connect(wetGain);
+        effectInput = allpassChain[0];
+      } else {
+        const flangerDelay = ctx.createDelay(0.05);
+        flangerDelay.delayTime.value = 0.005;
+        const lfoDepthGain = ctx.createGain();
+        lfoDepthGain.gain.value = (params.depth / 100) * 0.004;
+        lfo.connect(lfoDepthGain);
+        lfoDepthGain.connect(flangerDelay.delayTime);
+        lfo.start();
+
+        const fb = ctx.createGain();
+        fb.gain.value = params.feedback / 100 * 0.85;
+        flangerDelay.connect(fb);
+        fb.connect(flangerDelay);
+
+        flangerDelay.connect(wetGain);
+        effectInput = flangerDelay;
+      }
+    } else {
+      const windowSec = PITCH_WINDOW_SEC;
+      const ratio = Math.pow(2, params.semitone / 12);
+      const k = 1 - ratio;
+      const f = Math.max(0.02, Math.abs(k) / windowSec);
+      const scaleMag = windowSec / 2;
+      const scaleSigned = scaleMag * Math.sign(k || 1);
+      const windowCurve = makeWindowCurve();
+
+      const pitchInput = ctx.createGain();
+      effectInput = pitchInput;
+
+      function makeTap(startTime) {
+        const delay = ctx.createDelay(0.2);
+        delay.delayTime.value = scaleMag;
+        const sawGain = ctx.createGain();
+        sawGain.gain.value = scaleSigned;
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth'; osc.frequency.value = f;
+        osc.connect(sawGain); sawGain.connect(delay.delayTime);
+        const shaper = ctx.createWaveShaper(); shaper.curve = windowCurve;
+        const tapGain = ctx.createGain(); tapGain.gain.value = 0;
+        osc.connect(shaper); shaper.connect(tapGain.gain);
+        pitchInput.connect(delay); delay.connect(tapGain); tapGain.connect(wetGain);
+        osc.start(startTime);
+      }
+      const halfPeriod = f > 0 ? (1 / f) / 2 : 0;
+      makeTap(0);
+      makeTap(halfPeriod);
+    }
+
+    dryGain.gain.value = 1 - params.mix / 100;
+    wetGain.gain.value = params.mix / 100;
+    return { dryGain, effectInput };
+  }
+
+  function audioBufferToWavBlob(buffer) {
+    const numCh = buffer.numberOfChannels;
+    const sr = buffer.sampleRate;
+    const samples = buffer.length;
+    const blockAlign = numCh * 2;
+    const dataSize = samples * blockAlign;
+    const arrBuf = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrBuf);
+    function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+    writeString(0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeString(8, 'WAVE');
+    writeString(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
+    view.setUint32(24, sr, true); view.setUint32(28, sr * blockAlign, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+    writeString(36, 'data'); view.setUint32(40, dataSize, true);
+    let offset = 44;
+    const channels = [];
+    for (let ch = 0; ch < numCh; ch++) channels.push(buffer.getChannelData(ch));
+    for (let i = 0; i < samples; i++) {
+      for (let ch = 0; ch < numCh; ch++) {
+        let s = Math.max(-1, Math.min(1, channels[ch][i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+        offset += 2;
+      }
+    }
+    return new Blob([view], { type: 'audio/wav' });
+  }
+
+  exportBtn.addEventListener('click', async () => {
+    if (!audioBuffer) return;
+    exportBtn.disabled = true;
+    const originalLabel = exportBtn.textContent;
+    exportBtn.textContent = 'RENDERING…';
+    downloadRow.classList.remove('show');
+    try {
+      const offlineCtx = new OfflineAudioContext(2, audioBuffer.length, audioBuffer.sampleRate);
+      const params = {
+        rate: parseFloat(rateSlider.value),
+        depth: parseFloat(depthSlider.value),
+        feedback: parseFloat(fbSlider.value),
+        semitone: parseFloat(semitoneSlider.value),
+        mix: parseFloat(mixSlider.value)
+      };
+      const graph = buildOfflineGraph(offlineCtx, mode, params);
+      const src = offlineCtx.createBufferSource();
+      src.buffer = audioBuffer;
+      src.connect(graph.dryGain);
+      src.connect(graph.effectInput);
+      src.start(0);
+      const rendered = await offlineCtx.startRendering();
+      const blob = audioBufferToWavBlob(rendered);
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.download = 'wavebender-export.wav';
+      downloadRow.classList.add('show');
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = originalLabel;
+    }
   });
 
   setModeUI();
