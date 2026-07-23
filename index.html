@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGNAL RACK — browser audio tools</title>
+<meta name="description" content="Free browser-based audio tools — pitch bending, multitrack playback, and mastering — built with the Web Audio API. Nothing to install, nothing uploaded.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --metal-1: #e7e9ec;
+    --metal-2: #c6cad0;
+    --metal-3: #aeb3ba;
+    --frame: #1c1e22;
+    --frame-2: #101113;
+    --ink: #20232a;
+    --sub: #5b6169;
+    --amber: #ff7a2e;
+    --amber-dim: #b8552080;
+    --screw: #8b9099;
+
+    --wb-a: #5ee3c9; --wb-b: #c98bf0;
+    --tb-a: #00c2d1; --tb-b: #ff2ee6;
+    --fs-a: #2a9fd8; --fs-b: #7c8a9c;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--frame-2);
+    font-family: 'Inter', -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    color: var(--ink);
+  }
+  .rack {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 28px 18px 60px;
+  }
+
+  /* ---- Frame / hero ---- */
+  .frame-plate {
+    position: relative;
+    background: linear-gradient(155deg, var(--metal-1), var(--metal-2) 55%, var(--metal-3));
+    border-radius: 14px;
+    padding: 34px 30px 30px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 18px 40px rgba(0,0,0,0.45);
+    border: 1px solid #9fa5ad;
+  }
+  .screw {
+    position: absolute; width: 11px; height: 11px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f4f5f6, var(--screw) 70%, #6b7078);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25);
+  }
+  .screw::after {
+    content: ''; position: absolute; left: 2px; right: 2px; top: 50%; height: 1.4px;
+    background: rgba(0,0,0,0.35); transform: rotate(28deg);
+  }
+  .screw.tl { top: 12px; left: 12px; } .screw.tr { top: 12px; right: 12px; }
+  .screw.bl { bottom: 12px; left: 12px; } .screw.br { bottom: 12px; right: 12px; }
+
+  .eyebrow {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+    color: var(--sub); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--amber);
+    box-shadow: 0 0 6px 1px var(--amber); animation: blink 2.6s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  h1 {
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 0.02em;
+    font-size: clamp(34px, 7vw, 52px); line-height: 1; margin: 0 0 12px; color: var(--ink);
+  }
+  .tagline { font-size: 15px; color: var(--sub); max-width: 46ch; line-height: 1.6; margin: 0; }
+
+  /* LED strip — one light per module, this is the connecting motif */
+  .led-strip {
+    display: flex; gap: 10px; margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid rgba(0,0,0,0.12);
+  }
+  .led-chip {
+    display: flex; align-items: center; gap: 7px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--sub);
+    letter-spacing: 0.06em;
+  }
+  .led { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .led.wb { background: var(--wb-a); box-shadow: 0 0 6px 1px var(--wb-a); }
+  .led.tb { background: var(--tb-a); box-shadow: 0 0 6px 1px var(--tb-a); }
+  .led.fs { background: var(--fs-a); box-shadow: 0 0 6px 1px var(--fs-a); }
+
+  /* ---- Module cards ---- */
+  .modules { margin-top: 26px; display: flex; flex-direction: column; gap: 16px; }
+  .module {
+    position: relative;
+    background: var(--frame);
+    border-radius: 12px;
+    padding: 22px 22px 20px;
+    border: 1px solid #2c2f35;
+    overflow: hidden;
+  }
+  .module::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: linear-gradient(180deg, var(--a), var(--b));
+  }
+  .module.wb { --a: var(--wb-a); --b: var(--wb-b); }
+  .module.tb { --a: var(--tb-a); --b: var(--tb-b); }
+  .module.fs { --a: var(--fs-a); --b: var(--fs-b); }
+
+  .mod-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .mod-unit { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6c7480; letter-spacing: 0.1em; }
+  .mod-name {
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.02em;
+    color: #f2f4f6; flex: 1;
+  }
+  .mod-desc { font-size: 13.5px; color: #a7aeb8; line-height: 1.65; margin: 0 0 16px; max-width: 56ch; }
+  .mod-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+  .mod-tag {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9098a3;
+    border: 1px solid #383c44; border-radius: 20px; padding: 3px 9px; letter-spacing: 0.03em;
+  }
+  .mod-open {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.03em;
+    color: #0c0e12; text-decoration: none;
+    background: linear-gradient(120deg, var(--a), var(--b));
+    padding: 9px 18px; border-radius: 8px;
+  }
+  .mod-open:hover { filter: brightness(1.08); }
+  .mod-open .arrow { transition: transform 0.15s; }
+  .mod-open:hover .arrow { transform: translateX(3px); }
+
+  /* ---- Footer ---- */
+  .foot {
+    margin-top: 30px; padding-top: 20px; border-top: 1px solid #21242a;
+    font-size: 12px; color: #5c636e; line-height: 1.7;
+  }
+  .foot b { color: #8b93a0; }
+
+  @media (max-width: 480px) {
+    .rack { padding: 16px 10px 40px; }
+    .frame-plate { padding: 26px 18px 22px; }
+    .led-strip { flex-wrap: wrap; row-gap: 8px; }
+  }
+</style>
+</head>
+<body>
+  <div class="rack">
+
+    <div class="frame-plate">
+      <span class="screw tl"></span><span class="screw tr"></span>
+      <span class="screw bl"></span><span class="screw br"></span>
+
+      <div class="eyebrow"><span class="dot"></span> signal chain online</div>
+      <h1>SIGNAL RACK</h1>
+      <p class="tagline">
+        自分の作った音を、ブラウザだけでベンドしたり、重ねたり、仕上げたりするツール置き場。
+        インストール不要、サーバーへのアップロードも一切なし — 音声はすべて手元のブラウザの中だけで処理されます。
+      </p>
+
+      <div class="led-strip">
+        <span class="led-chip"><span class="led wb"></span>WAVEBENDER</span>
+        <span class="led-chip"><span class="led tb"></span>TRACKBENDER</span>
+        <span class="led-chip"><span class="led fs"></span>FINAL STAGE</span>
+      </div>
+    </div>
+
+    <div class="modules">
+
+      <div class="module wb">
+        <div class="mod-head">
+          <span class="mod-unit">UNIT 01</span>
+          <span class="mod-name">WAVEBENDER</span>
+        </div>
+        <p class="mod-desc">1本のMP3にフェイザー・フランジャー・ピッチベンドをかけて遊べる、最初の音いじりツール。波形を見ながらその場で聴き比べできます。</p>
+        <div class="mod-tags">
+          <span class="mod-tag">PHASER</span><span class="mod-tag">FLANGER</span><span class="mod-tag">PITCH BEND</span>
+        </div>
+        <a class="mod-open" href="./wavebender.html">開く <span class="arrow">→</span></a>
+      </div>
+
+      <div class="module tb">
+        <div class="mod-head">
+          <span class="mod-unit">UNIT 02</span>
+          <span class="mod-name">TRACKBENDER</span>
+        </div>
+        <p class="mod-desc">同じ曲のマルチトラック(最大12本)を完全に同期して再生。トラックごとにピッチシフト・BPM同期ディレイ・EQを自由に組み合わせて、そのまま録音もできます。</p>
+        <div class="mod-tags">
+          <span class="mod-tag">12 TRACKS SYNCED</span><span class="mod-tag">BPM DELAY</span><span class="mod-tag">EQ</span><span class="mod-tag">RECORD</span>
+        </div>
+        <a class="mod-open" href="./trackbender.html">開く <span class="arrow">→</span></a>
+      </div>
+
+      <div class="module fs">
+        <div class="mod-head">
+          <span class="mod-unit">UNIT 03</span>
+          <span class="mod-name">FINAL STAGE</span>
+        </div>
+        <p class="mod-desc">ステレオの2mixを仕上げるマスタリングチェーン。リミッター(初段固定)+エキサイター・イメージャー・リバーブを好きな順番で並べ替え、ラウドネスを見ながらWAVで書き出せます。</p>
+        <div class="mod-tags">
+          <span class="mod-tag">LIMITER</span><span class="mod-tag">REORDERABLE FX</span><span class="mod-tag">LUFS METER</span><span class="mod-tag">WAV EXPORT</span>
+        </div>
+        <a class="mod-open" href="./final-stage.html">開く <span class="arrow">→</span></a>
+      </div>
+
+    </div>
+
+    <div class="foot">
+      <b>すべてWeb Audio APIだけで動いています。</b> 読み込んだ音声ファイルはどこにも送信されず、あなたのブラウザの中だけで処理されます。<br>
+      対応ブラウザ: Chrome / Edge / Safari の最新版を推奨。
+    </div>
+
+  </div>
+</body>
+</html>

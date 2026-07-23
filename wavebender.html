@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAVEBENDER — phaser, flanger & pitch bend for a single track</title>
+<meta name="description" content="Single-track browser audio effects: phaser, flanger and a live pitch-bend, all in your browser.">
+<style>
+  html, body {
+    margin: 0; padding: 0; min-height: 100vh;
+    background: #0c0e12;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  body { padding: 24px 12px; box-sizing: border-box; width: 100%; }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<style>
+  #app-root {
+    --bg: #0c0e12;
+    --panel: #181c24;
+    --accent: #5ee3c9;
+    --accent2: #c98bf0;
+    --text: #eef1f5;
+    --sub: #8b93a3;
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 30px 20px 40px;
+    border-radius: 18px;
+    max-width: 640px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  #app-root * { box-sizing: border-box; }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    margin: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+  }
+  .tag {
+    font-size: 10.5px;
+    letter-spacing: 0.15em;
+    color: var(--sub);
+    border: 1px solid #313847;
+    border-radius: 20px;
+    padding: 3px 9px;
+    text-transform: uppercase;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--sub);
+    margin: 0 0 24px;
+  }
+  .drop {
+    border: 1.5px dashed #384051;
+    border-radius: 14px;
+    padding: 22px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: var(--panel);
+    display: block;
+  }
+  .drop:hover { border-color: var(--accent); }
+  .drop.dragover { border-color: var(--accent); background: #1f2530; }
+  .drop input { display: none; }
+  .drop-label { font-size: 14px; color: var(--sub); }
+  .drop-label b { color: var(--text); }
+  .filename { margin-top: 8px; font-size: 12px; color: var(--accent); word-break: break-all; }
+
+  .panel {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 20px;
+    margin-top: 18px;
+  }
+  .mode-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 10px 4px;
+    border-radius: 10px;
+    border: 1px solid #313847;
+    background: transparent;
+    color: var(--sub);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #0d1117;
+    border-color: var(--accent);
+  }
+  .row { margin-bottom: 16px; }
+  .row-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: var(--sub);
+    margin-bottom: 6px;
+  }
+  .row-head span.val { color: var(--text); font-weight: 600; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #313847;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(94,227,201,0.15);
+  }
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .play-btn {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #0d1117;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .play-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .progress-wrap { flex: 1; }
+  .progress-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: #313847;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .time { font-size: 11px; color: var(--sub); margin-top: 6px; }
+  .hint {
+    font-size: 12px;
+    color: var(--sub);
+    margin-top: 18px;
+    line-height: 1.6;
+  }
+</style>
+<script>
+(function() {
+  const root = document.getElementById('app-root');
+  root.innerHTML = `
+    <div class="brand">
+      <div class="title">WAVEBENDER</div>
+      <div class="tag">audio fx lab</div>
+    </div>
+    <div class="subtitle">MP3を読み込んで、フェイザー・フランジャー・ピッチシフトをその場でかけるアプリ</div>
+
+    <label class="drop" id="drop">
+      <input type="file" id="fileInput" accept="audio/*" />
+      <div class="drop-label"><b>ここをタップ</b>してMP3を選ぶ<br>（またはファイルをドラッグ）</div>
+      <div class="filename" id="filename"></div>
+    </label>
+
+    <div class="panel" id="panel" style="display:none;">
+      <div class="mode-row">
+        <button class="mode-btn active" data-mode="phaser">フェイザー</button>
+        <button class="mode-btn" data-mode="flanger">フランジャー</button>
+        <button class="mode-btn" data-mode="pitch">ピッチシフト</button>
+      </div>
+
+      <div class="row" data-group="modrate">
+        <div class="row-head"><span>スピード（うねりの速さ）</span><span class="val" id="rateVal">0.6 Hz</span></div>
+        <input type="range" id="rate" min="0.05" max="6" step="0.01" value="0.6">
+      </div>
+      <div class="row" data-group="modrate">
+        <div class="row-head"><span>深さ（うねりの強さ）</span><span class="val" id="depthVal">70%</span></div>
+        <input type="range" id="depth" min="0" max="100" step="1" value="70">
+      </div>
+      <div class="row" data-group="modrate">
+        <div class="row-head"><span>フィードバック（響きの強さ）</span><span class="val" id="fbVal">40%</span></div>
+        <input type="range" id="feedback" min="0" max="90" step="1" value="40">
+      </div>
+      <div class="row" data-group="pitch" style="display:none;">
+        <div class="row-head"><span>ピッチ（音の高さ）</span><span class="val" id="semitoneVal">+0.0 半音</span></div>
+        <input type="range" id="semitone" min="-12" max="12" step="0.1" value="0">
+      </div>
+      <div class="row">
+        <div class="row-head"><span>Mix（原音とのバランス）</span><span class="val" id="mixVal">50%</span></div>
+        <input type="range" id="mix" min="0" max="100" step="1" value="50">
+      </div>
+
+      <div class="transport">
+        <button class="play-btn" id="playBtn" disabled>▶</button>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="time" id="timeLabel">0:00 / 0:00</div>
+        </div>
+      </div>
+
+      <div class="hint" id="hintText">
+        フェイザーは「シュワシュワ」した揺れ、フランジャーは「ジェット機」っぽい金属的な揺れが特徴です。スライダーを動かすと再生中でも音が変わります。
+      </div>
+    </div>
+  `;
+
+  let audioCtx = null;
+  let audioBuffer = null;
+  let sourceNode = null;
+  let isPlaying = false;
+  let startTime = 0;
+  let pauseOffset = 0;
+  let mode = 'phaser';
+  let rafId = null;
+
+  // Effect nodes (rebuilt each time buildGraph runs)
+  let dryGain, wetGain, outGain, lfoDepthGain, flangerFeedbackGain;
+  let allpassChain = [];
+  let flangerDelay;
+  let activeOsc = []; // every oscillator currently running, so we can stop them all
+  let pitchDelayA, pitchDelayB, pitchGainA, pitchGainB, pitchSawGainA, pitchSawGainB;
+  let pitchOscA, pitchOscB;
+  const PITCH_WINDOW_SEC = 0.08;
+
+  const fileInput = root.querySelector('#fileInput');
+  const drop = root.querySelector('#drop');
+  const filenameEl = root.querySelector('#filename');
+  const panel = root.querySelector('#panel');
+  const playBtn = root.querySelector('#playBtn');
+  const progressFill = root.querySelector('#progressFill');
+  const timeLabel = root.querySelector('#timeLabel');
+  const hintText = root.querySelector('#hintText');
+
+  const rateSlider = root.querySelector('#rate');
+  const depthSlider = root.querySelector('#depth');
+  const fbSlider = root.querySelector('#feedback');
+  const mixSlider = root.querySelector('#mix');
+  const semitoneSlider = root.querySelector('#semitone');
+  const rateVal = root.querySelector('#rateVal');
+  const depthVal = root.querySelector('#depthVal');
+  const fbVal = root.querySelector('#fbVal');
+  const mixVal = root.querySelector('#mixVal');
+  const semitoneVal = root.querySelector('#semitoneVal');
+
+  const hints = {
+    phaser: 'フェイザーは「シュワシュワ」した揺れが特徴です。スライダーを動かすと再生中でも音が変わります。',
+    flanger: 'フランジャーは「ジェット機」っぽい金属的な揺れが特徴です。フィードバックを上げるとより強く響きます。',
+    pitch: 'ピッチシフトは、再生スピードを変えずに音の高さだけを変えるエフェクトです。スライダーはギターのペダルのようになめらかに動き、大きく変えるほど少しロボットっぽい響きが混ざります。'
+  };
+
+  function setModeUI() {
+    root.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    root.querySelectorAll('[data-group="modrate"]').forEach(el => {
+      el.style.display = (mode === 'pitch') ? 'none' : '';
+    });
+    root.querySelectorAll('[data-group="pitch"]').forEach(el => {
+      el.style.display = (mode === 'pitch') ? '' : 'none';
+    });
+    hintText.textContent = hints[mode];
+  }
+
+  root.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      mode = btn.dataset.mode;
+      setModeUI();
+      if (isPlaying) {
+        restart();
+      } else if (audioBuffer) {
+        buildGraph();
+      }
+    });
+  });
+
+  ['dragover','dragleave','drop'].forEach(evt => {
+    drop.addEventListener(evt, e => {
+      e.preventDefault();
+      if (evt === 'dragover') drop.classList.add('dragover');
+      if (evt === 'dragleave') drop.classList.remove('dragover');
+      if (evt === 'drop') {
+        drop.classList.remove('dragover');
+        const f = e.dataTransfer.files[0];
+        if (f) loadFile(f);
+      }
+    });
+  });
+
+  fileInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) loadFile(f);
+  });
+
+  async function loadFile(file) {
+    filenameEl.textContent = file.name;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuf = await file.arrayBuffer();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+    panel.style.display = 'block';
+    playBtn.disabled = false;
+    pauseOffset = 0;
+    updateTimeLabel(0);
+    buildGraph();
+  }
+
+  // raised-cosine window curve, used to crossfade the two pitch-shift taps.
+  // Smoother than a linear (triangle) fade: it eases in/out instead of
+  // changing volume at a constant rate, which is what removes the
+  // "stepped" feeling and makes pitch changes glide instead of click.
+  function makeWindowCurve() {
+    const n = 256;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1; // -1..1
+      curve[i] = 0.5 * (1 + Math.cos(Math.PI * x));
+    }
+    return curve;
+  }
+
+  function buildGraph() {
+    activeOsc = [];
+
+    dryGain = audioCtx.createGain();
+    wetGain = audioCtx.createGain();
+    outGain = audioCtx.createGain();
+    outGain.connect(audioCtx.destination);
+    dryGain.connect(outGain);
+    wetGain.connect(outGain);
+
+    if (mode === 'phaser' || mode === 'flanger') {
+      const lfo = audioCtx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = parseFloat(rateSlider.value);
+      activeOsc.push(lfo);
+
+      if (mode === 'phaser') {
+        allpassChain = [];
+        const freqs = [300, 800, 1500, 2500];
+        let prev = null;
+        freqs.forEach(f => {
+          const ap = audioCtx.createBiquadFilter();
+          ap.type = 'allpass';
+          ap.frequency.value = f;
+          allpassChain.push(ap);
+          if (prev) prev.connect(ap);
+          prev = ap;
+        });
+        lfoDepthGain = audioCtx.createGain();
+        lfoDepthGain.gain.value = (parseFloat(depthSlider.value)/100) * 1200;
+        lfo.connect(lfoDepthGain);
+        allpassChain.forEach(ap => lfoDepthGain.connect(ap.frequency));
+        lfo.start();
+
+        flangerFeedbackGain = audioCtx.createGain();
+        flangerFeedbackGain.gain.value = parseFloat(fbSlider.value)/100 * 0.9;
+        allpassChain[allpassChain.length-1].connect(flangerFeedbackGain);
+        flangerFeedbackGain.connect(allpassChain[0]);
+
+        allpassChain[allpassChain.length-1].connect(wetGain);
+        window.__effectInput = allpassChain[0];
+      } else {
+        flangerDelay = audioCtx.createDelay(0.05);
+        flangerDelay.delayTime.value = 0.005;
+        lfoDepthGain = audioCtx.createGain();
+        lfoDepthGain.gain.value = (parseFloat(depthSlider.value)/100) * 0.004;
+        lfo.connect(lfoDepthGain);
+        lfoDepthGain.connect(flangerDelay.delayTime);
+        lfo.start();
+
+        flangerFeedbackGain = audioCtx.createGain();
+        flangerFeedbackGain.gain.value = parseFloat(fbSlider.value)/100 * 0.85;
+        flangerDelay.connect(flangerFeedbackGain);
+        flangerFeedbackGain.connect(flangerDelay);
+
+        flangerDelay.connect(wetGain);
+        window.__effectInput = flangerDelay;
+      }
+    } else {
+      // Pitch shifter: two crossfaded delay-line taps (classic tape-style pitch shift)
+      const windowSec = PITCH_WINDOW_SEC;
+      const semis = parseFloat(semitoneSlider.value);
+      const ratio = Math.pow(2, semis / 12);
+      const k = 1 - ratio; // desired delay slope
+      const f = Math.max(0.02, Math.abs(k) / windowSec);
+      const scaleMag = windowSec / 2;
+      const scaleSigned = scaleMag * Math.sign(k || 1);
+
+      const pitchInput = audioCtx.createGain();
+      pitchInput.gain.value = 1;
+      window.__effectInput = pitchInput;
+
+      const windowCurve = makeWindowCurve();
+
+      // --- Tap A ---
+      const oscA = audioCtx.createOscillator();
+      oscA.type = 'sawtooth';
+      oscA.frequency.value = f;
+      activeOsc.push(oscA);
+      pitchOscA = oscA;
+
+      pitchDelayA = audioCtx.createDelay(0.2);
+      pitchDelayA.delayTime.value = scaleMag;
+      pitchSawGainA = audioCtx.createGain();
+      pitchSawGainA.gain.value = scaleSigned;
+      oscA.connect(pitchSawGainA);
+      pitchSawGainA.connect(pitchDelayA.delayTime);
+
+      const shaperA = audioCtx.createWaveShaper();
+      shaperA.curve = windowCurve;
+      pitchGainA = audioCtx.createGain();
+      pitchGainA.gain.value = 0;
+      oscA.connect(shaperA);
+      shaperA.connect(pitchGainA.gain);
+
+      pitchInput.connect(pitchDelayA);
+      pitchDelayA.connect(pitchGainA);
+      pitchGainA.connect(wetGain);
+
+      // --- Tap B (phase-shifted by half a cycle for continuous crossfade) ---
+      const oscB = audioCtx.createOscillator();
+      oscB.type = 'sawtooth';
+      oscB.frequency.value = f;
+      activeOsc.push(oscB);
+      pitchOscB = oscB;
+
+      pitchDelayB = audioCtx.createDelay(0.2);
+      pitchDelayB.delayTime.value = scaleMag;
+      pitchSawGainB = audioCtx.createGain();
+      pitchSawGainB.gain.value = scaleSigned;
+      oscB.connect(pitchSawGainB);
+      pitchSawGainB.connect(pitchDelayB.delayTime);
+
+      const shaperB = audioCtx.createWaveShaper();
+      shaperB.curve = windowCurve;
+      pitchGainB = audioCtx.createGain();
+      pitchGainB.gain.value = 0;
+      oscB.connect(shaperB);
+      shaperB.connect(pitchGainB.gain);
+
+      pitchInput.connect(pitchDelayB);
+      pitchDelayB.connect(pitchGainB);
+      pitchGainB.connect(wetGain);
+
+      const now = audioCtx.currentTime;
+      const halfPeriod = f > 0 ? (1 / f) / 2 : 0;
+      oscA.start(now);
+      oscB.start(now + halfPeriod);
+    }
+
+    applyMix();
+  }
+
+  // Bends the pitch shifter smoothly to a new semitone value without
+  // rebuilding the audio graph — this is what makes it feel like a
+  // continuous pitch-bend wheel instead of a switch that clicks between steps.
+  function updatePitchLive(semis) {
+    if (!pitchOscA || !pitchOscB) return;
+    const windowSec = PITCH_WINDOW_SEC;
+    const ratio = Math.pow(2, semis / 12);
+    const k = 1 - ratio;
+    const f = Math.max(0.02, Math.abs(k) / windowSec);
+    const scaleMag = windowSec / 2;
+    const scaleSigned = scaleMag * Math.sign(k || 1);
+    const now = audioCtx.currentTime;
+    const glide = 0.04; // smoothing time constant — bigger = more "rubbery" glide
+    pitchOscA.frequency.setTargetAtTime(f, now, glide);
+    pitchOscB.frequency.setTargetAtTime(f, now, glide);
+    pitchSawGainA.gain.setTargetAtTime(scaleSigned, now, glide);
+    pitchSawGainB.gain.setTargetAtTime(scaleSigned, now, glide);
+  }
+
+  function applyMix() {
+    const m = parseFloat(mixSlider.value) / 100;
+    if (dryGain && wetGain) {
+      dryGain.gain.value = 1 - m;
+      wetGain.gain.value = m;
+    }
+  }
+
+  function connectSource(offset) {
+    sourceNode = audioCtx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.connect(dryGain);
+    sourceNode.connect(window.__effectInput);
+    sourceNode.onended = () => {
+      if (isPlaying) {
+        isPlaying = false;
+        playBtn.textContent = '▶';
+        pauseOffset = 0;
+        cancelAnimationFrame(rafId);
+        progressFill.style.width = '0%';
+        updateTimeLabel(0);
+      }
+    };
+    sourceNode.start(0, offset);
+    startTime = audioCtx.currentTime - offset;
+  }
+
+  function restart() {
+    const wasPlaying = isPlaying;
+    const offset = getCurrentOffset();
+    stopSourceOnly();
+    buildGraph();
+    if (wasPlaying) {
+      connectSource(offset);
+      loopProgress();
+    } else {
+      pauseOffset = offset;
+    }
+  }
+
+  function stopSourceOnly() {
+    if (sourceNode) {
+      sourceNode.onended = null;
+      try { sourceNode.stop(); } catch(e) {}
+      sourceNode.disconnect();
+    }
+    activeOsc.forEach(o => { try { o.stop(); } catch(e) {} });
+    activeOsc = [];
+  }
+
+  function getCurrentOffset() {
+    if (isPlaying) return Math.min(audioCtx.currentTime - startTime, audioBuffer.duration);
+    return pauseOffset;
+  }
+
+  playBtn.addEventListener('click', async () => {
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (!isPlaying) {
+      buildGraph();
+      connectSource(pauseOffset >= audioBuffer.duration ? 0 : pauseOffset);
+      isPlaying = true;
+      playBtn.textContent = '❚❚';
+      loopProgress();
+    } else {
+      pauseOffset = getCurrentOffset();
+      stopSourceOnly();
+      isPlaying = false;
+      playBtn.textContent = '▶';
+      cancelAnimationFrame(rafId);
+    }
+  });
+
+  function loopProgress() {
+    const offset = getCurrentOffset();
+    const pct = Math.min(100, (offset / audioBuffer.duration) * 100);
+    progressFill.style.width = pct + '%';
+    updateTimeLabel(offset);
+    if (isPlaying) rafId = requestAnimationFrame(loopProgress);
+  }
+
+  function updateTimeLabel(offset) {
+    const fmt = s => {
+      s = Math.max(0, s);
+      const m = Math.floor(s/60);
+      const sec = Math.floor(s%60).toString().padStart(2,'0');
+      return m + ':' + sec;
+    };
+    const dur = audioBuffer ? audioBuffer.duration : 0;
+    timeLabel.textContent = fmt(offset) + ' / ' + fmt(dur);
+  }
+
+  rateSlider.addEventListener('input', () => {
+    rateVal.textContent = parseFloat(rateSlider.value).toFixed(2) + ' Hz';
+    if (isPlaying) restart();
+  });
+  depthSlider.addEventListener('input', () => {
+    depthVal.textContent = depthSlider.value + '%';
+    if (lfoDepthGain) {
+      const v = mode === 'phaser' ? (parseFloat(depthSlider.value)/100)*1200 : (parseFloat(depthSlider.value)/100)*0.004;
+      lfoDepthGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    }
+  });
+  fbSlider.addEventListener('input', () => {
+    fbVal.textContent = fbSlider.value + '%';
+    if (flangerFeedbackGain) {
+      const cap = mode === 'phaser' ? 0.9 : 0.85;
+      flangerFeedbackGain.gain.setTargetAtTime(parseFloat(fbSlider.value)/100*cap, audioCtx.currentTime, 0.01);
+    }
+  });
+  semitoneSlider.addEventListener('input', () => {
+    const v = parseFloat(semitoneSlider.value);
+    semitoneVal.textContent = (v > 0 ? '+' : '') + v.toFixed(1) + ' 半音';
+    if (mode === 'pitch' && pitchOscA) {
+      updatePitchLive(v);
+    } else if (audioBuffer) {
+      buildGraph();
+    }
+  });
+  mixSlider.addEventListener('input', () => {
+    mixVal.textContent = mixSlider.value + '%';
+    applyMix();
+  });
+
+  setModeUI();
+})();
+</script>
+
+</body>
+</html>

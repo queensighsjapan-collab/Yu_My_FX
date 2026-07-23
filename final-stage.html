@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FINAL STAGE — mastering suite (limiter, exciter, imager, reverb)</title>
+<meta name="description" content="A reorderable mastering chain — limiter, exciter, stereo imager and reverb — with a loudness meter and WAV export.">
+<style>
+  html, body {
+    margin: 0; padding: 0; min-height: 100vh;
+    background: #0a0d11;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  body { padding: 24px 12px; box-sizing: border-box; width: 100%; }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<style>
+  #app-root {
+    --bg: #0a0d11;
+    --panel: #131820;
+    --accent: #4fc3f7;
+    --accent2: #c7d2e0;
+    --warn: #ff6b5e;
+    --text: #eef3f8;
+    --sub: #7c8a9c;
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: linear-gradient(180deg, #0d1116, #0a0d11);
+    color: var(--text);
+    padding: 30px 20px 40px;
+    border-radius: 18px;
+    max-width: 680px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    border: 1px solid #232b36;
+  }
+  #app-root * { box-sizing: border-box; }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: 0.04em; margin: 0; color: var(--accent2);
+    text-shadow: 0 0 16px rgba(79,195,247,0.35); }
+  .tag { font-size: 10.5px; letter-spacing: 0.15em; color: var(--accent); border: 1px solid rgba(79,195,247,0.4);
+    border-radius: 20px; padding: 3px 9px; text-transform: uppercase; }
+  .subtitle { font-size: 13px; color: var(--sub); margin: 0 0 20px; }
+
+  .drop { border: 1.5px dashed #2a3340; border-radius: 14px; padding: 22px; text-align: center; cursor: pointer;
+    background: var(--panel); transition: border-color .2s, background .2s; }
+  .drop:hover { border-color: var(--accent); }
+  .drop.dragover { border-color: var(--accent); background: #17202b; }
+  .drop input { display: none; }
+  .drop-label { font-size: 14px; color: var(--sub); }
+  .drop-label b { color: var(--accent2); }
+  .filename { margin-top: 8px; font-size: 12px; color: var(--accent); word-break: break-all; }
+
+  .panel { background: var(--panel); border-radius: 14px; padding: 20px; margin-top: 18px; border: 1px solid #232b36; }
+
+  /* --- Loudness meter --- */
+  .meter-box { background: #0c1017; border-radius: 10px; border: 1px solid #232b36; padding: 14px; margin-bottom: 14px; }
+  .meter-readouts { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .meter-readout { text-align: center; flex: 1; }
+  .meter-readout .num { font-size: 18px; font-weight: 800; color: var(--accent2); }
+  .meter-readout .lbl { font-size: 10px; color: var(--sub); letter-spacing: 0.08em; text-transform: uppercase; }
+  .meter-bar-wrap { position: relative; height: 10px; border-radius: 5px; background: #1a212b; overflow: visible; }
+  .meter-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 5px;
+    background: linear-gradient(90deg, #4fc3f7, #ff6b5e); }
+  .meter-target-line { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--accent2); opacity: 0.6; }
+  .meter-note { font-size: 10.5px; color: var(--sub); margin-top: 8px; line-height: 1.5; }
+
+  /* --- Limiter (fixed first stage) --- */
+  .limiter-box { background: #0c1017; border: 1px solid #2a3340; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .limiter-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .limiter-name { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; color: var(--accent2); flex: 1; }
+  .stage-badge { font-size: 9.5px; letter-spacing: 0.1em; color: var(--sub); border: 1px solid #2a3340; border-radius: 6px; padding: 2px 6px; }
+  .gr-readout { font-size: 11px; color: var(--sub); }
+  .gr-readout b { color: var(--warn); }
+
+  .module-card { background: #0c1017; border: 1px solid #232b36; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .module-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .order-badge { width: 22px; height: 22px; border-radius: 6px; background: #1a212b; color: var(--accent);
+    font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .module-name { font-size: 14px; font-weight: 700; flex: 1; color: var(--accent2); }
+  .order-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #2a3340; background: #131820;
+    color: var(--sub); font-size: 12px; cursor: pointer; }
+  .order-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .order-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .power-toggle { width: 40px; height: 22px; border-radius: 20px; border: 1px solid #2a3340; background: #131820;
+    color: var(--sub); font-size: 9.5px; font-weight: 800; cursor: pointer; }
+  .power-toggle.on { background: linear-gradient(135deg, var(--accent), #2a9fd8); color: #0a0d11; border-color: transparent; }
+  .module-body { margin-top: 10px; }
+  .row { margin-bottom: 12px; }
+  .row:last-child { margin-bottom: 0; }
+  .row-head { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--sub); margin-bottom: 5px; }
+  .row-head span.val { color: var(--accent); font-weight: 700; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #232b36; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; box-shadow: 0 0 8px 2px rgba(79,195,247,0.5); }
+
+  .waveform-wrap { position: relative; height: 56px; border-radius: 8px; overflow: hidden; background: #0c1017;
+    cursor: pointer; border: 1px solid #232b36; margin-bottom: 6px; margin-top: 18px; }
+  #waveformCanvas { display: block; width: 100%; height: 100%; }
+  .time { font-size: 11px; color: var(--sub); margin-bottom: 18px; }
+  .transport { display: flex; align-items: center; gap: 14px; }
+  .rewind-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2a3340; background: #0c1017;
+    color: var(--text); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .rewind-btn:hover { border-color: var(--accent); }
+  .rewind-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .play-btn { width: 52px; height: 52px; border-radius: 50%; border: none; background: linear-gradient(135deg, var(--accent), #2a9fd8);
+    color: #0a0d11; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    box-shadow: 0 0 16px rgba(79,195,247,0.35); }
+  .play-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+  .export-btn { padding: 0 18px; height: 40px; border-radius: 20px; border: none;
+    background: linear-gradient(135deg, var(--accent), #2a9fd8); color: #0a0d11; font-size: 12.5px; font-weight: 800;
+    letter-spacing: 0.04em; cursor: pointer; margin-left: auto; }
+  .export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .download-row { display: none; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 14px; background: #0c1017;
+    border-radius: 10px; font-size: 12.5px; color: var(--sub); border: 1px solid #232b36; }
+  .download-row.show { display: flex; }
+  .download-row a { color: #0a0d11; background: linear-gradient(135deg, var(--accent), #2a9fd8); padding: 6px 14px;
+    border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 12.5px; }
+  .hint { font-size: 12px; color: var(--sub); margin-top: 16px; line-height: 1.6; }
+</style>
+<script>
+(function() {
+  const root = document.getElementById('app-root');
+  root.innerHTML = `
+    <div class="brand">
+      <div class="title">FINAL STAGE</div>
+      <div class="tag">mastering suite</div>
+    </div>
+    <div class="subtitle">ステレオの2mixを読み込み、リミッター→エキサイター・イメージャー・リバーブ(順番変更可)を重ねて、処理後の音をWAVで書き出せます</div>
+
+    <label class="drop" id="drop">
+      <input type="file" id="fileInput" accept="audio/*" />
+      <div class="drop-label"><b>ここをタップ</b>してステレオの2mixを選ぶ<br>（またはファイルをドラッグ）</div>
+      <div class="filename" id="filename"></div>
+    </label>
+
+    <div class="panel" id="panel" style="display:none;">
+
+      <div class="meter-box">
+        <div class="meter-readouts">
+          <div class="meter-readout"><div class="num" id="momentaryNum">--</div><div class="lbl">Momentary LUFS</div></div>
+          <div class="meter-readout"><div class="num" id="integratedNum">--</div><div class="lbl">Integrated LUFS</div></div>
+          <div class="meter-readout"><div class="num" id="peakNum">--</div><div class="lbl">Peak dBFS</div></div>
+        </div>
+        <div class="meter-bar-wrap">
+          <div class="meter-bar-fill" id="meterBarFill"></div>
+          <div class="meter-target-line" id="meterTargetLine" title="-14 LUFS 目安"></div>
+        </div>
+        <div class="meter-note">ITU-R BS.1770の考え方を簡易的に取り入れた概算値です。認証されたラウドネスメーターと同じ精度は保証しません。線は配信目安(-14LUFS付近)。</div>
+      </div>
+
+      <div class="limiter-box">
+        <div class="limiter-head">
+          <div class="stage-badge">STAGE 0 · FIXED</div>
+          <div class="limiter-name">INPUT LIMITER</div>
+          <span class="gr-readout">GR <b id="grVal">0.0</b>dB</span>
+          <button class="power-toggle on" id="limiterToggle">ON</button>
+        </div>
+        <div class="row">
+          <div class="row-head"><span>BOOST</span><span class="val" id="boostVal">6.0dB</span></div>
+          <input type="range" id="boostSlider" min="0" max="24" step="0.1" value="6">
+        </div>
+        <div class="row">
+          <div class="row-head"><span>CEILING (MAX AMPLITUDE)</span><span class="val" id="ceilingVal">-1.0dB</span></div>
+          <input type="range" id="ceilingSlider" min="-6" max="0" step="0.1" value="-1">
+        </div>
+      </div>
+
+      <div id="moduleList"></div>
+
+      <div class="waveform-wrap" id="waveformWrap"><canvas id="waveformCanvas" width="700" height="56"></canvas></div>
+      <div class="time" id="timeLabel">0:00 / 0:00</div>
+
+      <div class="transport">
+        <button class="rewind-btn" id="rewindBtn" disabled title="Rewind to start">⏮</button>
+        <button class="play-btn" id="playBtn" disabled>▶</button>
+        <button class="export-btn" id="exportBtn" disabled>EXPORT WAV</button>
+      </div>
+
+      <div class="download-row" id="downloadRow">
+        <span id="downloadLabel">Export ready</span>
+        <a id="downloadLink" download="final-stage-export.wav">Download</a>
+      </div>
+
+      <div class="hint">再生ボタンは試聴用(今の設定の掛かり具合をリアルタイムで確認できます)。実際に保存する音は「EXPORT WAV」で、曲全体を今の設定のまま最初から最後まで書き出した、無劣化のWAVファイルです。GR(ゲインリダクション)が常に大きく点灯している場合、リミッターが常時ベタ掛けになっている(海苔波形の兆候)ので、BOOSTを下げるかCEILINGを上げてみてください。</div>
+    </div>
+  `;
+
+  let audioCtx = null, masterGain = null;
+  let audioBuffer = null, sourceNode = null, isPlaying = false, startTime = 0, pauseOffset = 0, rafId = null;
+  let chainInput = null;
+  let graphReady = false;
+
+  const fileInput = root.querySelector('#fileInput');
+  const drop = root.querySelector('#drop');
+  const filenameEl = root.querySelector('#filename');
+  const panel = root.querySelector('#panel');
+  const playBtn = root.querySelector('#playBtn');
+  const rewindBtn = root.querySelector('#rewindBtn');
+  const exportBtn = root.querySelector('#exportBtn');
+  const downloadRow = root.querySelector('#downloadRow');
+  const downloadLink = root.querySelector('#downloadLink');
+  const downloadLabel = root.querySelector('#downloadLabel');
+  const waveformCanvas = root.querySelector('#waveformCanvas');
+  const waveformWrap = root.querySelector('#waveformWrap');
+  const waveCtx = waveformCanvas.getContext('2d');
+  const timeLabel = root.querySelector('#timeLabel');
+  const moduleListEl = root.querySelector('#moduleList');
+  const momentaryNum = root.querySelector('#momentaryNum');
+  const integratedNum = root.querySelector('#integratedNum');
+  const peakNum = root.querySelector('#peakNum');
+  const meterBarFill = root.querySelector('#meterBarFill');
+  const meterTargetLine = root.querySelector('#meterTargetLine');
+  const boostSlider = root.querySelector('#boostSlider');
+  const ceilingSlider = root.querySelector('#ceilingSlider');
+  const boostVal = root.querySelector('#boostVal');
+  const ceilingVal = root.querySelector('#ceilingVal');
+  const grVal = root.querySelector('#grVal');
+  const limiterToggle = root.querySelector('#limiterToggle');
+
+  // ---------- Shared state (used both for live playback and offline export) ----------
+  const limiterState = { on: true, boost: 6, ceiling: -1 };
+
+  const moduleDefs = {
+    exciter: {
+      label: 'EXCITER',
+      params: [
+        { key: 'freq', label: 'FREQUENCY', min: 0, max: 100, val: 55, fmt: v => Math.round(freqFromExciterSlider(v)) + 'Hz' },
+        { key: 'drive', label: 'DRIVE', min: 0, max: 100, val: 40, fmt: v => v + '%' },
+        { key: 'mix', label: 'MIX', min: 0, max: 100, val: 35, fmt: v => v + '%' }
+      ]
+    },
+    imager: {
+      label: 'STEREO IMAGER',
+      params: [
+        { key: 'width', label: 'WIDTH', min: 0, max: 200, val: 120, fmt: v => v + '%' },
+        { key: 'bassFreq', label: 'BASS MONO FREQ', min: 60, max: 300, val: 120, fmt: v => Math.round(v) + 'Hz' },
+        { key: 'mix', label: 'MIX', min: 0, max: 100, val: 100, fmt: v => v + '%' }
+      ]
+    },
+    reverb: {
+      label: 'REVERB',
+      params: [
+        { key: 'size', label: 'SIZE (DECAY)', min: 0, max: 100, val: 30, fmt: v => sizeFromSlider(v).toFixed(1) + 's' },
+        { key: 'predelay', label: 'PRE-DELAY', min: 0, max: 100, val: 10, fmt: v => Math.round(v) + 'ms' },
+        { key: 'tone', label: 'TONE', min: 0, max: 100, val: 60, fmt: v => v + '%' },
+        { key: 'mix', label: 'MIX', min: 0, max: 100, val: 20, fmt: v => v + '%' }
+      ]
+    }
+  };
+
+  function freqFromExciterSlider(v) { return 1000 * Math.pow(10, v / 100); }
+  function sizeFromSlider(v) { return 0.5 + (v / 100) * 4.5; }
+  function toneFreqFromSlider(v) { return 800 * Math.pow(20, v / 100); }
+
+  let moduleOrder = ['exciter', 'imager', 'reverb'];
+  const moduleState = { exciter: { on: true }, imager: { on: true }, reverb: { on: true } };
+  Object.keys(moduleDefs).forEach(key => { moduleDefs[key].params.forEach(p => { moduleState[key][p.key] = p.val; }); });
+  const modules = {};
+  let limiterNodes = null;
+
+  function ensureAudioCtx() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 1;
+    masterGain.connect(audioCtx.destination);
+    chainInput = audioCtx.createGain();
+    setupLoudnessMeter();
+  }
+
+  // ================= Graph builders (ctx-parameterized so the SAME code
+  // builds both the live monitoring graph and the offline export graph) =================
+
+  function buildLimiter(ctx, state) {
+    const input = ctx.createGain();
+    const output = ctx.createGain();
+    const dryGate = ctx.createGain();
+    const wetGate = ctx.createGain();
+    const boostGain = ctx.createGain();
+    boostGain.gain.value = Math.pow(10, state.boost / 20);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = state.ceiling;
+    comp.knee.value = 6;
+    comp.ratio.value = 20;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.25;
+    const safety = ctx.createWaveShaper();
+    safety.curve = buildClampCurve(state.ceiling);
+
+    input.connect(dryGate); dryGate.connect(output);
+    input.connect(boostGain); boostGain.connect(comp); comp.connect(safety); safety.connect(wetGate); wetGate.connect(output);
+    dryGate.gain.value = state.on ? 0 : 1;
+    wetGate.gain.value = state.on ? 1 : 0;
+
+    return { input, output, boostGain, comp, safety, dryGate, wetGate };
+  }
+
+  function buildClampCurve(ceilingDb) {
+    const ceilingLin = Math.pow(10, ceilingDb / 20);
+    const n = 1024;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1;
+      curve[i] = Math.max(-ceilingLin, Math.min(ceilingLin, x));
+    }
+    return curve;
+  }
+
+  function buildExciter(ctx, state) {
+    const input = ctx.createGain();
+    const output = ctx.createGain();
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass';
+    hp.frequency.value = freqFromExciterSlider(state.freq);
+    const shaper = ctx.createWaveShaper();
+    shaper.oversample = '2x';
+    const harmGain = ctx.createGain();
+    harmGain.gain.value = state.on ? (state.drive / 100) * (state.mix / 100) * 1.4 : 0;
+
+    input.connect(output);
+    input.connect(hp); hp.connect(shaper); shaper.connect(harmGain); harmGain.connect(output);
+
+    return { input, output, hp, shaper, harmGain };
+  }
+
+  function buildImager(ctx, state) {
+    const input = ctx.createGain();
+    const output = ctx.createGain();
+    const dryGate = ctx.createGain();
+    const wetGate = ctx.createGain();
+    const splitter = ctx.createChannelSplitter(2);
+    const merger = ctx.createChannelMerger(2);
+    const midGain1 = ctx.createGain(); midGain1.gain.value = 0.5;
+    const sideGainL = ctx.createGain(); sideGainL.gain.value = 0.5;
+    const sideGainR = ctx.createGain(); sideGainR.gain.value = -0.5;
+    const sideWidthHi = ctx.createGain();
+    const sideWidthLo = ctx.createGain();
+    const sideHP = ctx.createBiquadFilter(); sideHP.type = 'highpass';
+    const sideLP = ctx.createBiquadFilter(); sideLP.type = 'lowpass';
+    sideHP.frequency.value = state.bassFreq;
+    sideLP.frequency.value = state.bassFreq;
+    const sideSum = ctx.createGain();
+    const outL = ctx.createGain();
+    const outR = ctx.createGain();
+    const sideInv = ctx.createGain(); sideInv.gain.value = -1;
+    const sideRaw = ctx.createGain();
+
+    input.connect(splitter);
+    splitter.connect(midGain1, 0); splitter.connect(midGain1, 1);
+    splitter.connect(sideGainL, 0); splitter.connect(sideGainR, 1);
+    sideGainL.connect(sideRaw); sideGainR.connect(sideRaw);
+
+    sideRaw.connect(sideHP); sideHP.connect(sideWidthHi);
+    sideRaw.connect(sideLP); sideLP.connect(sideWidthLo);
+    sideWidthHi.gain.value = state.width / 100;
+    sideWidthLo.gain.value = 0.05;
+    sideWidthHi.connect(sideSum); sideWidthLo.connect(sideSum);
+
+    midGain1.connect(outL); sideSum.connect(outL);
+    midGain1.connect(outR); sideSum.connect(sideInv); sideInv.connect(outR);
+
+    outL.connect(merger, 0, 0);
+    outR.connect(merger, 0, 1);
+
+    merger.connect(wetGate);
+    input.connect(dryGate);
+    dryGate.connect(output);
+    wetGate.connect(output);
+    dryGate.gain.value = state.on ? 1 - state.mix / 100 : 1;
+    wetGate.gain.value = state.on ? state.mix / 100 : 0;
+
+    return { input, output, dryGate, wetGate, sideWidthHi, sideHP, sideLP };
+  }
+
+  function buildImpulse(ctx, durationSec) {
+    const rate = ctx.sampleRate;
+    const length = Math.max(1, Math.floor(rate * durationSec));
+    const impulse = ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+    }
+    return impulse;
+  }
+
+  function buildReverb(ctx, state) {
+    const input = ctx.createGain();
+    const output = ctx.createGain();
+    const preDelay = ctx.createDelay(0.15);
+    preDelay.delayTime.value = state.predelay / 1000;
+    const convolver = ctx.createConvolver();
+    convolver.buffer = buildImpulse(ctx, sizeFromSlider(state.size));
+    const tone = ctx.createBiquadFilter(); tone.type = 'lowpass';
+    tone.frequency.value = toneFreqFromSlider(state.tone);
+    const wetGain = ctx.createGain();
+    wetGain.gain.value = state.on ? state.mix / 100 * 0.9 : 0;
+
+    input.connect(output);
+    input.connect(preDelay); preDelay.connect(convolver); convolver.connect(tone); tone.connect(wetGain); wetGain.connect(output);
+
+    return { input, output, preDelay, convolver, tone, wetGain };
+  }
+
+  const BUILDERS = { exciter: buildExciter, imager: buildImager, reverb: buildReverb };
+
+  // Builds the full chain (limiter -> reordered modules) on a given context
+  // using the CURRENT UI settings, and returns { input, output }.
+  function buildFullChain(ctx) {
+    const limiter = buildLimiter(ctx, limiterState);
+    const built = {};
+    moduleOrder.forEach(key => { built[key] = BUILDERS[key](ctx, moduleState[key]); });
+    let prev = limiter.output;
+    moduleOrder.forEach(key => { prev.connect(built[key].input); prev = built[key].output; });
+    return { input: limiter.input, output: prev, limiter, modulesBuilt: built };
+  }
+
+  // ---------- Live graph (for real-time monitoring) ----------
+  function ensureLiveGraph() {
+    if (graphReady) return;
+    graphReady = true;
+    limiterNodes = buildLimiter(audioCtx, limiterState);
+    modules.exciter = buildExciter(audioCtx, moduleState.exciter);
+    modules.imager = buildImager(audioCtx, moduleState.imager);
+    modules.reverb = buildReverb(audioCtx, moduleState.reverb);
+    rewireLiveChain();
+  }
+
+  function rewireLiveChain() {
+    try { limiterNodes.output.disconnect(); } catch (e) {}
+    Object.keys(modules).forEach(key => { try { modules[key].output.disconnect(); } catch (e) {} });
+    try { chainInput.disconnect(); } catch (e) {}
+    chainInput.connect(limiterNodes.input);
+    let prev = limiterNodes.output;
+    moduleOrder.forEach(key => { prev.connect(modules[key].input); prev = modules[key].output; });
+    prev.connect(masterGain);
+  }
+
+  // ---------- Loudness meter (taps the live monitoring output) ----------
+  let momentaryMS = 0, integratedSumMS = 0, integratedCount = 0, peakLinear = 0;
+
+  function setupLoudnessMeter() {
+    const splitter = audioCtx.createChannelSplitter(2);
+    const merger = audioCtx.createChannelMerger(2);
+    [0, 1].forEach(ch => {
+      const shelf = audioCtx.createBiquadFilter(); shelf.type = 'highshelf'; shelf.frequency.value = 1500; shelf.gain.value = 4;
+      const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 60; hp.Q.value = 0.5;
+      masterGain.connect(splitter);
+      splitter.connect(shelf, ch);
+      shelf.connect(hp);
+      hp.connect(merger, 0, ch);
+    });
+    const processor = audioCtx.createScriptProcessor(4096, 2, 2);
+    merger.connect(processor);
+    const silent = audioCtx.createGain(); silent.gain.value = 0;
+    processor.connect(silent); silent.connect(audioCtx.destination);
+
+    processor.onaudioprocess = e => {
+      const L = e.inputBuffer.getChannelData(0);
+      const R = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : L;
+      let sumSq = 0, peak = 0;
+      for (let i = 0; i < L.length; i++) {
+        const l = L[i], r = R[i];
+        sumSq += l * l + r * r;
+        const p = Math.max(Math.abs(l), Math.abs(r));
+        if (p > peak) peak = p;
+      }
+      const blockMS = sumSq / L.length;
+      const dt = L.length / audioCtx.sampleRate;
+      const alphaM = 1 - Math.exp(-dt / 0.4);
+      momentaryMS += (blockMS - momentaryMS) * alphaM;
+      peakLinear = Math.max(peakLinear * 0.995, peak);
+      const blockLUFS = blockMS > 0 ? -0.691 + 10 * Math.log10(blockMS) : -100;
+      if (isPlaying && blockLUFS > -70) { integratedSumMS += blockMS; integratedCount++; }
+    };
+  }
+
+  function resetLoudnessStats() { integratedSumMS = 0; integratedCount = 0; peakLinear = 0; }
+
+  function updateMeterDisplay() {
+    const momentaryLUFS = momentaryMS > 0 ? -0.691 + 10 * Math.log10(momentaryMS) : -100;
+    const integratedLUFS = integratedCount > 0 ? -0.691 + 10 * Math.log10(integratedSumMS / integratedCount) : -100;
+    const peakDbFS = 20 * Math.log10(peakLinear || 1e-6);
+    momentaryNum.textContent = momentaryLUFS <= -99 ? '--' : momentaryLUFS.toFixed(1);
+    integratedNum.textContent = integratedLUFS <= -99 ? '--' : integratedLUFS.toFixed(1);
+    peakNum.textContent = peakDbFS <= -99 ? '--' : peakDbFS.toFixed(1);
+    const pct = Math.max(0, Math.min(100, (momentaryLUFS + 40) / 40 * 100));
+    meterBarFill.style.width = pct + '%';
+    const targetPct = Math.max(0, Math.min(100, (-14 + 40) / 40 * 100));
+    meterTargetLine.style.left = targetPct + '%';
+    if (limiterNodes) grVal.textContent = Math.abs(limiterNodes.comp.reduction || 0).toFixed(1);
+    requestAnimationFrame(updateMeterDisplay);
+  }
+
+  // ---------- Limiter UI ----------
+  limiterToggle.addEventListener('click', () => {
+    limiterState.on = !limiterState.on;
+    limiterToggle.classList.toggle('on', limiterState.on);
+    limiterToggle.textContent = limiterState.on ? 'ON' : 'OFF';
+    applyLimiterParams();
+  });
+  boostSlider.addEventListener('input', () => {
+    limiterState.boost = parseFloat(boostSlider.value);
+    boostVal.textContent = limiterState.boost.toFixed(1) + 'dB';
+    applyLimiterParams();
+  });
+  ceilingSlider.addEventListener('input', () => {
+    limiterState.ceiling = parseFloat(ceilingSlider.value);
+    ceilingVal.textContent = limiterState.ceiling.toFixed(1) + 'dB';
+    applyLimiterParams();
+  });
+  function applyLimiterParams() {
+    if (!limiterNodes) return;
+    const now = audioCtx.currentTime;
+    limiterNodes.boostGain.gain.setTargetAtTime(Math.pow(10, limiterState.boost / 20), now, 0.02);
+    limiterNodes.comp.threshold.setTargetAtTime(limiterState.ceiling, now, 0.02);
+    limiterNodes.safety.curve = buildClampCurve(limiterState.ceiling);
+    limiterNodes.dryGate.gain.setTargetAtTime(limiterState.on ? 0 : 1, now, 0.02);
+    limiterNodes.wetGate.gain.setTargetAtTime(limiterState.on ? 1 : 0, now, 0.02);
+  }
+
+  // ---------- Module UI ----------
+  function renderModuleList() {
+    moduleListEl.innerHTML = '';
+    moduleOrder.forEach((key, idx) => {
+      const def = moduleDefs[key];
+      const state = moduleState[key];
+      const card = document.createElement('div');
+      card.className = 'module-card';
+      const paramsHtml = def.params.map(p => `
+        <div class="row">
+          <div class="row-head"><span>${p.label}</span><span class="val" id="val-${key}-${p.key}">${p.fmt(state[p.key])}</span></div>
+          <input type="range" id="slider-${key}-${p.key}" min="${p.min}" max="${p.max}" step="1" value="${state[p.key]}">
+        </div>
+      `).join('');
+      card.innerHTML = `
+        <div class="module-head">
+          <div class="order-badge">${idx + 1}</div>
+          <div class="module-name">${def.label}</div>
+          <button class="order-btn" data-key="${key}" data-dir="up" ${idx === 0 ? 'disabled' : ''}>↑</button>
+          <button class="order-btn" data-key="${key}" data-dir="down" ${idx === moduleOrder.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="power-toggle ${state.on ? 'on' : ''}" data-key="${key}">${state.on ? 'ON' : 'OFF'}</button>
+        </div>
+        <div class="module-body">${paramsHtml}</div>
+      `;
+      moduleListEl.appendChild(card);
+    });
+
+    moduleListEl.querySelectorAll('.order-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        const dir = btn.dataset.dir;
+        const i = moduleOrder.indexOf(key);
+        const j = dir === 'up' ? i - 1 : i + 1;
+        if (j < 0 || j >= moduleOrder.length) return;
+        [moduleOrder[i], moduleOrder[j]] = [moduleOrder[j], moduleOrder[i]];
+        renderModuleList();
+        if (audioCtx && modules.exciter) rewireLiveChain();
+      });
+    });
+
+    moduleListEl.querySelectorAll('.power-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        moduleState[key].on = !moduleState[key].on;
+        applyModuleParams(key);
+        renderModuleList();
+      });
+    });
+
+    Object.keys(moduleDefs).forEach(key => {
+      moduleDefs[key].params.forEach(p => {
+        const slider = root.querySelector(`#slider-${key}-${p.key}`);
+        if (!slider) return;
+        slider.addEventListener('input', () => {
+          moduleState[key][p.key] = parseFloat(slider.value);
+          const valEl = root.querySelector(`#val-${key}-${p.key}`);
+          if (valEl) valEl.textContent = p.fmt(moduleState[key][p.key]);
+          applyModuleParams(key);
+        });
+      });
+    });
+  }
+
+  function applyModuleParams(key) {
+    if (!modules[key]) return;
+    const s = moduleState[key];
+    const now = audioCtx.currentTime;
+    if (key === 'exciter') {
+      modules.exciter.hp.frequency.setTargetAtTime(freqFromExciterSlider(s.freq), now, 0.02);
+      modules.exciter.harmGain.gain.setTargetAtTime(s.on ? (s.drive / 100) * (s.mix / 100) * 1.4 : 0, now, 0.02);
+    } else if (key === 'imager') {
+      modules.imager.sideHP.frequency.setTargetAtTime(s.bassFreq, now, 0.02);
+      modules.imager.sideLP.frequency.setTargetAtTime(s.bassFreq, now, 0.02);
+      modules.imager.sideWidthHi.gain.setTargetAtTime(s.width / 100, now, 0.02);
+      modules.imager.dryGate.gain.setTargetAtTime(s.on ? 1 - s.mix / 100 : 1, now, 0.02);
+      modules.imager.wetGate.gain.setTargetAtTime(s.on ? s.mix / 100 : 0, now, 0.02);
+    } else if (key === 'reverb') {
+      modules.reverb.preDelay.delayTime.setTargetAtTime(s.predelay / 1000, now, 0.02);
+      modules.reverb.tone.frequency.setTargetAtTime(toneFreqFromSlider(s.tone), now, 0.02);
+      modules.reverb.wetGain.gain.setTargetAtTime(s.on ? s.mix / 100 * 0.9 : 0, now, 0.02);
+      modules.reverb.convolver.buffer = buildImpulse(audioCtx, sizeFromSlider(s.size));
+    }
+  }
+
+  renderModuleList();
+
+  // ---------- File loading ----------
+  async function loadFile(file) {
+    filenameEl.textContent = file.name;
+    ensureAudioCtx();
+    ensureLiveGraph();
+    const arrayBuf = await file.arrayBuffer();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+    panel.style.display = 'block';
+    playBtn.disabled = false;
+    rewindBtn.disabled = false;
+    exportBtn.disabled = false;
+    pauseOffset = 0;
+    resetLoudnessStats();
+    computePeaks();
+    drawWaveform(0);
+    updateTimeLabel(0);
+    requestAnimationFrame(updateMeterDisplay);
+  }
+
+  ['dragover', 'dragleave', 'drop'].forEach(evt => {
+    drop.addEventListener(evt, e => {
+      e.preventDefault();
+      if (evt === 'dragover') drop.classList.add('dragover');
+      if (evt === 'dragleave') drop.classList.remove('dragover');
+      if (evt === 'drop') { drop.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); }
+    });
+  });
+  fileInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); });
+
+  // ---------- Waveform ----------
+  let peaks = null;
+  function computePeaks() {
+    const numBuckets = waveformCanvas.width;
+    const dur = audioBuffer.duration;
+    const data = audioBuffer.getChannelData(0);
+    const sr = audioBuffer.sampleRate;
+    const result = new Float32Array(numBuckets);
+    for (let b = 0; b < numBuckets; b++) {
+      const iStart = Math.floor((b / numBuckets) * dur * sr);
+      const iEnd = Math.min(data.length, Math.floor(((b + 1) / numBuckets) * dur * sr));
+      const span = Math.max(1, iEnd - iStart);
+      const stride = Math.max(1, Math.floor(span / 200));
+      let peak = 0;
+      for (let i = iStart; i < iEnd; i += stride) { const v = Math.abs(data[i]); if (v > peak) peak = v; }
+      result[b] = peak;
+    }
+    peaks = result;
+  }
+
+  function drawWaveform(playheadTime) {
+    const w = waveformCanvas.width, h = waveformCanvas.height;
+    waveCtx.clearRect(0, 0, w, h);
+    if (peaks) {
+      const mid = h / 2;
+      waveCtx.fillStyle = '#2a3340';
+      for (let x = 0; x < w; x++) { const amp = Math.max(peaks[x], 0.02) * (mid - 2); waveCtx.fillRect(x, mid - amp, 1, amp * 2); }
+    }
+    const dur = audioBuffer ? audioBuffer.duration : 0;
+    if (dur > 0) {
+      const playedX = Math.floor((playheadTime / dur) * w);
+      if (peaks) {
+        const mid = h / 2;
+        waveCtx.fillStyle = '#4fc3f7';
+        for (let x = 0; x < playedX; x++) { const amp = Math.max(peaks[x], 0.02) * (mid - 2); waveCtx.fillRect(x, mid - amp, 1, amp * 2); }
+      }
+      waveCtx.fillStyle = '#eef3f8';
+      waveCtx.fillRect(playedX, 0, 1.5, h);
+    }
+  }
+
+  function xToTime(clientX) {
+    const rect = waveformWrap.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return frac * (audioBuffer ? audioBuffer.duration : 0);
+  }
+  let isDraggingSeek = false, previewTime = 0;
+  function seekStart(x) { if (!audioBuffer) return; isDraggingSeek = true; previewTime = xToTime(x); drawWaveform(previewTime); }
+  function seekMove(x) { if (!isDraggingSeek) return; previewTime = xToTime(x); drawWaveform(previewTime); }
+  function seekEnd() { if (!isDraggingSeek) return; isDraggingSeek = false; seekTo(previewTime); }
+  waveformWrap.addEventListener('mousedown', e => seekStart(e.clientX));
+  window.addEventListener('mousemove', e => seekMove(e.clientX));
+  window.addEventListener('mouseup', seekEnd);
+  waveformWrap.addEventListener('touchstart', e => seekStart(e.touches[0].clientX), { passive: true });
+  window.addEventListener('touchmove', e => { if (isDraggingSeek) seekMove(e.touches[0].clientX); }, { passive: true });
+  window.addEventListener('touchend', seekEnd);
+
+  function seekTo(time) {
+    const dur = audioBuffer.duration;
+    time = Math.max(0, Math.min(time, dur));
+    if (isPlaying) { stopSourceOnly(); connectSource(time); } else { pauseOffset = time; }
+    drawWaveform(time);
+    updateTimeLabel(time);
+  }
+
+  function connectSource(offset) {
+    sourceNode = audioCtx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.connect(chainInput);
+    sourceNode.onended = () => {
+      if (isPlaying) {
+        isPlaying = false; playBtn.textContent = '▶'; pauseOffset = 0;
+        cancelAnimationFrame(rafId); drawWaveform(0); updateTimeLabel(0);
+      }
+    };
+    sourceNode.start(0, offset);
+    startTime = audioCtx.currentTime - offset;
+  }
+  function stopSourceOnly() {
+    if (sourceNode) { sourceNode.onended = null; try { sourceNode.stop(); } catch (e) {} sourceNode.disconnect(); sourceNode = null; }
+  }
+  function getCurrentOffset() {
+    if (isPlaying) return Math.min(audioCtx.currentTime - startTime, audioBuffer.duration);
+    return pauseOffset;
+  }
+
+  playBtn.addEventListener('click', async () => {
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (!isPlaying) {
+      const offset = pauseOffset >= audioBuffer.duration ? 0 : pauseOffset;
+      connectSource(offset);
+      isPlaying = true; playBtn.textContent = '❚❚';
+      loopProgress();
+    } else {
+      pauseOffset = getCurrentOffset();
+      stopSourceOnly();
+      isPlaying = false; playBtn.textContent = '▶';
+      cancelAnimationFrame(rafId);
+    }
+  });
+  rewindBtn.addEventListener('click', () => { resetLoudnessStats(); seekTo(0); });
+
+  function loopProgress() {
+    const offset = getCurrentOffset();
+    const dur = audioBuffer.duration;
+    drawWaveform(offset);
+    updateTimeLabel(offset);
+    if (offset >= dur && dur > 0) {
+      isPlaying = false; playBtn.textContent = '▶'; pauseOffset = 0;
+      stopSourceOnly(); drawWaveform(0); updateTimeLabel(0);
+      return;
+    }
+    if (isPlaying) rafId = requestAnimationFrame(loopProgress);
+  }
+
+  function updateTimeLabel(offset) {
+    const fmt = s => { s = Math.max(0, s); const m = Math.floor(s / 60); const sec = Math.floor(s % 60).toString().padStart(2, '0'); return m + ':' + sec; };
+    timeLabel.textContent = fmt(offset) + ' / ' + fmt(audioBuffer ? audioBuffer.duration : 0);
+  }
+
+  // ---------- Export (offline render -> WAV) ----------
+  function audioBufferToWavBlob(buffer) {
+    const numCh = buffer.numberOfChannels;
+    const sr = buffer.sampleRate;
+    const samples = buffer.length;
+    const blockAlign = numCh * 2;
+    const dataSize = samples * blockAlign;
+    const arrBuf = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrBuf);
+    function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+    writeString(0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeString(8, 'WAVE');
+    writeString(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
+    view.setUint32(24, sr, true); view.setUint32(28, sr * blockAlign, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+    writeString(36, 'data'); view.setUint32(40, dataSize, true);
+    let offset = 44;
+    const channels = [];
+    for (let ch = 0; ch < numCh; ch++) channels.push(buffer.getChannelData(ch));
+    for (let i = 0; i < samples; i++) {
+      for (let ch = 0; ch < numCh; ch++) {
+        let s = Math.max(-1, Math.min(1, channels[ch][i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+        offset += 2;
+      }
+    }
+    return new Blob([view], { type: 'audio/wav' });
+  }
+
+  exportBtn.addEventListener('click', async () => {
+    if (!audioBuffer) return;
+    exportBtn.disabled = true;
+    const originalLabel = exportBtn.textContent;
+    exportBtn.textContent = 'RENDERING…';
+    downloadRow.classList.remove('show');
+    try {
+      const offlineCtx = new OfflineAudioContext(2, audioBuffer.length, audioBuffer.sampleRate);
+      const chain = buildFullChain(offlineCtx);
+      chain.output.connect(offlineCtx.destination);
+      const src = offlineCtx.createBufferSource();
+      src.buffer = audioBuffer;
+      src.connect(chain.input);
+      src.start(0);
+      const rendered = await offlineCtx.startRendering();
+      const blob = audioBufferToWavBlob(rendered);
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.download = 'final-stage-export.wav';
+      downloadLabel.textContent = 'Export ready (WAV, lossless)';
+      downloadRow.classList.add('show');
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = originalLabel;
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRACKBENDER — synced multitrack player with pitch, delay & EQ</title>
+<meta name="description" content="Play up to 12 synced stems, bend pitch, add BPM-synced delay and EQ per track, record the result.">
+<style>
+  html, body {
+    margin: 0; padding: 0; min-height: 100vh;
+    background: #0a0d11;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  body { padding: 24px 12px; box-sizing: border-box; width: 100%; }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<style>
+  #app-root {
+    --bg: #05060a;
+    --panel: #10121a;
+    --accent: #00f0ff;
+    --accent2: #ff2ee6;
+    --accent3: #f5ff3d;
+    --text: #eef8ff;
+    --sub: #7d8bb5;
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(255,46,230,0.12), transparent 55%),
+      radial-gradient(ellipse at 90% 0%, rgba(0,240,255,0.12), transparent 50%),
+      var(--bg);
+    color: var(--text);
+    padding: 30px 20px 40px;
+    border-radius: 18px;
+    max-width: 680px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #1c2440;
+  }
+  #app-root::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,240,255,0.05) 0 1px, transparent 1px 42px),
+      repeating-linear-gradient(90deg, rgba(255,46,230,0.05) 0 1px, transparent 1px 42px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #app-root::after {
+    content: '';
+    position: absolute; left: 0; right: 0; height: 120px;
+    background: linear-gradient(180deg, rgba(0,240,255,0.06), transparent);
+    animation: scan 5s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes scan {
+    0% { top: -120px; }
+    100% { top: 100%; }
+  }
+  #app-root > * { position: relative; z-index: 1; }
+  #app-root * { box-sizing: border-box; }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .title {
+    font-size: 26px; font-weight: 800; letter-spacing: 0.03em; margin: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 6px rgba(0,240,255,0.5)) drop-shadow(0 0 14px rgba(255,46,230,0.35));
+    animation: titleFlicker 3.4s infinite;
+  }
+  @keyframes titleFlicker {
+    0%, 92%, 96%, 100% { opacity: 1; }
+    93% { opacity: 0.55; }
+    94% { opacity: 1; }
+    95% { opacity: 0.7; }
+  }
+  .tag {
+    font-size: 10.5px; letter-spacing: 0.15em; color: var(--accent3);
+    border: 1px solid rgba(245,255,61,0.4); border-radius: 20px; padding: 3px 9px; text-transform: uppercase;
+    box-shadow: 0 0 8px rgba(245,255,61,0.25) inset;
+  }
+  .subtitle { font-size: 13px; color: var(--sub); margin: 0 0 22px; }
+
+  .bulk-drop {
+    border: 1.5px dashed #2a3660;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--panel);
+    margin-bottom: 18px;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .bulk-drop:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0,240,255,0.25); }
+  .bulk-drop.dragover { border-color: var(--accent2); background: #1a1030; box-shadow: 0 0 24px rgba(255,46,230,0.35); }
+  .bulk-drop input { display: none; }
+  .bulk-drop-label { font-size: 13.5px; color: var(--sub); }
+  .bulk-drop-label b { color: var(--accent); }
+
+  .tracks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+  .track {
+    display: grid;
+    grid-template-columns: 34px 1fr 90px 52px;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid #1c2440;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .track.loaded { border-color: #2a3660; }
+  .track-num {
+    font-size: 11px; font-weight: 700; color: var(--sub);
+    background: #05070d; border-radius: 8px; text-align: center; padding: 6px 0;
+    transition: box-shadow .08s linear, color .08s linear;
+  }
+  .track-load { background: none; border: none; text-align: left; cursor: pointer; padding: 0; min-width: 0; }
+  .track-name {
+    font-size: 13px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .track.loaded .track-name { color: var(--text); }
+  .track-vol { width: 90px; }
+  .fx-toggle {
+    width: 52px; height: 28px;
+    border-radius: 20px;
+    border: 1px solid #2a3660;
+    background: #05070d;
+    color: var(--sub);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .fx-toggle.on {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #05070d;
+    border-color: transparent;
+    box-shadow: 0 0 14px rgba(255,46,230,0.55), 0 0 4px rgba(0,240,255,0.6);
+  }
+  .fx-toggle:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .fx-tab-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .fx-tab {
+    flex: 1; padding: 9px 0; border-radius: 10px; border: 1px solid #2a3660;
+    background: #05070d; color: var(--sub); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .fx-tab.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #05070d; border-color: transparent;
+    box-shadow: 0 0 14px rgba(0,240,255,0.35);
+  }
+  .fx-panel { margin-bottom: 4px; }
+  .bpm-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .bpm-field {
+    display: flex; align-items: center; gap: 8px;
+    background: #05070d; border: 1px solid #2a3660; border-radius: 10px;
+    padding: 6px 12px; font-size: 12.5px; color: var(--sub);
+  }
+  .bpm-field input {
+    width: 64px; background: transparent; border: none; color: var(--accent);
+    font-size: 15px; font-weight: 700; text-shadow: 0 0 8px rgba(0,240,255,0.5);
+    outline: none;
+  }
+  .detect-btn {
+    padding: 8px 14px; border-radius: 10px; border: 1px solid #2a3660;
+    background: #05070d; color: var(--accent3); font-size: 12.5px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .detect-btn:hover { border-color: var(--accent3); box-shadow: 0 0 10px rgba(245,255,61,0.35); }
+  .division-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .division-btn {
+    flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid #2a3660;
+    background: #05070d; color: var(--sub); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .division-btn.active {
+    background: linear-gradient(135deg, var(--accent3), var(--accent2));
+    color: #05070d; border-color: transparent;
+    box-shadow: 0 0 12px rgba(245,255,61,0.35);
+  }
+  .eq-type-btn {
+    flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid #2a3660;
+    background: #05070d; color: var(--sub); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .eq-type-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    color: #05070d; border-color: transparent;
+    box-shadow: 0 0 12px rgba(0,240,255,0.35);
+  }
+  .panel {
+    background: var(--panel); border-radius: 14px; padding: 20px;
+    border: 1px solid #1c2440;
+    transition: box-shadow .12s linear;
+  }
+  .row { margin-bottom: 4px; }
+  .row-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--sub); margin-bottom: 6px; }
+  .row-head span.val { color: var(--accent); font-weight: 700; text-shadow: 0 0 8px rgba(0,240,255,0.5); }
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #232c4a; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; box-shadow: 0 0 10px 2px rgba(0,240,255,0.7);
+  }
+  .vu-wrap { margin-bottom: 18px; border-radius: 10px; overflow: hidden; background: #05070d; border: 1px solid #1c2440; }
+  #vuCanvas { display: block; width: 100%; height: 44px; }
+  .transport { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .play-btn {
+    width: 52px; height: 52px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #05070d; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    box-shadow: 0 0 18px rgba(0,240,255,0.45), 0 0 30px rgba(255,46,230,0.25);
+  }
+  .play-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+  .rewind-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2a3660;
+    background: #05070d; color: var(--text); font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .rewind-btn:hover { border-color: var(--accent); box-shadow: 0 0 12px rgba(0,240,255,0.4); }
+  .rewind-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .rec-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2a3660;
+    background: #05070d; color: #ff3b5c; font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all .15s;
+  }
+  .rec-btn:hover { border-color: #ff3b5c; box-shadow: 0 0 12px rgba(255,59,92,0.4); }
+  .rec-btn.recording {
+    background: #ff3b5c; color: #05070d; border-color: transparent;
+    animation: recPulse 1.1s infinite;
+  }
+  .rec-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  @keyframes recPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,92,0.6), 0 0 10px rgba(255,59,92,0.6); }
+    50% { box-shadow: 0 0 0 8px rgba(255,59,92,0), 0 0 22px rgba(255,59,92,0.8); }
+  }
+  .download-row {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: #05070d;
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--sub);
+    border: 1px solid #2a3660;
+  }
+  .download-row.show { display: flex; }
+  .download-row a {
+    color: #05070d;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 12.5px;
+    box-shadow: 0 0 12px rgba(0,240,255,0.4);
+  }
+  .progress-wrap { flex: 1; }
+  .waveform-wrap {
+    position: relative; height: 56px; border-radius: 8px; overflow: hidden;
+    background: #05070d; cursor: pointer; border: 1px solid #1c2440;
+  }
+  #waveformCanvas { display: block; width: 100%; height: 100%; }
+  .time { font-size: 11px; color: var(--sub); margin-top: 6px; }
+  .hint { font-size: 12px; color: var(--sub); margin-top: 16px; line-height: 1.6; }
+</style>
+<script>
+(function() {
+  const root = document.getElementById('app-root');
+  const NUM_TRACKS = 12;
+  const PITCH_WINDOW_SEC = 0.08;
+
+  let trackRowsHtml = '';
+  for (let i = 0; i < NUM_TRACKS; i++) {
+    trackRowsHtml += `
+      <div class="track" id="track-${i}">
+        <div class="track-num">${i + 1}</div>
+        <button class="track-load" data-idx="${i}">
+          <div class="track-name" id="trackname-${i}">Tap to load</div>
+        </button>
+        <input type="range" class="track-vol" id="trackvol-${i}" min="0" max="100" value="80" disabled>
+        <button class="fx-toggle" id="fxtoggle-${i}" data-idx="${i}" disabled>FX</button>
+      </div>
+      <input type="file" accept="audio/*" id="trackfile-${i}" style="display:none">
+    `;
+  }
+
+  root.innerHTML = `
+    <div class="brand">
+      <div class="title">TRACKBENDER</div>
+      <div class="tag">multitrack fx lab</div>
+    </div>
+    <div class="subtitle">Play up to 12 tracks from the same song in perfect sync. Apply pitch shift to any track you choose.</div>
+
+    <label class="bulk-drop" id="bulkDrop">
+      <input type="file" id="bulkFileInput" accept="audio/*" multiple />
+      <div class="bulk-drop-label"><b>Load all at once</b> (select or drag up to 12 MP3s)</div>
+    </label>
+
+    <div class="tracks">
+      ${trackRowsHtml}
+    </div>
+
+    <div class="panel">
+      <div class="vu-wrap">
+        <canvas id="vuCanvas" width="700" height="44"></canvas>
+      </div>
+
+      <div class="fx-tab-row">
+        <button class="fx-tab active" data-tab="pitch">PITCH</button>
+        <button class="fx-tab" data-tab="delay">BPM DELAY</button>
+        <button class="fx-tab" data-tab="eq">EQ</button>
+      </div>
+
+      <div class="fx-panel" data-tabpanel="pitch">
+        <div class="row">
+          <div class="row-head"><span>PITCH</span><span class="val" id="semitoneVal">+0.0 st</span></div>
+          <input type="range" id="semitone" min="-12" max="12" step="0.1" value="0">
+        </div>
+      </div>
+
+      <div class="fx-panel" data-tabpanel="delay" style="display:none;">
+        <div class="bpm-row">
+          <div class="bpm-field">
+            <span>BPM</span>
+            <input type="number" id="bpmInput" min="40" max="240" step="0.1" value="120">
+          </div>
+          <button class="detect-btn" id="detectBtn">DETECT</button>
+        </div>
+        <div class="row">
+          <div class="row-head"><span>SYNC</span></div>
+          <div class="division-row">
+            <button class="division-btn" data-div="1">1/1</button>
+            <button class="division-btn active" data-div="0.5">1/2</button>
+            <button class="division-btn" data-div="0.25">1/4</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-head"><span>DEPTH</span><span class="val" id="delayDepthVal">45%</span></div>
+          <input type="range" id="delayDepth" min="0" max="100" step="1" value="45">
+        </div>
+        <div class="row">
+          <div class="row-head"><span>FEEDBACK</span><span class="val" id="delayFbVal">35%</span></div>
+          <input type="range" id="delayFeedback" min="0" max="90" step="1" value="35">
+        </div>
+      </div>
+
+      <div class="fx-panel" data-tabpanel="eq" style="display:none;">
+        <div class="row">
+          <div class="row-head"><span>TYPE</span></div>
+          <div class="division-row">
+            <button class="eq-type-btn active" data-type="lowpass">LOWPASS</button>
+            <button class="eq-type-btn" data-type="highpass">HIGHPASS</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-head"><span>CUTOFF</span><span class="val" id="cutoffVal">2.0kHz</span></div>
+          <input type="range" id="cutoffSlider" min="0" max="100" step="1" value="67">
+        </div>
+        <div class="row">
+          <div class="row-head"><span>RESONANCE</span><span class="val" id="resonanceVal">1.0</span></div>
+          <input type="range" id="resonanceSlider" min="0" max="100" step="1" value="29">
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="rewind-btn" id="rewindBtn" disabled title="Rewind to start">⏮</button>
+        <button class="play-btn" id="playBtn" disabled>▶</button>
+        <button class="rec-btn" id="recBtn" disabled title="Record">⏺</button>
+        <div class="progress-wrap">
+          <div class="waveform-wrap" id="waveformWrap">
+            <canvas id="waveformCanvas" width="700" height="56"></canvas>
+          </div>
+          <div class="time" id="timeLabel">0:00 / 0:00</div>
+        </div>
+      </div>
+
+      <div class="download-row" id="downloadRow">
+        <span id="downloadLabel">Recording ready</span>
+        <a id="downloadLink" download="trackbender-recording.webm">Download</a>
+      </div>
+
+      <div class="hint" id="hintText">
+        FXスイッチをONにしたトラックだけが、今開いているタブの効果を受けます。タブを切り替えても、各トラックのON/OFF設定はそれぞれ覚えています。ピッチスライダーは指を離してもその位置のまま固定されます(ダブルクリックで正確に0へ戻せます)。
+      </div>
+    </div>
+  `;
+
+  let audioCtx = null;
+  let masterGain = null;
+  let recordDest = null;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let isRecording = false;
+  let masterAnalyser = null;
+  let masterData = null;
+  let visualLoopStarted = false;
+  let isPlaying = false;
+  let startTime = 0;
+  let pauseOffset = 0;
+  let rafId = null;
+
+  // shared pitch-shift modulation source (built once, lazily, on first file load)
+  let pitchOscA, pitchOscB, pitchSawGainA, pitchSawGainB, pitchShaperA, pitchShaperB;
+  let pitchGraphReady = false;
+
+  // shared BPM-sync delay bus
+  let delayInput, delayNode, delayFeedbackGain, delayWetGain, delayDryGain;
+  let delayGraphReady = false;
+  let bpmValue = 120;
+  let bpmDivision = 0.5;
+  let bpmDetectedOnce = false;
+
+  // EQ (per-track filter instances; frequency/Q/type are shared control values
+  // pushed out to every filter that exists)
+  let eqType = 'lowpass';
+  let eqCutoff = 2000;
+  let eqResonance = 1;
+  const eqFilters = [];
+
+  let currentTab = 'pitch';
+
+  // per-track state
+  const tracks = [];
+  for (let i = 0; i < NUM_TRACKS; i++) {
+    tracks.push({
+      buffer: null, name: '', volume: 80, fxPitch: false, fxDelay: false, fxEQ: false,
+      sourceNode: null, trackGain: null,
+      eqFilter: null, eqBypassGate: null, eqWetGate: null, preStage: null,
+      gateDry: null, gatePitchToMaster: null, gatePitchToDelay: null, gateDryToDelay: null,
+      pitchDelayA: null, pitchGainA: null, pitchDelayB: null, pitchGainB: null, pitchOutSum: null,
+      analyser: null, analyserData: null
+    });
+  }
+
+  const playBtn = root.querySelector('#playBtn');
+  const rewindBtn = root.querySelector('#rewindBtn');
+  const recBtn = root.querySelector('#recBtn');
+  const downloadRow = root.querySelector('#downloadRow');
+  const downloadLink = root.querySelector('#downloadLink');
+  const vuCanvas = root.querySelector('#vuCanvas');
+  const vuCtx = vuCanvas.getContext('2d');
+  const panelEl = root.querySelector('.panel');
+  const waveformCanvas = root.querySelector('#waveformCanvas');
+  const waveformWrap = root.querySelector('#waveformWrap');
+  const waveCtx = waveformCanvas.getContext('2d');
+  const timeLabel = root.querySelector('#timeLabel');
+  const semitoneSlider = root.querySelector('#semitone');
+  const semitoneVal = root.querySelector('#semitoneVal');
+  const bulkDrop = root.querySelector('#bulkDrop');
+  const bulkFileInput = root.querySelector('#bulkFileInput');
+  const bpmInput = root.querySelector('#bpmInput');
+  const detectBtn = root.querySelector('#detectBtn');
+  const delayDepthSlider = root.querySelector('#delayDepth');
+  const delayFbSlider = root.querySelector('#delayFeedback');
+  const delayDepthVal = root.querySelector('#delayDepthVal');
+  const delayFbVal = root.querySelector('#delayFbVal');
+  const cutoffSlider = root.querySelector('#cutoffSlider');
+  const resonanceSlider = root.querySelector('#resonanceSlider');
+  const cutoffVal = root.querySelector('#cutoffVal');
+  const resonanceVal = root.querySelector('#resonanceVal');
+  const hintText = root.querySelector('#hintText');
+
+  function makeWindowCurve() {
+    const n = 256;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1;
+      curve[i] = 0.5 * (1 + Math.cos(Math.PI * x));
+    }
+    return curve;
+  }
+
+  function ensureAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 1;
+      masterGain.connect(audioCtx.destination);
+      recordDest = audioCtx.createMediaStreamDestination();
+      masterGain.connect(recordDest); // same final mix, tapped for recording
+
+      masterAnalyser = audioCtx.createAnalyser();
+      masterAnalyser.fftSize = 256;
+      masterGain.connect(masterAnalyser);
+      masterData = new Uint8Array(masterAnalyser.frequencyBinCount);
+
+      if (!visualLoopStarted) {
+        visualLoopStarted = true;
+        requestAnimationFrame(visualLoop);
+      }
+    }
+  }
+
+  // Continuously running visual reactivity loop — draws the neon spectrum
+  // bars and pulses glows in sync with whatever is actually playing.
+  function visualLoop() {
+    if (masterAnalyser) {
+      masterAnalyser.getByteFrequencyData(masterData);
+      drawVU();
+      let sum = 0;
+      for (let i = 0; i < masterData.length; i++) sum += masterData[i];
+      const level = sum / masterData.length / 255;
+      panelEl.style.boxShadow =
+        `0 0 ${14 + level * 46}px rgba(0,240,255,${0.12 + level * 0.35}), ` +
+        `0 0 ${20 + level * 60}px rgba(255,46,230,${0.08 + level * 0.25})`;
+    }
+    tracks.forEach((t, i) => {
+      if (!t.analyser) return;
+      t.analyser.getByteFrequencyData(t.analyserData);
+      let s = 0;
+      for (let j = 0; j < t.analyserData.length; j++) s += t.analyserData[j];
+      const lvl = s / t.analyserData.length / 255;
+      const el = root.querySelector('#track-' + i + ' .track-num');
+      if (el) {
+        const color = t.fxDelay ? '245,255,61' : t.fxPitch ? '255,46,230' : '0,240,255';
+        el.style.boxShadow = `0 0 ${3 + lvl * 22}px rgba(${color},${0.25 + lvl * 0.75})`;
+        el.style.color = lvl > 0.04 ? '#eef8ff' : '';
+      }
+    });
+    requestAnimationFrame(visualLoop);
+  }
+
+  function drawVU() {
+    const w = vuCanvas.width, h = vuCanvas.height;
+    vuCtx.clearRect(0, 0, w, h);
+    const numBars = 48;
+    const barW = w / numBars;
+    const binsPerBar = Math.max(1, Math.floor(masterData.length / numBars));
+    for (let b = 0; b < numBars; b++) {
+      let sum = 0;
+      for (let k = 0; k < binsPerBar; k++) sum += masterData[b * binsPerBar + k] || 0;
+      const v = (sum / binsPerBar) / 255;
+      const barH = Math.max(2, v * h);
+      const grad = vuCtx.createLinearGradient(0, h, 0, h - barH);
+      grad.addColorStop(0, '#00f0ff');
+      grad.addColorStop(1, '#ff2ee6');
+      vuCtx.fillStyle = grad;
+      vuCtx.shadowColor = 'rgba(0,240,255,0.8)';
+      vuCtx.shadowBlur = 6;
+      vuCtx.fillRect(b * barW + 1, h - barH, barW - 2, barH);
+    }
+    vuCtx.shadowBlur = 0;
+  }
+
+  // Shared pitch MODULATION source only (the two oscillators + the window
+  // envelope shapers). Each track gets its own pair of DelayNode/GainNode
+  // taps that this modulation fans out to — that's what lets a track's own
+  // pitch-shifted output be picked up separately afterward (e.g. sent on
+  // into the delay bus) instead of being permanently pre-mixed with every
+  // other pitch-enabled track.
+  function ensurePitchGraph() {
+    if (pitchGraphReady) return;
+    pitchGraphReady = true;
+
+    const windowCurve = makeWindowCurve();
+    const semis = parseFloat(semitoneSlider.value);
+    const { f, scaleSigned } = pitchParamsFor(semis);
+
+    pitchSawGainA = audioCtx.createGain();
+    pitchSawGainA.gain.value = scaleSigned;
+    pitchOscA = audioCtx.createOscillator();
+    pitchOscA.type = 'sawtooth';
+    pitchOscA.frequency.value = f;
+    pitchOscA.connect(pitchSawGainA);
+    pitchShaperA = audioCtx.createWaveShaper();
+    pitchShaperA.curve = windowCurve;
+    pitchOscA.connect(pitchShaperA);
+
+    pitchSawGainB = audioCtx.createGain();
+    pitchSawGainB.gain.value = scaleSigned;
+    pitchOscB = audioCtx.createOscillator();
+    pitchOscB.type = 'sawtooth';
+    pitchOscB.frequency.value = f;
+    pitchOscB.connect(pitchSawGainB);
+    pitchShaperB = audioCtx.createWaveShaper();
+    pitchShaperB.curve = windowCurve;
+    pitchOscB.connect(pitchShaperB);
+
+    const now = audioCtx.currentTime;
+    const halfPeriod = f > 0 ? (1 / f) / 2 : 0;
+    pitchOscA.start(now);
+    pitchOscB.start(now + halfPeriod);
+  }
+
+  // Builds one track's own pitch-shift taps and wires them to the shared
+  // modulation source above. Reads from the track's pre-stage (post-EQ-or-bypass)
+  // signal so EQ, if enabled, is applied before the pitch shift.
+  function ensureTrackPitchNodes(t) {
+    if (t.pitchOutSum) return;
+    const half = PITCH_WINDOW_SEC / 2;
+
+    t.pitchDelayA = audioCtx.createDelay(0.2);
+    t.pitchDelayA.delayTime.value = half;
+    pitchSawGainA.connect(t.pitchDelayA.delayTime);
+    t.pitchGainA = audioCtx.createGain();
+    t.pitchGainA.gain.value = 0;
+    pitchShaperA.connect(t.pitchGainA.gain);
+
+    t.pitchDelayB = audioCtx.createDelay(0.2);
+    t.pitchDelayB.delayTime.value = half;
+    pitchSawGainB.connect(t.pitchDelayB.delayTime);
+    t.pitchGainB = audioCtx.createGain();
+    t.pitchGainB.gain.value = 0;
+    pitchShaperB.connect(t.pitchGainB.gain);
+
+    t.pitchOutSum = audioCtx.createGain();
+    t.pitchOutSum.gain.value = 1;
+
+    t.preStage.connect(t.pitchDelayA);
+    t.pitchDelayA.connect(t.pitchGainA);
+    t.pitchGainA.connect(t.pitchOutSum);
+
+    t.preStage.connect(t.pitchDelayB);
+    t.pitchDelayB.connect(t.pitchGainB);
+    t.pitchGainB.connect(t.pitchOutSum);
+  }
+
+  // Builds one track's own resonant filter, plus a bypass path, feeding
+  // into t.preStage — the single point everything downstream (pitch, dry,
+  // delay-send) reads from. This is what puts EQ first in the chain.
+  function ensureTrackEQNodes(t) {
+    if (t.preStage) return;
+
+    t.eqFilter = audioCtx.createBiquadFilter();
+    t.eqFilter.type = eqType;
+    t.eqFilter.frequency.value = eqCutoff;
+    t.eqFilter.Q.value = eqResonance;
+    eqFilters.push(t.eqFilter);
+
+    t.eqBypassGate = audioCtx.createGain();
+    t.eqBypassGate.gain.value = t.fxEQ ? 0 : 1;
+    t.eqWetGate = audioCtx.createGain();
+    t.eqWetGate.gain.value = t.fxEQ ? 1 : 0;
+
+    t.preStage = audioCtx.createGain();
+    t.preStage.gain.value = 1;
+
+    t.trackGain.connect(t.eqBypassGate);
+    t.eqBypassGate.connect(t.preStage);
+
+    t.trackGain.connect(t.eqFilter);
+    t.eqFilter.connect(t.eqWetGate);
+    t.eqWetGate.connect(t.preStage);
+  }
+
+  function pitchParamsFor(semis) {
+    const ratio = Math.pow(2, semis / 12);
+    const k = 1 - ratio;
+    const f = Math.max(0.02, Math.abs(k) / PITCH_WINDOW_SEC);
+    const scaleMag = PITCH_WINDOW_SEC / 2;
+    const scaleSigned = scaleMag * Math.sign(k || 1);
+    return { f, scaleMag, scaleSigned };
+  }
+
+  function ensureDelayGraph() {
+    if (delayGraphReady) return;
+    delayGraphReady = true;
+
+    delayInput = audioCtx.createGain();
+    delayInput.gain.value = 1;
+
+    delayNode = audioCtx.createDelay(2.5);
+    delayNode.delayTime.value = currentDelayTimeSec();
+
+    delayFeedbackGain = audioCtx.createGain();
+    delayFeedbackGain.gain.value = parseFloat(delayFbSlider.value) / 100 * 0.9;
+    delayNode.connect(delayFeedbackGain);
+    delayFeedbackGain.connect(delayNode);
+
+    delayWetGain = audioCtx.createGain();
+    delayWetGain.gain.value = parseFloat(delayDepthSlider.value) / 100;
+    delayDryGain = audioCtx.createGain();
+    delayDryGain.gain.value = 1; // the track's own sound always comes through the delay bus too
+
+    delayInput.connect(delayDryGain);
+    delayInput.connect(delayNode);
+    delayNode.connect(delayWetGain);
+    delayDryGain.connect(masterGain);
+    delayWetGain.connect(masterGain);
+  }
+
+  function currentDelayTimeSec() {
+    const beatSec = 60 / bpmValue;
+    return Math.max(0.01, beatSec * bpmDivision);
+  }
+
+  function updateDelayTiming() {
+    if (!delayGraphReady) return;
+    const now = audioCtx.currentTime;
+    delayNode.delayTime.setTargetAtTime(currentDelayTimeSec(), now, 0.05);
+  }
+
+  // Lightweight BPM detector: builds a coarse loudness envelope, takes the
+  // positive-going changes in it (onset strength), then finds the repeating
+  // gap between onsets via autocorrelation — the gap that lines up best
+  // with itself, over and over, is treated as the beat interval.
+  function detectBPM(buffer) {
+    const data = buffer.getChannelData(0);
+    const sampleRate = buffer.sampleRate;
+    const envSR = 100;
+    const windowSize = Math.floor(sampleRate / envSR);
+    const numWindows = Math.floor(data.length / windowSize);
+    if (numWindows < 20) return 120;
+
+    const envelope = new Float32Array(numWindows);
+    for (let w = 0; w < numWindows; w++) {
+      let sum = 0;
+      const start = w * windowSize;
+      const end = start + windowSize;
+      for (let i = start; i < end; i++) { const v = data[i]; sum += v * v; }
+      envelope[w] = Math.sqrt(sum / windowSize);
+    }
+
+    const onset = new Float32Array(numWindows);
+    for (let w = 1; w < numWindows; w++) {
+      const d = envelope[w] - envelope[w - 1];
+      onset[w] = d > 0 ? d : 0;
+    }
+
+    const minBPM = 60, maxBPM = 200;
+    const minLag = Math.round(envSR * 60 / maxBPM);
+    const maxLag = Math.round(envSR * 60 / minBPM);
+    let bestLag = minLag, bestScore = -Infinity;
+    for (let lag = minLag; lag <= maxLag; lag++) {
+      let score = 0;
+      for (let w = 0; w < numWindows - lag; w++) score += onset[w] * onset[w + lag];
+      if (score > bestScore) { bestScore = score; bestLag = lag; }
+    }
+    const bpm = 60 * envSR / bestLag;
+    return Math.round(bpm * 10) / 10;
+  }
+
+  function updatePitchLive(semis) {
+    if (!pitchGraphReady) return;
+    const { f, scaleSigned } = pitchParamsFor(semis);
+    const now = audioCtx.currentTime;
+    const glide = 0.04;
+    pitchOscA.frequency.setTargetAtTime(f, now, glide);
+    pitchOscB.frequency.setTargetAtTime(f, now, glide);
+    pitchSawGainA.gain.setTargetAtTime(scaleSigned, now, glide);
+    pitchSawGainB.gain.setTargetAtTime(scaleSigned, now, glide);
+  }
+
+  function ensureTrackNodes(i) {
+    const t = tracks[i];
+    if (t.trackGain) return;
+    t.trackGain = audioCtx.createGain();
+    t.trackGain.gain.value = t.volume / 100;
+
+    ensureTrackEQNodes(t);
+    ensureTrackPitchNodes(t);
+
+    // Four gates decide where this track's sound actually goes. Exactly one
+    // (or, for "both", a specific pair) is open at a time — switching between
+    // them is just a smooth gain change, no rebuilding. All of them read from
+    // t.preStage, i.e. after the (optional) EQ, so the effect order is
+    // EQ -> pitch -> delay whenever more than one is enabled together.
+    t.gateDry = audioCtx.createGain();          // signal      -> master   (neither pitch nor delay on)
+    t.gatePitchToMaster = audioCtx.createGain(); // pitched     -> master   (pitch only)
+    t.gatePitchToDelay = audioCtx.createGain();  // pitched     -> delay bus (pitch AND delay: serial chain)
+    t.gateDryToDelay = audioCtx.createGain();    // signal      -> delay bus (delay only, no pitch)
+
+    t.preStage.connect(t.gateDry);
+    t.pitchOutSum.connect(t.gatePitchToMaster);
+    t.pitchOutSum.connect(t.gatePitchToDelay);
+    t.preStage.connect(t.gateDryToDelay);
+
+    t.gateDry.connect(masterGain);
+    t.gatePitchToMaster.connect(masterGain);
+    t.gatePitchToDelay.connect(delayInput);
+    t.gateDryToDelay.connect(delayInput);
+
+    updateTrackRouting(i);
+
+    t.analyser = audioCtx.createAnalyser();
+    t.analyser.fftSize = 128;
+    t.trackGain.connect(t.analyser);
+    t.analyserData = new Uint8Array(t.analyser.frequencyBinCount);
+  }
+
+  function updateTrackRouting(i) {
+    const t = tracks[i];
+    if (!t.gateDry) return;
+    const now = audioCtx.currentTime;
+    const neither = !t.fxPitch && !t.fxDelay;
+    const pitchOnly = t.fxPitch && !t.fxDelay;
+    const delayOnly = !t.fxPitch && t.fxDelay;
+    const both = t.fxPitch && t.fxDelay;
+    t.gateDry.gain.setTargetAtTime(neither ? 1 : 0, now, 0.02);
+    t.gatePitchToMaster.gain.setTargetAtTime(pitchOnly ? 1 : 0, now, 0.02);
+    t.gatePitchToDelay.gain.setTargetAtTime(both ? 1 : 0, now, 0.02);
+    t.gateDryToDelay.gain.setTargetAtTime(delayOnly ? 1 : 0, now, 0.02);
+    if (t.eqBypassGate) {
+      t.eqBypassGate.gain.setTargetAtTime(t.fxEQ ? 0 : 1, now, 0.02);
+      t.eqWetGate.gain.setTargetAtTime(t.fxEQ ? 1 : 0, now, 0.02);
+    }
+  }
+
+  async function loadFileIntoSlot(i, file) {
+    ensureAudioCtx();
+    ensurePitchGraph();
+    ensureDelayGraph();
+    if (isPlaying) hardStop();
+
+    const arrayBuf = await file.arrayBuffer();
+    const buffer = await audioCtx.decodeAudioData(arrayBuf);
+    const t = tracks[i];
+    t.buffer = buffer;
+    t.name = file.name;
+    if (!bpmDetectedOnce) {
+      bpmDetectedOnce = true;
+      bpmValue = detectBPM(buffer);
+      bpmInput.value = bpmValue;
+      updateDelayTiming();
+    }
+    ensureTrackNodes(i);
+
+    const row = root.querySelector('#track-' + i);
+    row.classList.add('loaded');
+    root.querySelector('#trackname-' + i).textContent = file.name;
+    const volEl = root.querySelector('#trackvol-' + i);
+    volEl.disabled = false;
+    const fxEl = root.querySelector('#fxtoggle-' + i);
+    fxEl.disabled = false;
+
+    playBtn.disabled = !anyTrackLoaded();
+    rewindBtn.disabled = !anyTrackLoaded();
+    recBtn.disabled = !anyTrackLoaded();
+    pauseOffset = 0;
+    computePeaks();
+    drawWaveform(0);
+    updateTimeLabel(0);
+  }
+
+  function anyTrackLoaded() {
+    return tracks.some(t => t.buffer);
+  }
+
+  function totalDuration() {
+    return tracks.reduce((max, t) => t.buffer ? Math.max(max, t.buffer.duration) : max, 0);
+  }
+
+  // --- Waveform overview (peaks combined across all loaded tracks) ---
+  let peaks = null; // Float32Array, one peak value (0..1) per pixel bucket
+
+  function computePeaks() {
+    const numBuckets = waveformCanvas.width;
+    const dur = totalDuration();
+    const result = new Float32Array(numBuckets);
+    if (dur <= 0) { peaks = result; return; }
+
+    tracks.forEach(t => {
+      if (!t.buffer) return;
+      const data = t.buffer.getChannelData(0);
+      const sr = t.buffer.sampleRate;
+      for (let b = 0; b < numBuckets; b++) {
+        const tStart = (b / numBuckets) * dur;
+        const tEnd = ((b + 1) / numBuckets) * dur;
+        const iStart = Math.floor(tStart * sr);
+        const iEnd = Math.min(data.length, Math.floor(tEnd * sr));
+        if (iStart >= data.length) continue;
+        const span = Math.max(1, iEnd - iStart);
+        const stride = Math.max(1, Math.floor(span / 200));
+        let peak = 0;
+        for (let i = iStart; i < iEnd; i += stride) {
+          const v = Math.abs(data[i]);
+          if (v > peak) peak = v;
+        }
+        if (peak > result[b]) result[b] = peak;
+      }
+    });
+    peaks = result;
+  }
+
+  function drawWaveform(playheadTime) {
+    const w = waveformCanvas.width;
+    const h = waveformCanvas.height;
+    waveCtx.clearRect(0, 0, w, h);
+
+    if (peaks) {
+      const mid = h / 2;
+      waveCtx.fillStyle = '#1c2440';
+      for (let x = 0; x < w; x++) {
+        const amp = Math.max(peaks[x], 0.02) * (mid - 2);
+        waveCtx.fillRect(x, mid - amp, 1, amp * 2);
+      }
+    }
+
+    const dur = totalDuration();
+    if (dur > 0) {
+      const playedX = Math.floor((playheadTime / dur) * w);
+      if (peaks) {
+        const mid = h / 2;
+        const grad = waveCtx.createLinearGradient(0, 0, playedX, 0);
+        grad.addColorStop(0, '#00f0ff');
+        grad.addColorStop(1, '#ff2ee6');
+        waveCtx.fillStyle = grad;
+        waveCtx.shadowColor = 'rgba(0,240,255,0.6)';
+        waveCtx.shadowBlur = 4;
+        for (let x = 0; x < playedX; x++) {
+          const amp = Math.max(peaks[x], 0.02) * (mid - 2);
+          waveCtx.fillRect(x, mid - amp, 1, amp * 2);
+        }
+        waveCtx.shadowBlur = 0;
+      }
+      waveCtx.shadowColor = 'rgba(255,255,255,0.9)';
+      waveCtx.shadowBlur = 8;
+      waveCtx.fillStyle = '#eef8ff';
+      waveCtx.fillRect(playedX, 0, 1.5, h);
+      waveCtx.shadowBlur = 0;
+    }
+  }
+
+  function xToTime(clientX) {
+    const rect = waveformWrap.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return frac * totalDuration();
+  }
+
+  function seekTo(time) {
+    const dur = totalDuration();
+    time = Math.max(0, Math.min(time, dur));
+    if (isPlaying) {
+      hardStop();
+      connectAllSources(time);
+    } else {
+      pauseOffset = time;
+    }
+    drawWaveform(time);
+    updateTimeLabel(time);
+  }
+
+  let isDraggingSeek = false;
+  let previewTime = 0;
+
+  function seekStart(clientX) {
+    if (!anyTrackLoaded()) return;
+    isDraggingSeek = true;
+    previewTime = xToTime(clientX);
+    drawWaveform(previewTime);
+  }
+  function seekMove(clientX) {
+    if (!isDraggingSeek) return;
+    previewTime = xToTime(clientX);
+    drawWaveform(previewTime);
+  }
+  function seekEnd() {
+    if (!isDraggingSeek) return;
+    isDraggingSeek = false;
+    seekTo(previewTime);
+  }
+
+  waveformWrap.addEventListener('mousedown', e => seekStart(e.clientX));
+  window.addEventListener('mousemove', e => seekMove(e.clientX));
+  window.addEventListener('mouseup', seekEnd);
+  waveformWrap.addEventListener('touchstart', e => seekStart(e.touches[0].clientX), { passive: true });
+  window.addEventListener('touchmove', e => { if (isDraggingSeek) seekMove(e.touches[0].clientX); }, { passive: true });
+  window.addEventListener('touchend', seekEnd);
+
+  rewindBtn.addEventListener('click', () => seekTo(0));
+
+  function pickMimeType() {
+    const candidates = [
+      'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'
+    ];
+    return candidates.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+  }
+
+  recBtn.addEventListener('click', async () => {
+    if (!isRecording) {
+      ensureAudioCtx();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+      if (!isPlaying) {
+        const offset = pauseOffset >= totalDuration() ? 0 : pauseOffset;
+        connectAllSources(offset);
+        isPlaying = true;
+        playBtn.textContent = '❚❚';
+        loopProgress();
+      }
+      downloadRow.classList.remove('show');
+      recordedChunks = [];
+      const mimeType = pickMimeType();
+      mediaRecorder = mimeType
+        ? new MediaRecorder(recordDest.stream, { mimeType })
+        : new MediaRecorder(recordDest.stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const ext = (mediaRecorder.mimeType || '').includes('mp4') ? 'm4a'
+                  : (mediaRecorder.mimeType || '').includes('ogg') ? 'ogg' : 'webm';
+        downloadLink.href = url;
+        downloadLink.download = 'trackbender-recording.' + ext;
+        downloadRow.classList.add('show');
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      recBtn.classList.add('recording');
+    } else {
+      mediaRecorder.stop();
+      isRecording = false;
+      recBtn.classList.remove('recording');
+    }
+  });
+
+  root.querySelectorAll('.track-load').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
+      root.querySelector('#trackfile-' + idx).click();
+    });
+  });
+
+  for (let i = 0; i < NUM_TRACKS; i++) {
+    const fileInput = root.querySelector('#trackfile-' + i);
+    fileInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) loadFileIntoSlot(i, f);
+    });
+
+    root.querySelector('#trackvol-' + i).addEventListener('input', e => {
+      const t = tracks[i];
+      t.volume = parseFloat(e.target.value);
+      if (t.trackGain) t.trackGain.gain.setTargetAtTime(t.volume / 100, audioCtx.currentTime, 0.02);
+    });
+
+    root.querySelector('#fxtoggle-' + i).addEventListener('click', () => {
+      const t = tracks[i];
+      if (currentTab === 'pitch') {
+        t.fxPitch = !t.fxPitch;
+      } else if (currentTab === 'delay') {
+        t.fxDelay = !t.fxDelay;
+      } else {
+        t.fxEQ = !t.fxEQ;
+      }
+      refreshFxButton(i);
+      updateTrackRouting(i);
+    });
+  }
+
+  function refreshFxButton(i) {
+    const t = tracks[i];
+    const on = currentTab === 'pitch' ? t.fxPitch : currentTab === 'delay' ? t.fxDelay : t.fxEQ;
+    root.querySelector('#fxtoggle-' + i).classList.toggle('on', on);
+  }
+
+  function refreshAllFxButtons() {
+    for (let i = 0; i < NUM_TRACKS; i++) refreshFxButton(i);
+  }
+
+  ['dragover','dragleave','drop'].forEach(evt => {
+    bulkDrop.addEventListener(evt, e => {
+      e.preventDefault();
+      if (evt === 'dragover') bulkDrop.classList.add('dragover');
+      if (evt === 'dragleave') bulkDrop.classList.remove('dragover');
+      if (evt === 'drop') {
+        bulkDrop.classList.remove('dragover');
+        handleBulkFiles(e.dataTransfer.files);
+      }
+    });
+  });
+  bulkFileInput.addEventListener('change', e => handleBulkFiles(e.target.files));
+
+  async function handleBulkFiles(fileList) {
+    const files = Array.from(fileList).slice(0, NUM_TRACKS);
+    for (let i = 0; i < files.length; i++) {
+      await loadFileIntoSlot(i, files[i]);
+    }
+  }
+
+  function connectAllSources(offset) {
+    const now = audioCtx.currentTime;
+    tracks.forEach(t => {
+      if (!t.buffer) return;
+      const src = audioCtx.createBufferSource();
+      src.buffer = t.buffer;
+      src.connect(t.trackGain);
+      src.start(0, Math.min(offset, t.buffer.duration));
+      t.sourceNode = src;
+    });
+    startTime = now - offset;
+  }
+
+  function hardStop() {
+    tracks.forEach(t => {
+      if (t.sourceNode) {
+        t.sourceNode.onended = null;
+        try { t.sourceNode.stop(); } catch(e) {}
+        t.sourceNode.disconnect();
+        t.sourceNode = null;
+      }
+    });
+  }
+
+  function getCurrentOffset() {
+    if (isPlaying) return Math.min(audioCtx.currentTime - startTime, totalDuration());
+    return pauseOffset;
+  }
+
+  playBtn.addEventListener('click', async () => {
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (!isPlaying) {
+      const offset = pauseOffset >= totalDuration() ? 0 : pauseOffset;
+      connectAllSources(offset);
+      isPlaying = true;
+      playBtn.textContent = '❚❚';
+      loopProgress();
+    } else {
+      pauseOffset = getCurrentOffset();
+      hardStop();
+      isPlaying = false;
+      playBtn.textContent = '▶';
+      cancelAnimationFrame(rafId);
+    }
+  });
+
+  function loopProgress() {
+    const offset = getCurrentOffset();
+    const dur = totalDuration();
+    drawWaveform(offset);
+    updateTimeLabel(offset);
+    if (offset >= dur && dur > 0) {
+      isPlaying = false;
+      playBtn.textContent = '▶';
+      pauseOffset = 0;
+      hardStop();
+      drawWaveform(0);
+      updateTimeLabel(0);
+      if (isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        recBtn.classList.remove('recording');
+      }
+      return;
+    }
+    if (isPlaying) rafId = requestAnimationFrame(loopProgress);
+  }
+
+  function updateTimeLabel(offset) {
+    const fmt = s => {
+      s = Math.max(0, s);
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60).toString().padStart(2, '0');
+      return m + ':' + sec;
+    };
+    timeLabel.textContent = fmt(offset) + ' / ' + fmt(totalDuration());
+  }
+
+  let springBackRAF = null;
+
+  // Snaps the pitch slider exactly back to 0 — now triggered by double-click
+  // (not by releasing the mouse), since the bend position should stay put
+  // while it's being combined with other effects.
+  function springBackToZero() {
+    cancelAnimationFrame(springBackRAF);
+    const startVal = parseFloat(semitoneSlider.value);
+    if (startVal === 0) return;
+    const duration = 220; // ms — quick, smooth snap to center
+    const t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const val = startVal * (1 - eased);
+      semitoneSlider.value = val;
+      semitoneVal.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' st';
+      updatePitchLive(val);
+      if (t < 1) {
+        springBackRAF = requestAnimationFrame(step);
+      } else {
+        semitoneSlider.value = 0;
+        semitoneVal.textContent = '+0.0 st';
+        updatePitchLive(0);
+      }
+    }
+    springBackRAF = requestAnimationFrame(step);
+  }
+
+  semitoneSlider.addEventListener('dblclick', () => springBackToZero());
+
+  semitoneSlider.addEventListener('input', () => {
+    const v = parseFloat(semitoneSlider.value);
+    semitoneVal.textContent = (v > 0 ? '+' : '') + v.toFixed(1) + ' st';
+    updatePitchLive(v);
+  });
+
+  const hints = {
+    pitch: 'FXスイッチをONにしたトラックだけが、今開いているタブの効果を受けます。タブを切り替えても、各トラックのON/OFF設定はそれぞれ覚えています。ピッチスライダーは指を離してもその位置のまま固定されます(ダブルクリックで正確に0へ戻せます)。',
+    delay: 'FXスイッチをONにしたトラックだけが、BPM同期ディレイを受けます。シンク間隔(1/1・1/2・1/4)は、検出(または手入力)したBPMの1拍を基準にした長さです。ピッチとディレイを同じトラックで両方ONにすると、ピッチシフトされた音にディレイがかかります(直列接続)。',
+    eq: 'FXスイッチをONにしたトラックだけが、このフィルターを通ります。カットオフより上(ローパス)/下(ハイパス)の音がだんだん削られ、レゾナンスを上げるとカットオフ付近の音が強調されて「ピー」っと響くクセの強い音になります。EQは他の効果より先にかかる(EQ→ピッチ→ディレイの順)ので、フィルターで音を作ってからピッチやディレイを重ねられます。'
+  };
+
+  root.querySelectorAll('.fx-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTab = btn.dataset.tab;
+      root.querySelectorAll('.fx-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === currentTab));
+      root.querySelectorAll('.fx-panel').forEach(p => {
+        p.style.display = (p.dataset.tabpanel === currentTab) ? '' : 'none';
+      });
+      hintText.textContent = hints[currentTab];
+      refreshAllFxButtons();
+    });
+  });
+
+  root.querySelectorAll('.division-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      root.querySelectorAll('.division-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      bpmDivision = parseFloat(btn.dataset.div);
+      updateDelayTiming();
+    });
+  });
+
+  bpmInput.addEventListener('input', () => {
+    const v = parseFloat(bpmInput.value);
+    if (!isNaN(v) && v > 0) {
+      bpmValue = v;
+      updateDelayTiming();
+    }
+  });
+
+  detectBtn.addEventListener('click', () => {
+    const firstLoaded = tracks.find(t => t.buffer);
+    if (!firstLoaded) return;
+    bpmValue = detectBPM(firstLoaded.buffer);
+    bpmInput.value = bpmValue;
+    updateDelayTiming();
+  });
+
+  delayDepthSlider.addEventListener('input', () => {
+    delayDepthVal.textContent = delayDepthSlider.value + '%';
+    if (delayWetGain) delayWetGain.gain.setTargetAtTime(parseFloat(delayDepthSlider.value) / 100, audioCtx.currentTime, 0.02);
+  });
+
+  delayFbSlider.addEventListener('input', () => {
+    delayFbVal.textContent = delayFbSlider.value + '%';
+    if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(parseFloat(delayFbSlider.value) / 100 * 0.9, audioCtx.currentTime, 0.02);
+  });
+
+  // Cutoff: slider 0-100 mapped exponentially across 20Hz-20kHz (frequency
+  // perception is logarithmic, so a linear slider would feel very lopsided).
+  function cutoffFromSlider(v) { return 20 * Math.pow(1000, v / 100); }
+  // Resonance (Q): slider 0-100 mapped exponentially across a gentle-to-
+  // screaming range.
+  function resonanceFromSlider(v) { return 0.3 * Math.pow(20 / 0.3, v / 100); }
+
+  function refreshEQLabels() {
+    eqCutoff = cutoffFromSlider(parseFloat(cutoffSlider.value));
+    cutoffVal.textContent = eqCutoff >= 1000 ? (eqCutoff / 1000).toFixed(1) + 'kHz' : Math.round(eqCutoff) + 'Hz';
+    eqResonance = resonanceFromSlider(parseFloat(resonanceSlider.value));
+    resonanceVal.textContent = eqResonance.toFixed(1);
+  }
+  refreshEQLabels();
+
+  cutoffSlider.addEventListener('input', () => {
+    refreshEQLabels();
+    if (audioCtx) eqFilters.forEach(f => f.frequency.setTargetAtTime(eqCutoff, audioCtx.currentTime, 0.02));
+  });
+
+  resonanceSlider.addEventListener('input', () => {
+    refreshEQLabels();
+    if (audioCtx) eqFilters.forEach(f => f.Q.setTargetAtTime(eqResonance, audioCtx.currentTime, 0.02));
+  });
+
+  root.querySelectorAll('.eq-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      root.querySelectorAll('.eq-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      eqType = btn.dataset.type;
+      eqFilters.forEach(f => { f.type = eqType; });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
