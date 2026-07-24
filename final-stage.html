@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FINAL STAGE — mastering suite (limiter, exciter, imager, reverb)</title>
 <meta name="description" content="A reorderable mastering chain — limiter, exciter, stereo imager and reverb — with a loudness meter and WAV export.">
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.all.js"></script>
 <style>
   html, body {
     margin: 0; padding: 0; min-height: 100vh;
@@ -122,6 +123,12 @@
     background: linear-gradient(135deg, var(--accent), #2a9fd8); color: #0a0d11; font-size: 12.5px; font-weight: 800;
     letter-spacing: 0.04em; cursor: pointer; margin-left: auto; }
   .export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .format-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .format-label { font-size: 11px; color: var(--sub); letter-spacing: 0.04em; }
+  .format-toggle { display: flex; gap: 6px; }
+  .format-btn { padding: 5px 12px; border-radius: 14px; border: 1px solid #2a3340; background: transparent;
+    color: var(--sub); font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all .15s; }
+  .format-btn.active { background: var(--accent); color: #0a0d11; border-color: var(--accent); }
   .download-row { display: none; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 14px; background: #0c1017;
     border-radius: 10px; font-size: 12.5px; color: var(--sub); border: 1px solid #232b36; }
   .download-row.show { display: flex; }
@@ -182,6 +189,14 @@
       <div class="waveform-wrap" id="waveformWrap"><canvas id="waveformCanvas" width="700" height="56"></canvas></div>
       <div class="time" id="timeLabel">0:00 / 0:00</div>
 
+      <div class="format-row">
+        <span class="format-label">FORMAT</span>
+        <div class="format-toggle">
+          <button class="format-btn active" id="fmtWavBtn" data-fmt="wav">WAV</button>
+          <button class="format-btn" id="fmtMp3Btn" data-fmt="mp3">MP3</button>
+        </div>
+      </div>
+
       <div class="transport">
         <button class="rewind-btn" id="rewindBtn" disabled title="Rewind to start">⏮</button>
         <button class="play-btn" id="playBtn" disabled>▶</button>
@@ -193,7 +208,7 @@
         <a id="downloadLink" download="final-stage-export.wav">Download</a>
       </div>
 
-      <div class="hint">再生ボタンは試聴用(今の設定の掛かり具合をリアルタイムで確認できます)。実際に保存する音は「EXPORT WAV」で、曲全体を今の設定のまま最初から最後まで書き出した、無劣化のWAVファイルです。GR(ゲインリダクション)が常に大きく点灯している場合、リミッターが常時ベタ掛けになっている(海苔波形の兆候)ので、BOOSTを下げるかCEILINGを上げてみてください。</div>
+      <div class="hint">再生ボタンは試聴用(今の設定の掛かり具合をリアルタイムで確認できます)。実際に保存する音は「FORMAT」でWAV(無劣化)かMP3(圧縮)を選び、「EXPORT」ボタンで曲全体を今の設定のまま最初から最後まで書き出します。GR(ゲインリダクション)が常に大きく点灯している場合、リミッターが常時ベタ掛けになっている(海苔波形の兆候)ので、BOOSTを下げるかCEILINGを上げてみてください。</div>
     </div>
   `;
 
@@ -212,6 +227,19 @@
   const downloadRow = root.querySelector('#downloadRow');
   const downloadLink = root.querySelector('#downloadLink');
   const downloadLabel = root.querySelector('#downloadLabel');
+  const fmtWavBtn = root.querySelector('#fmtWavBtn');
+  const fmtMp3Btn = root.querySelector('#fmtMp3Btn');
+  let exportFormat = 'wav';
+  fmtWavBtn.addEventListener('click', () => {
+    exportFormat = 'wav';
+    fmtWavBtn.classList.add('active'); fmtMp3Btn.classList.remove('active');
+    exportBtn.textContent = 'EXPORT WAV';
+  });
+  fmtMp3Btn.addEventListener('click', () => {
+    exportFormat = 'mp3';
+    fmtMp3Btn.classList.add('active'); fmtWavBtn.classList.remove('active');
+    exportBtn.textContent = 'EXPORT MP3';
+  });
   const waveformCanvas = root.querySelector('#waveformCanvas');
   const waveformWrap = root.querySelector('#waveformWrap');
   const waveCtx = waveformCanvas.getContext('2d');
@@ -791,12 +819,44 @@
     return new Blob([view], { type: 'audio/wav' });
   }
 
+  // Encodes a rendered AudioBuffer to MP3 using lamejs (loaded from CDN).
+  function audioBufferToMp3Blob(buffer, kbps) {
+    if (!window.lamejs) throw new Error('lamejs not loaded');
+    const numCh = buffer.numberOfChannels;
+    const sr = buffer.sampleRate;
+    const encoder = new lamejs.Mp3Encoder(numCh, sr, kbps);
+    const left = floatTo16BitPCM(buffer.getChannelData(0));
+    const right = numCh > 1 ? floatTo16BitPCM(buffer.getChannelData(1)) : null;
+    const blockSize = 1152;
+    const chunks = [];
+    for (let i = 0; i < left.length; i += blockSize) {
+      const leftChunk = left.subarray(i, i + blockSize);
+      const mp3buf = right
+        ? encoder.encodeBuffer(leftChunk, right.subarray(i, i + blockSize))
+        : encoder.encodeBuffer(leftChunk);
+      if (mp3buf.length > 0) chunks.push(mp3buf);
+    }
+    const end = encoder.flush();
+    if (end.length > 0) chunks.push(end);
+    return new Blob(chunks, { type: 'audio/mp3' });
+  }
+
+  function floatTo16BitPCM(floatArr) {
+    const out = new Int16Array(floatArr.length);
+    for (let i = 0; i < floatArr.length; i++) {
+      const s = Math.max(-1, Math.min(1, floatArr[i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return out;
+  }
+
   exportBtn.addEventListener('click', async () => {
     if (!audioBuffer) return;
     exportBtn.disabled = true;
     const originalLabel = exportBtn.textContent;
     exportBtn.textContent = 'RENDERING…';
     downloadRow.classList.remove('show');
+    downloadLink.style.display = '';
     try {
       const offlineCtx = new OfflineAudioContext(2, audioBuffer.length, audioBuffer.sampleRate);
       const chain = buildFullChain(offlineCtx);
@@ -806,12 +866,28 @@
       src.connect(chain.input);
       src.start(0);
       const rendered = await offlineCtx.startRendering();
-      const blob = audioBufferToWavBlob(rendered);
-      const url = URL.createObjectURL(blob);
-      downloadLink.href = url;
-      downloadLink.download = 'final-stage-export.wav';
-      downloadLabel.textContent = 'Export ready (WAV, lossless)';
+
+      if (exportFormat === 'mp3') {
+        const blob = audioBufferToMp3Blob(rendered, 192);
+        const url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        downloadLink.download = 'final-stage-export.mp3';
+        downloadLabel.textContent = 'Export ready (MP3, 192kbps)';
+      } else {
+        const blob = audioBufferToWavBlob(rendered);
+        const url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        downloadLink.download = 'final-stage-export.wav';
+        downloadLabel.textContent = 'Export ready (WAV, lossless)';
+      }
       downloadRow.classList.add('show');
+    } catch (err) {
+      console.error(err);
+      downloadLabel.textContent = exportFormat === 'mp3'
+        ? 'MP3変換に失敗しました(MP3エンコーダーの読み込みに問題がある可能性があります。通信環境を確認するか、WAVをお試しください)'
+        : '書き出しに失敗しました';
+      downloadRow.classList.add('show');
+      downloadLink.style.display = 'none';
     } finally {
       exportBtn.disabled = false;
       exportBtn.textContent = originalLabel;

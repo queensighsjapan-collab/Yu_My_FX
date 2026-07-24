@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WAVEBENDER — phaser, flanger & pitch bend for a single track</title>
 <meta name="description" content="Single-track browser audio effects: phaser, flanger and a live pitch-bend, all in your browser.">
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.all.js"></script>
 <style>
   html, body {
     margin: 0; padding: 0; min-height: 100vh;
@@ -170,6 +171,15 @@
     cursor: pointer; margin-left: auto; flex-shrink: 0;
   }
   .export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .format-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .format-label { font-size: 11px; color: var(--sub); letter-spacing: 0.04em; }
+  .format-toggle { display: flex; gap: 6px; }
+  .format-btn {
+    padding: 5px 12px; border-radius: 14px; border: 1px solid #313847;
+    background: transparent; color: var(--sub); font-size: 11.5px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .format-btn.active { background: var(--accent); color: #0d1117; border-color: var(--accent); }
   .download-row {
     display: none; align-items: center; gap: 10px; margin-top: 14px;
     padding: 10px 14px; background: var(--panel); border: 1px solid #313847;
@@ -245,6 +255,14 @@
         <input type="range" id="mix" min="0" max="100" step="1" value="50">
       </div>
 
+      <div class="format-row">
+        <span class="format-label">FORMAT</span>
+        <div class="format-toggle">
+          <button class="format-btn active" id="fmtWavBtn" data-fmt="wav">WAV</button>
+          <button class="format-btn" id="fmtMp3Btn" data-fmt="mp3">MP3</button>
+        </div>
+      </div>
+
       <div class="transport">
         <button class="play-btn" id="playBtn" disabled>▶</button>
         <div class="progress-wrap">
@@ -255,7 +273,7 @@
       </div>
 
       <div class="download-row" id="downloadRow">
-        <span>Export ready (WAV, lossless)</span>
+        <span id="downloadLabel">Export ready (WAV, lossless)</span>
         <a id="downloadLink" download="wavebender-export.wav">Download</a>
       </div>
 
@@ -294,6 +312,20 @@
   const exportBtn = root.querySelector('#exportBtn');
   const downloadRow = root.querySelector('#downloadRow');
   const downloadLink = root.querySelector('#downloadLink');
+  const downloadLabel = root.querySelector('#downloadLabel');
+  const fmtWavBtn = root.querySelector('#fmtWavBtn');
+  const fmtMp3Btn = root.querySelector('#fmtMp3Btn');
+  let exportFormat = 'wav';
+  fmtWavBtn.addEventListener('click', () => {
+    exportFormat = 'wav';
+    fmtWavBtn.classList.add('active'); fmtMp3Btn.classList.remove('active');
+    exportBtn.textContent = 'EXPORT WAV';
+  });
+  fmtMp3Btn.addEventListener('click', () => {
+    exportFormat = 'mp3';
+    fmtMp3Btn.classList.add('active'); fmtWavBtn.classList.remove('active');
+    exportBtn.textContent = 'EXPORT MP3';
+  });
 
   const rateSlider = root.querySelector('#rate');
   const depthSlider = root.querySelector('#depth');
@@ -775,12 +807,46 @@
     return new Blob([view], { type: 'audio/wav' });
   }
 
+  // Encodes a rendered AudioBuffer to MP3 using lamejs (loaded from CDN).
+  // lamejs works on 16-bit PCM, so we convert each channel first, then feed
+  // it through in fixed-size blocks as its encoder expects.
+  function audioBufferToMp3Blob(buffer, kbps) {
+    if (!window.lamejs) throw new Error('lamejs not loaded');
+    const numCh = buffer.numberOfChannels;
+    const sr = buffer.sampleRate;
+    const encoder = new lamejs.Mp3Encoder(numCh, sr, kbps);
+    const left = floatTo16BitPCM(buffer.getChannelData(0));
+    const right = numCh > 1 ? floatTo16BitPCM(buffer.getChannelData(1)) : null;
+    const blockSize = 1152;
+    const chunks = [];
+    for (let i = 0; i < left.length; i += blockSize) {
+      const leftChunk = left.subarray(i, i + blockSize);
+      const mp3buf = right
+        ? encoder.encodeBuffer(leftChunk, right.subarray(i, i + blockSize))
+        : encoder.encodeBuffer(leftChunk);
+      if (mp3buf.length > 0) chunks.push(mp3buf);
+    }
+    const end = encoder.flush();
+    if (end.length > 0) chunks.push(end);
+    return new Blob(chunks, { type: 'audio/mp3' });
+  }
+
+  function floatTo16BitPCM(floatArr) {
+    const out = new Int16Array(floatArr.length);
+    for (let i = 0; i < floatArr.length; i++) {
+      const s = Math.max(-1, Math.min(1, floatArr[i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return out;
+  }
+
   exportBtn.addEventListener('click', async () => {
     if (!audioBuffer) return;
     exportBtn.disabled = true;
     const originalLabel = exportBtn.textContent;
     exportBtn.textContent = 'RENDERING…';
     downloadRow.classList.remove('show');
+    downloadLink.style.display = '';
     try {
       const offlineCtx = new OfflineAudioContext(2, audioBuffer.length, audioBuffer.sampleRate);
       const params = {
@@ -797,11 +863,28 @@
       src.connect(graph.effectInput);
       src.start(0);
       const rendered = await offlineCtx.startRendering();
-      const blob = audioBufferToWavBlob(rendered);
-      const url = URL.createObjectURL(blob);
-      downloadLink.href = url;
-      downloadLink.download = 'wavebender-export.wav';
+
+      if (exportFormat === 'mp3') {
+        const blob = audioBufferToMp3Blob(rendered, 192);
+        const url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        downloadLink.download = 'wavebender-export.mp3';
+        downloadLabel.textContent = 'Export ready (MP3, 192kbps)';
+      } else {
+        const blob = audioBufferToWavBlob(rendered);
+        const url = URL.createObjectURL(blob);
+        downloadLink.href = url;
+        downloadLink.download = 'wavebender-export.wav';
+        downloadLabel.textContent = 'Export ready (WAV, lossless)';
+      }
       downloadRow.classList.add('show');
+    } catch (err) {
+      console.error(err);
+      downloadLabel.textContent = exportFormat === 'mp3'
+        ? 'MP3変換に失敗しました(MP3エンコーダーの読み込みに問題がある可能性があります。通信環境を確認するか、WAVをお試しください)'
+        : '書き出しに失敗しました';
+      downloadRow.classList.add('show');
+      downloadLink.style.display = 'none';
     } finally {
       exportBtn.disabled = false;
       exportBtn.textContent = originalLabel;
