@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Games | Yu_My_Love Tool Box</title>
+<style>
+  :root{
+    --bg: #05070d;
+    --ink: #eef1f8;
+    --ink-dim: #6f7a90;
+    --line: #202839;
+    --c1: #ff2ea6;
+    --c2: #2ee6ff;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(1200px 700px at 50% -10%, #131a2b 0%, var(--bg) 60%);
+    color: var(--ink);
+    font-family: 'Courier New', Consolas, monospace;
+    display:flex; flex-direction:column; align-items:center;
+    padding: 60px 20px 40px;
+  }
+  h1{
+    font-size: clamp(22px, 5vw, 34px);
+    letter-spacing: 3px;
+    margin: 0 0 40px;
+    background: linear-gradient(90deg, var(--c1), var(--c2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grid{
+    width:100%; max-width: 700px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  @media (max-width:560px){ .grid{ grid-template-columns: 1fr; } }
+  .card{
+    display:block; text-decoration:none; color:inherit;
+    background: linear-gradient(180deg, #10141f, #0a0d16);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align:center;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .card:hover{ transform: translateY(-4px); border-color: var(--card-color); }
+  .card .label{ font-size:15px; letter-spacing:1px; margin-bottom:8px; }
+  .card .desc{ font-size:11px; color:var(--ink-dim); line-height:1.7; }
+  #c1{ --card-color: var(--c2); }
+  #c2{ --card-color: var(--c1); }
+  .back{
+    display:block; margin-top: 40px;
+    font-size: 11px; letter-spacing:2px;
+    color: var(--ink-dim); text-decoration:none;
+  }
+  .back:hover{ color: var(--ink); }
+</style>
+</head>
+<body>
+  <h1>GAMES</h1>
+  <div class="grid">
+    <a class="card" id="c1" href="./mp3-barcode-battle.html">
+      <div class="label">MP3 BARCODE BATTLE</div>
+      <div class="desc">2曲のmp3を解析してバトルさせる<br>ターン制対戦ゲーム</div>
+    </a>
+    <a class="card" id="c2" href="./mp3-pet.html">
+      <div class="label">MP3 PET</div>
+      <div class="desc">mp3を栄養にして<br>謎の生物を育てる育成ゲーム</div>
+    </a>
+  </div>
+  <a class="back" href="../index.html">&larr; BACK TO TOOL BOX</a>
+</body>
+</html>

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MP3 PET</title>
+<style>
+  :root{
+    --bg: #05070d;
+    --panel: #131826;
+    --line: #232b3d;
+    --ink: #eef1f8;
+    --ink-dim: #7d879c;
+    --accent1: #ff2ea6;
+    --accent2: #2ee6ff;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(1200px 600px at 50% -10%, #1a2035 0%, var(--bg) 60%);
+    color: var(--ink);
+    font-family: 'Courier New', Consolas, monospace;
+    padding: 30px 16px 60px;
+  }
+  h1{
+    text-align:center;
+    font-size: clamp(22px, 5vw, 34px);
+    letter-spacing: 4px;
+    margin: 4px 0 26px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .wrap{
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .pet-frame{
+    background: linear-gradient(180deg, var(--panel), #0d1120);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    text-align:center;
+  }
+  .pet-stage{
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--ink-dim);
+    margin-bottom: 4px;
+  }
+  .pet-status{
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .pet-status.normal{ color: var(--accent2); }
+  .pet-status.hibernating{ color: #ffd23f; }
+  .pet-status.cocoon{ color: var(--accent1); }
+
+  .pet-stage-view{
+    width: 220px; height: 230px;
+    margin: 0 auto 10px;
+    position: relative;
+  }
+  .pet-svg{
+    width:100%; height:100%;
+    transform-origin: 50% 90%;
+    animation: unyu 2.6s ease-in-out infinite;
+  }
+  @keyframes unyu{
+    0%, 100%{ transform: scale(1,1); }
+    50%{ transform: scale(0.88, 1.16); }
+  }
+  .pet-svg.sleepy{
+    animation: none;
+    filter: grayscale(0.5) brightness(0.7) hue-rotate(var(--hue,0deg)) !important;
+  }
+  .cocoon-wrap{
+    display:none;
+    width: 220px; height: 230px;
+    margin: 0 auto 10px;
+    align-items:center; justify-content:center;
+  }
+  .flavor{
+    font-size: 11px;
+    color: var(--ink-dim);
+    line-height: 1.8;
+    min-height: 34px;
+    margin-bottom: 14px;
+  }
+  .days-line{
+    font-size: 10px;
+    color: var(--ink-dim);
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+
+  .dropzone{
+    border: 1px dashed var(--accent2);
+    border-radius: 8px;
+    padding: 24px 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: var(--accent2);
+    transition: border-color .2s, background .2s;
+  }
+  .dropzone:hover{ border-color: var(--accent1); background: rgba(255,255,255,0.04); color: var(--accent1); }
+  .dropzone input{ display:none; }
+
+  #feedStatus{
+    font-size: 11px;
+    color: var(--ink-dim);
+    min-height: 16px;
+    margin-top: 10px;
+  }
+
+  #resetBtn{
+    display:block; margin: 22px auto 0;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    padding: 10px 20px;
+    font-family: inherit;
+    letter-spacing: 2px;
+    font-size: 11px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #resetBtn:hover{ border-color: var(--ink-dim); color: var(--ink); }
+</style>
+</head>
+<body>
+
+  <h1>MP3 PET</h1>
+
+  <div class="wrap">
+    <div class="pet-frame">
+      <div class="pet-stage" id="stageLabel">STAGE 01 &mdash; ポリプ様</div>
+      <div class="pet-status normal" id="statusLabel">げんき</div>
+
+      <div class="pet-stage-view" id="petView"></div>
+      <div class="cocoon-wrap" id="cocoonView">
+        <svg viewBox="0 0 140 150" width="160" height="170" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="70" cy="130" rx="30" ry="8" fill="#1a2030"/>
+          <path d="M50 130 Q40 90 55 55 Q70 35 85 55 Q100 90 90 130 Z" fill="#8a7a68" stroke="#4a3f34" stroke-width="2"/>
+          <path d="M52 70 Q70 78 88 70" stroke="#4a3f34" stroke-width="1.2" fill="none" opacity="0.6"/>
+          <path d="M50 95 Q70 103 90 95" stroke="#4a3f34" stroke-width="1.2" fill="none" opacity="0.6"/>
+          <path d="M52 115 Q70 122 88 115" stroke="#4a3f34" stroke-width="1.2" fill="none" opacity="0.6"/>
+        </svg>
+      </div>
+
+      <div class="flavor" id="flavorText">今日のごはんを待っています</div>
+      <div class="days-line" id="daysLine"></div>
+
+      <div class="dropzone" id="dropZone">
+        MP3を与える(ドロップ / タップ)
+        <input type="file" id="fileInput" accept="audio/mpeg,audio/mp3,.mp3">
+      </div>
+      <div id="feedStatus"></div>
+    </div>
+
+    <button id="resetBtn">最初からやり直す</button>
+  </div>
+
+<script>
+(function(){
+
+  const STORAGE_KEY = 'mp3pet_state_v1';
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // ---------- date helpers ----------
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function addDays(dateStr, n){
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate()+n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function daysBetween(a, b){
+    const da = new Date(a+'T00:00:00');
+    const db = new Date(b+'T00:00:00');
+    return Math.round((db-da)/86400000);
+  }
+  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+  function lerp(a,b,t){ return a+(b-a)*clamp01(t); }
+  function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+  // ---------- state ----------
+  function defaultState(){
+    const today = todayStr();
+    return {
+      createdDate: today,
+      lastFedDate: today,
+      feedCountToday: 0,
+      todayDateForCount: today,
+      growthScore: 0,
+      mutationAvg: 0.3,
+      hibernating: false,
+      hibernationEnteredDate: null,
+      hibernationFeedDays: 0,
+      hibernationLastFeedDate: null,
+      cocoon: false,
+      cocoonNeeded: 0,
+      cocoonGiven: 0
+    };
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultState();
+      return Object.assign(defaultState(), JSON.parse(raw));
+    }catch(e){
+      return defaultState();
+    }
+  }
+  function saveState(state){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  let state = loadState();
+
+  // ---------- daily transitions ----------
+  function recompute(state){
+    const today = todayStr();
+    if(state.cocoon){
+      return state; // 繭化中は自然遷移しない(復活かリセットのみ)
+    }
+    if(state.hibernating){
+      const daysInHib = daysBetween(state.hibernationEnteredDate, today);
+      if(daysInHib >= 10){
+        state.cocoon = true;
+        state.cocoonNeeded = randInt(5,8);
+        state.cocoonGiven = 0;
+        state.hibernating = false;
+        state.hibernationEnteredDate = null;
+        state.hibernationFeedDays = 0;
+        state.hibernationLastFeedDate = null;
+      }
+      return state;
+    }
+    const daysUnfed = daysBetween(state.lastFedDate, today);
+    if(daysUnfed >= 5){
+      state.hibernating = true;
+      state.hibernationEnteredDate = addDays(state.lastFedDate, 5);
+      state.hibernationFeedDays = 0;
+      state.hibernationLastFeedDate = null;
+    }
+    return state;
+  }
+
+  // ---------- FFT (radix-2) ----------
+  function fft(re, im){
+    const n = re.length;
+    for(let i=1,j=0;i<n;i++){
+      let bit = n>>1;
+      for(;j&bit;bit>>=1) j ^= bit;
+      j ^= bit;
+      if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+    }
+    for(let len=2; len<=n; len<<=1){
+      const ang = -2*Math.PI/len;
+      const wr = Math.cos(ang), wi = Math.sin(ang);
+      for(let i=0;i<n;i+=len){
+        let curWr=1, curWi=0;
+        for(let j=0;j<len/2;j++){
+          const ur=re[i+j], ui=im[i+j];
+          const vr=re[i+j+len/2]*curWr - im[i+j+len/2]*curWi;
+          const vi=re[i+j+len/2]*curWi + im[i+j+len/2]*curWr;
+          re[i+j]=ur+vr; im[i+j]=ui+vi;
+          re[i+j+len/2]=ur-vr; im[i+j+len/2]=ui-vi;
+          const nwr = curWr*wr - curWi*wi;
+          const nwi = curWr*wi + curWi*wr;
+          curWr=nwr; curWi=nwi;
+        }
+      }
+    }
+  }
+  function hannWindow(n){
+    const w = new Float32Array(n);
+    for(let i=0;i<n;i++) w[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/(n-1));
+    return w;
+  }
+
+  // ---------- audio analysis ----------
+  function estimateBPM(mono, sr){
+    const maxSamples = Math.min(mono.length, sr*30);
+    const frame = 1024, hop = 512;
+    const env = [];
+    for(let i=0; i+frame<=maxSamples; i+=hop){
+      let s=0;
+      for(let j=0;j<frame;j++){ const v=mono[i+j]; s+=v*v; }
+      env.push(Math.sqrt(s/frame));
+    }
+    if(env.length < 8) return 100;
+    const envSr = sr/hop;
+    const mean = env.reduce((a,b)=>a+b,0)/env.length;
+    const centered = env.map(v=>v-mean);
+    const minLag = Math.max(1, Math.floor(envSr*60/180));
+    const maxLag = Math.min(centered.length-1, Math.floor(envSr*60/60));
+    let bestLag = minLag, bestVal = -Infinity;
+    for(let lag=minLag; lag<=maxLag; lag++){
+      let sum=0;
+      for(let i=0;i+lag<centered.length;i++){ sum += centered[i]*centered[i+lag]; }
+      if(sum>bestVal){ bestVal=sum; bestLag=lag; }
+    }
+    return 60*envSr/bestLag;
+  }
+
+  function estimateFlatness(mono, sr){
+    const fftSize = 2048;
+    const window = hannWindow(fftSize);
+    const maxSamples = Math.min(mono.length, sr*30);
+    const hop = fftSize;
+    const flatnesses = [];
+    for(let start=0; start+fftSize<=maxSamples; start+=hop){
+      const re = new Float32Array(fftSize);
+      const im = new Float32Array(fftSize);
+      for(let i=0;i<fftSize;i++) re[i] = mono[start+i]*window[i];
+      fft(re, im);
+      const half = fftSize/2;
+      let logSum=0, sum=0, count=0;
+      for(let k=1;k<half;k++){
+        const mag = Math.sqrt(re[k]*re[k]+im[k]*im[k]) + 1e-9;
+        logSum += Math.log(mag);
+        sum += mag;
+        count++;
+      }
+      const geoMean = Math.exp(logSum/count);
+      const arithMean = sum/count;
+      flatnesses.push(geoMean/arithMean);
+    }
+    if(!flatnesses.length) return 0.1;
+    return flatnesses.reduce((a,b)=>a+b,0)/flatnesses.length;
+  }
+
+  function estimateStereoWidth(audioBuffer){
+    if(audioBuffer.numberOfChannels < 2) return 0;
+    const L = audioBuffer.getChannelData(0);
+    const R = audioBuffer.getChannelData(1);
+    const len = Math.min(L.length, R.length);
+    let midSum=0, sideSum=0;
+    const step = Math.max(1, Math.floor(len/200000));
+    let n=0;
+    for(let i=0;i<len;i+=step){
+      const mid = (L[i]+R[i])/2;
+      const side = (L[i]-R[i])/2;
+      midSum += mid*mid;
+      sideSum += side*side;
+      n++;
+    }
+    const midE = midSum/n, sideE = sideSum/n;
+    return sideE/(midE+sideE+1e-9);
+  }
+
+  async function analyzeFile(file){
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+    const sr = audioBuffer.sampleRate;
+    const ch0 = audioBuffer.getChannelData(0);
+
+    const bpm = estimateBPM(ch0, sr);
+    const flatness = estimateFlatness(ch0, sr);
+    const duration = audioBuffer.duration;
+    const stereoWidth = estimateStereoWidth(audioBuffer);
+
+    return { bpm, flatness, duration, stereoWidth };
+  }
+
+  // ---------- nutrition -> growth ----------
+  function computeContribution(analysis){
+    const energyNorm = clamp01((analysis.bpm-60)/(180-60));
+    const individualityNorm = clamp01(analysis.flatness/0.5);
+    const fullnessNorm = clamp01((analysis.duration-60)/(300-60));
+    const mutationNorm = clamp01(analysis.stereoWidth*3);
+    const growth = (energyNorm*0.35 + individualityNorm*0.35 + fullnessNorm*0.3) * 100;
+    return { growth, mutationNorm };
+  }
+
+  function stageIndex(growthScore){
+    const th = [0, 250, 550, 900, 1300];
+    let idx = 0;
+    for(let i=0;i<th.length;i++){ if(growthScore>=th[i]) idx=i; }
+    return idx;
+  }
+  const stageNames = ['ポリプ様','幼虫','青年','成体','老体'];
+
+  // ---------- feed pipeline ----------
+  async function feedPet(file){
+    const feedStatus = document.getElementById('feedStatus');
+    feedStatus.textContent = '解析中...';
+    try{
+      state = recompute(state);
+      const analysis = await analyzeFile(file);
+      const { growth, mutationNorm } = computeContribution(analysis);
+      const today = todayStr();
+
+      if(state.cocoon){
+        state.cocoonGiven++;
+        if(state.cocoonGiven >= state.cocoonNeeded){
+          state.cocoon = false;
+          state.lastFedDate = today;
+          state.feedCountToday = 0;
+          state.todayDateForCount = today;
+          feedStatus.textContent = '繭が破れ、目を覚ました…!';
+        }else{
+          feedStatus.textContent = 'まだ繭の中で何かが動いている…';
+        }
+      }else if(state.hibernating){
+        if(state.hibernationLastFeedDate !== today){
+          state.hibernationFeedDays++;
+          state.hibernationLastFeedDate = today;
+        }
+        if(state.todayDateForCount !== today){ state.feedCountToday = 0; state.todayDateForCount = today; }
+        const mult = Math.pow(0.5, state.feedCountToday);
+        state.feedCountToday++;
+        state.growthScore += growth*mult;
+        state.mutationAvg = state.mutationAvg*0.8 + mutationNorm*0.2;
+        state.lastFedDate = today;
+
+        if(state.hibernationFeedDays >= 2){
+          state.hibernating = false;
+          state.hibernationEnteredDate = null;
+          state.hibernationFeedDays = 0;
+          state.hibernationLastFeedDate = null;
+          feedStatus.textContent = '冬眠から目を覚ました!';
+        }else{
+          feedStatus.textContent = '冬眠中…そっと置き餌をした';
+        }
+      }else{
+        if(state.todayDateForCount !== today){ state.feedCountToday = 0; state.todayDateForCount = today; }
+        const mult = Math.pow(0.5, state.feedCountToday);
+        state.feedCountToday++;
+        state.growthScore += growth*mult;
+        state.mutationAvg = state.mutationAvg*0.8 + mutationNorm*0.2;
+        state.lastFedDate = today;
+        feedStatus.textContent = 'ごはんをあげた';
+      }
+
+      saveState(state);
+      render();
+    }catch(err){
+      console.error(err);
+      feedStatus.textContent = '解析に失敗しました: ' + err.message;
+    }
+  }
+
+  // ---------- rendering ----------
+  const stageTemplates = [
+    // 0: ポリプ様
+    `<g transform="translate(70,124) scale(0.31) translate(-70,-124)">
+      <ellipse cx="70" cy="120" rx="30" ry="8" fill="#1a2030"/>
+      <path d="M45 122 Q40 90 55 65 Q70 45 85 65 Q100 90 95 122 Z" fill="#c98bff" stroke="#6b3fa0" stroke-width="2"/>
+      <path d="M58 60 Q56 48 60 40" stroke="#c98bff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M82 60 Q84 48 80 40" stroke="#c98bff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <circle cx="62" cy="85" r="7" fill="#0a0d14"/>
+      <circle cx="80" cy="85" r="7" fill="#0a0d14"/>
+      <circle cx="63.5" cy="82.5" r="2" fill="#fff"/>
+      <circle cx="81.5" cy="82.5" r="2" fill="#fff"/>
+      <path d="M65 100 Q70 104 75 100" stroke="#4a2a70" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </g>`,
+    // 1: 幼虫
+    `<g>
+      <ellipse cx="70" cy="128" rx="6" ry="4" fill="#1a2030"/>
+      <ellipse cx="45" cy="128" rx="6" ry="4" fill="#1a2030"/>
+      <ellipse cx="95" cy="128" rx="6" ry="4" fill="#1a2030"/>
+      <ellipse cx="95" cy="108" rx="22" ry="18" fill="#b96fff" stroke="#6b3fa0" stroke-width="2"/>
+      <ellipse cx="65" cy="112" rx="20" ry="17" fill="#c07dff" stroke="#6b3fa0" stroke-width="2"/>
+      <ellipse cx="40" cy="116" rx="16" ry="14" fill="#c98bff" stroke="#6b3fa0" stroke-width="2"/>
+      <path d="M32 100 Q28 88 32 80" stroke="#c98bff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <path d="M44 98 Q42 86 46 80" stroke="#c98bff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <circle cx="33" cy="112" r="5" fill="#0a0d14"/>
+      <circle cx="46" cy="112" r="5" fill="#0a0d14"/>
+      <circle cx="34.3" cy="110.3" r="1.5" fill="#fff"/>
+      <circle cx="47.3" cy="110.3" r="1.5" fill="#fff"/>
+    </g>`,
+    // 2: 青年
+    `<g>
+      <ellipse cx="70" cy="132" rx="34" ry="7" fill="#1a2030"/>
+      <path d="M50 60 Q30 55 22 40" stroke="#2ee6ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M90 60 Q110 55 118 40" stroke="#2ee6ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M40 128 Q35 105 48 78 Q60 55 80 55 Q100 55 105 80 Q112 105 100 128 Z" fill="#8fd6ff" stroke="#1c7a99" stroke-width="2"/>
+      <path d="M55 60 L50 42" stroke="#8fd6ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M85 60 L90 42" stroke="#8fd6ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M46 115 Q30 118 22 128" stroke="#8fd6ff" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <path d="M94 115 Q110 118 118 128" stroke="#8fd6ff" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <path d="M58 88 L65 82 L72 88" stroke="#1c3d47" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <path d="M78 88 L85 82 L92 88" stroke="#1c3d47" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    </g>`,
+    // 3: 成体
+    `<g>
+      <ellipse cx="70" cy="134" rx="38" ry="7" fill="#1a2030"/>
+      <path d="M42 60 Q10 50 8 20 Q28 28 44 48 Z" fill="#ff6fd0" stroke="#99235f" stroke-width="2"/>
+      <path d="M98 60 Q130 50 132 20 Q112 28 96 48 Z" fill="#ff6fd0" stroke="#99235f" stroke-width="2"/>
+      <path d="M38 130 Q30 100 46 70 Q60 45 80 45 Q100 45 106 72 Q116 100 102 130 Z" fill="#ff8ade" stroke="#99235f" stroke-width="2"/>
+      <circle cx="70" cy="75" r="3" fill="#fff6fb" opacity="0.85"/>
+      <circle cx="58" cy="95" r="2.4" fill="#fff6fb" opacity="0.75"/>
+      <circle cx="82" cy="95" r="2.4" fill="#fff6fb" opacity="0.75"/>
+      <path d="M52 55 L46 35" stroke="#ff8ade" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M88 55 L94 35" stroke="#ff8ade" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M44 118 Q28 122 18 132" stroke="#ff8ade" stroke-width="7" stroke-linecap="round" fill="none"/>
+      <path d="M96 118 Q112 122 122 132" stroke="#ff8ade" stroke-width="7" stroke-linecap="round" fill="none"/>
+      <path d="M56 84 Q62 80 68 84" stroke="#5c1236" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <path d="M72 84 Q78 80 84 84" stroke="#5c1236" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    </g>`,
+    // 4: 老体
+    `<g>
+      <ellipse cx="72" cy="134" rx="36" ry="7" fill="#1a2030"/>
+      <path d="M46 68 Q18 66 14 42 Q30 46 46 58 Z" fill="#9b7fa8" stroke="#544058" stroke-width="2" opacity="0.85"/>
+      <path d="M96 68 Q124 66 128 42 Q112 46 96 58 Z" fill="#9b7fa8" stroke="#544058" stroke-width="2" opacity="0.85"/>
+      <path d="M42 128 Q34 100 50 76 Q62 58 78 60 Q96 62 100 84 Q108 106 96 128 Z" fill="#a98fb5" stroke="#544058" stroke-width="2"/>
+      <path d="M55 78 L60 100" stroke="#544058" stroke-width="1" opacity="0.6" fill="none"/>
+      <path d="M85 82 L82 104" stroke="#544058" stroke-width="1" opacity="0.6" fill="none"/>
+      <path d="M55 60 Q50 48 54 38" stroke="#a98fb5" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"/>
+      <path d="M88 62 Q94 50 92 40" stroke="#a98fb5" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"/>
+      <path d="M46 122 Q34 124 26 132" stroke="#a98fb5" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <path d="M92 122 Q104 124 112 132" stroke="#a98fb5" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <path d="M58 92 Q64 95 70 92" stroke="#3e2f42" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M78 92 Q84 95 90 92" stroke="#3e2f42" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </g>`
+  ];
+
+  function render(){
+    const today = todayStr();
+    const stageLabel = document.getElementById('stageLabel');
+    const statusLabel = document.getElementById('statusLabel');
+    const petView = document.getElementById('petView');
+    const cocoonView = document.getElementById('cocoonView');
+    const flavorText = document.getElementById('flavorText');
+    const daysLine = document.getElementById('daysLine');
+
+    const idx = stageIndex(state.growthScore);
+    stageLabel.textContent = 'STAGE ' + String(idx+1).padStart(2,'0') + ' &mdash; ' + stageNames[idx];
+    stageLabel.innerHTML = 'STAGE ' + String(idx+1).padStart(2,'0') + ' &mdash; ' + stageNames[idx];
+
+    const hue = Math.round(260 + state.mutationAvg*200) % 360;
+
+    if(state.cocoon){
+      cocoonView.style.display = 'flex';
+      petView.style.display = 'none';
+      statusLabel.textContent = '繭化中';
+      statusLabel.className = 'pet-status cocoon';
+      flavorText.textContent = '静かに繭の中で眠っている…mp3を与え続ければ、また目を覚ますかもしれない';
+      daysLine.textContent = '';
+    }else{
+      cocoonView.style.display = 'none';
+      petView.style.display = 'block';
+      petView.innerHTML = `<svg class="pet-svg ${state.hibernating?'sleepy':''}" style="--hue:${hue}deg; filter:${state.hibernating?'':'hue-rotate('+hue+'deg)'}" viewBox="0 0 140 150" xmlns="http://www.w3.org/2000/svg">${stageTemplates[idx]}</svg>`;
+
+      if(state.hibernating){
+        statusLabel.textContent = '冬眠中';
+        statusLabel.className = 'pet-status hibernating';
+        flavorText.textContent = 'すやすや眠っている…置き餌をしてあげると目を覚ますかも';
+        const daysInHib = daysBetween(state.hibernationEnteredDate, today);
+        daysLine.textContent = '冬眠して ' + Math.max(0,daysInHib) + ' 日経過';
+      }else{
+        statusLabel.textContent = 'げんき';
+        statusLabel.className = 'pet-status normal';
+        flavorText.textContent = 'もりもりmp3を食べて育っている';
+        const daysUnfed = daysBetween(state.lastFedDate, today);
+        daysLine.textContent = '最後にごはんをあげてから ' + daysUnfed + ' 日';
+      }
+    }
+  }
+
+  // ---------- init ----------
+  state = recompute(state);
+  saveState(state);
+  render();
+
+  // ---------- UI wiring ----------
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', e=>{
+    if(e.target.files.length) feedPet(e.target.files[0]);
+  });
+  ['dragenter','dragover'].forEach(evt=>{
+    dropZone.addEventListener(evt, e=>{
+      e.preventDefault(); e.stopPropagation();
+      dropZone.style.borderColor = '#2ee6ff';
+    });
+  });
+  ['dragleave','dragend'].forEach(evt=>{
+    dropZone.addEventListener(evt, e=>{
+      e.preventDefault(); e.stopPropagation();
+      dropZone.style.borderColor = '';
+    });
+  });
+  dropZone.addEventListener('drop', e=>{
+    e.preventDefault(); e.stopPropagation();
+    dropZone.style.borderColor = '';
+    if(e.dataTransfer.files.length) feedPet(e.dataTransfer.files[0]);
+  });
+  ['dragover','drop'].forEach(evt=>{
+    window.addEventListener(evt, e=> e.preventDefault());
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    if(!confirm('本当に最初からやり直しますか?今のペットのデータは消えます。')) return;
+    state = defaultState();
+    saveState(state);
+    render();
+    document.getElementById('feedStatus').textContent = '';
+  });
+
+})();
+</script>
+</body>
+</html>

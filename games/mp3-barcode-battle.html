@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MP3 BARCODE BATTLE</title>
+<style>
+  :root{
+    --bg: #0a0d14;
+    --bg2: #10141f;
+    --a-color: #ff2ea6;
+    --b-color: #2ee6ff;
+    --a-glow: rgba(255,46,166,0.55);
+    --b-glow: rgba(46,230,255,0.55);
+    --ink: #eef1f8;
+    --ink-dim: #7d879c;
+    --panel: #131826;
+    --line: #232b3d;
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin:0;
+    background: radial-gradient(1200px 600px at 50% -10%, #1a2035 0%, var(--bg) 60%);
+    color: var(--ink);
+    font-family: 'Courier New', 'Consolas', monospace;
+    min-height:100vh;
+    padding: 24px 16px 60px;
+  }
+  h1{
+    text-align:center;
+    font-size: clamp(22px, 5vw, 38px);
+    letter-spacing: 4px;
+    margin: 4px 0 2px;
+    background: linear-gradient(90deg, var(--a-color), var(--b-color));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(255,255,255,0.08);
+  }
+  .subtitle{
+    text-align:center;
+    color: var(--ink-dim);
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin-bottom: 28px;
+  }
+  .arena{
+    max-width: 920px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 700px){
+    .arena{ grid-template-columns: 1fr; }
+  }
+  .fighter{
+    background: linear-gradient(180deg, var(--panel), #0d1120);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    position: relative;
+    overflow:hidden;
+  }
+  .fighter.side-a{ box-shadow: inset 3px 0 0 var(--a-color); }
+  .fighter.side-b{ box-shadow: inset 3px 0 0 var(--b-color); }
+  .slot-label{
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--ink-dim);
+    margin-bottom: 10px;
+  }
+  .side-a .slot-label{ color: var(--a-color); }
+  .side-b .slot-label{ color: var(--b-color); }
+
+  .dropzone{
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 22px 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ink-dim);
+    transition: border-color .2s, background .2s;
+  }
+  .dropzone:hover{ border-color: var(--ink-dim); background: rgba(255,255,255,0.02); }
+  .dropzone input{ display:none; }
+  .track-name{
+    font-size: 13px;
+    margin: 10px 0 2px;
+    word-break: break-all;
+    color: var(--ink);
+  }
+  .status{
+    font-size: 11px;
+    color: var(--ink-dim);
+    min-height: 14px;
+    margin-bottom: 8px;
+  }
+
+  .stat-row{ margin: 8px 0; }
+  .stat-label{
+    display:flex; justify-content:space-between;
+    font-size: 11px; letter-spacing:1px; color: var(--ink-dim);
+    margin-bottom: 3px;
+  }
+  .stat-label b{ color: var(--ink); font-weight: normal; }
+  .bar-track{
+    height: 8px; border-radius: 4px;
+    background: #1a2033;
+    overflow:hidden;
+    border: 1px solid var(--line);
+  }
+  .bar-fill{
+    height: 100%; width:0%;
+    border-radius: 4px;
+    transition: width .5s ease;
+  }
+  .side-a .bar-fill{ background: linear-gradient(90deg, #ff2ea6, #ff8ad1); box-shadow: 0 0 8px var(--a-glow); }
+  .side-b .bar-fill{ background: linear-gradient(90deg, #2ee6ff, #9df7ff); box-shadow: 0 0 8px var(--b-glow); }
+  .bar-fill.hp{ background: linear-gradient(90deg, #ffd23f, #ff9d3f); box-shadow: 0 0 8px rgba(255,180,50,0.5); }
+
+  .hp-number{ font-size: 11px; color: var(--ink-dim); text-align:right; margin-top:2px; }
+
+  #startBtn{
+    display:block; margin: 26px auto 10px;
+    background: transparent;
+    border: 1px solid var(--ink-dim);
+    color: var(--ink);
+    padding: 12px 30px;
+    font-family: inherit;
+    letter-spacing: 3px;
+    font-size: 13px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  #startBtn:hover:not(:disabled){
+    border-color: #fff;
+    box-shadow: 0 0 18px rgba(255,255,255,0.15);
+  }
+  #startBtn:disabled{ opacity: 0.35; cursor: not-allowed; }
+
+  #battleCanvas{
+    display:block;
+    max-width: 920px;
+    width: 100%;
+    margin: 18px auto 4px;
+    border-radius: 10px;
+    background: #05070c;
+    border: 1px solid var(--line);
+  }
+
+  #log{
+    max-width: 920px;
+    margin: 6px auto 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.9;
+    max-height: 180px;
+    overflow-y: auto;
+    color: var(--ink-dim);
+  }
+  #log .me{ color: var(--ink); }
+  #log .win{ color: #ffd23f; }
+
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+  <h1>MP3 BARCODE BATTLE</h1>
+  <div class="subtitle">音の中身が武器になる &mdash; PROTOTYPE</div>
+
+  <div class="arena">
+    <div class="fighter side-a" id="fighterA">
+      <div class="slot-label">PLAYER A</div>
+      <div class="dropzone" id="dropA">
+        MP3をドロップ / タップして選択
+        <input type="file" id="fileA" accept="audio/mpeg,audio/mp3,.mp3">
+      </div>
+      <div class="track-name" id="nameA"></div>
+      <div class="status" id="statusA"></div>
+      <div id="statsA"></div>
+    </div>
+
+    <div class="fighter side-b" id="fighterB">
+      <div class="slot-label">PLAYER B</div>
+      <div class="dropzone" id="dropB">
+        MP3をドロップ / タップして選択
+        <input type="file" id="fileB" accept="audio/mpeg,audio/mp3,.mp3">
+      </div>
+      <div class="track-name" id="nameB"></div>
+      <div class="status" id="statusB"></div>
+      <div id="statsB"></div>
+    </div>
+  </div>
+
+  <button id="startBtn" disabled>BATTLE START</button>
+
+  <canvas id="battleCanvas" width="920" height="220" class="hidden"></canvas>
+  <div id="log" class="hidden"></div>
+
+<script>
+(function(){
+  const state = { A: null, B: null };
+
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // ---------- FFT (radix-2, power-of-2 length) ----------
+  function fft(re, im){
+    const n = re.length;
+    for(let i=1,j=0;i<n;i++){
+      let bit = n>>1;
+      for(;j&bit;bit>>=1) j ^= bit;
+      j ^= bit;
+      if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+    }
+    for(let len=2; len<=n; len<<=1){
+      const ang = -2*Math.PI/len;
+      const wr = Math.cos(ang), wi = Math.sin(ang);
+      for(let i=0;i<n;i+=len){
+        let curWr=1, curWi=0;
+        for(let j=0;j<len/2;j++){
+          const ur=re[i+j], ui=im[i+j];
+          const vr=re[i+j+len/2]*curWr - im[i+j+len/2]*curWi;
+          const vi=re[i+j+len/2]*curWi + im[i+j+len/2]*curWr;
+          re[i+j]=ur+vr; im[i+j]=ui+vi;
+          re[i+j+len/2]=ur-vr; im[i+j+len/2]=ui-vi;
+          const nwr = curWr*wr - curWi*wi;
+          const nwi = curWr*wi + curWi*wr;
+          curWr=nwr; curWi=nwi;
+        }
+      }
+    }
+  }
+
+  function hannWindow(n){
+    const w = new Float32Array(n);
+    for(let i=0;i<n;i++) w[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/(n-1));
+    return w;
+  }
+
+  // ---------- Hash (FNV-1a) for "luck" ----------
+  async function hashBufferToLuck(arrayBuffer){
+    const bytes = new Uint8Array(arrayBuffer);
+    let h = 0x811c9dc5;
+    // サンプリングして高速化(全バイトだと重いので間引く)
+    const step = Math.max(1, Math.floor(bytes.length / 200000));
+    for(let i=0;i<bytes.length;i+=step){
+      h ^= bytes[i];
+      h = Math.imul(h, 0x01000193);
+    }
+    const unsigned = h >>> 0;
+    return { luck: unsigned % 100, rawHash: unsigned };
+  }
+
+  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+  function lerp(a,b,t){ return a + (b-a)*clamp01(t); }
+
+  // ---------- Core analysis ----------
+  async function analyzeFile(file){
+    const arrayBuffer = await file.arrayBuffer();
+    const { luck, rawHash } = await hashBufferToLuck(arrayBuffer);
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+
+    const sr = audioBuffer.sampleRate;
+    const ch0 = audioBuffer.getChannelData(0);
+    const ch1 = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : null;
+    const len = ch0.length;
+
+    // モノラル化(参照はコピーせず都度計算)
+    const monoAt = (i) => ch1 ? (ch0[i]+ch1[i])/2 : ch0[i];
+
+    // 全体RMS
+    let sumSq = 0;
+    for(let i=0;i<len;i++){ const v = monoAt(i); sumSq += v*v; }
+    const rmsFull = Math.sqrt(sumSq/len) || 1e-9;
+    const rmsDb = 20*Math.log10(rmsFull);
+
+    // ブロック分割(3秒)でRMSとスペクトル重心
+    const blockSize = Math.floor(sr*3);
+    const blockCount = Math.max(1, Math.floor(len/blockSize));
+    const blockRms = [];
+    const centroids = [];
+
+    const fftSize = 2048;
+    const window = hannWindow(fftSize);
+
+    for(let b=0; b<blockCount; b++){
+      const start = b*blockSize;
+      const end = Math.min(len, start+blockSize);
+
+      // block RMS
+      let bs = 0;
+      for(let i=start;i<end;i++){ const v = monoAt(i); bs += v*v; }
+      blockRms.push(Math.sqrt(bs/(end-start)) || 1e-9);
+
+      // block内先頭からfftSize分だけ切り出してFFT(代表サンプル)
+      if(end-start >= fftSize){
+        const re = new Float32Array(fftSize);
+        const im = new Float32Array(fftSize);
+        for(let i=0;i<fftSize;i++) re[i] = monoAt(start+i) * window[i];
+        fft(re, im);
+        let num=0, den=0;
+        const half = fftSize/2;
+        for(let k=1;k<half;k++){
+          const mag = Math.sqrt(re[k]*re[k] + im[k]*im[k]);
+          const freq = k*sr/fftSize;
+          num += freq*mag;
+          den += mag;
+        }
+        centroids.push(den>0 ? num/den : 0);
+      }
+    }
+
+    const avgCentroid = centroids.length ? centroids.reduce((a,c)=>a+c,0)/centroids.length : 1000;
+    const maxBlockRms = Math.max(...blockRms);
+    const meanBlockRms = blockRms.reduce((a,c)=>a+c,0)/blockRms.length;
+    const dynamicRangeDb = 20*Math.log10(maxBlockRms/meanBlockRms || 1);
+
+    // ---- スケール変換 ----
+    // HP: -30dB〜-6dB -> 10000〜50000
+    const hpT = clamp01((rmsDb - (-30)) / ((-6) - (-30)));
+    const HP = Math.round(lerp(10000, 50000, hpT));
+
+    // ST: 500Hz〜6000Hz -> 3000〜15000
+    const stT = clamp01((avgCentroid - 500) / (6000-500));
+    const ST = Math.round(lerp(3000, 15000, stT));
+
+    // DF: 3dB〜20dB -> 1000〜9000
+    const dfT = clamp01((dynamicRangeDb - 3) / (20-3));
+    const DF = Math.round(lerp(1000, 9000, dfT));
+
+    return {
+      name: file.name,
+      HP, ST, DF, LUCK: luck,
+      rawHash,
+      debug: { rmsDb, avgCentroid, dynamicRangeDb }
+    };
+  }
+
+  // ---------- UI wiring ----------
+  function renderStats(side, data){
+    const el = document.getElementById('stats'+side);
+    el.innerHTML = `
+      <div class="stat-row">
+        <div class="stat-label"><span>HP</span><b>${data.HP.toLocaleString()}</b></div>
+        <div class="bar-track"><div class="bar-fill hp" style="width:${(data.HP/50000*100).toFixed(0)}%"></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label"><span>ST (攻撃力)</span><b>${data.ST.toLocaleString()}</b></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(data.ST/15000*100).toFixed(0)}%"></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label"><span>DF (守備力)</span><b>${data.DF.toLocaleString()}</b></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(data.DF/9000*100).toFixed(0)}%"></div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label"><span>LUCK (先攻判定)</span><b>${data.LUCK}</b></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${data.LUCK}%; background:#888; box-shadow:none;"></div></div>
+      </div>
+    `;
+  }
+
+  function setupSlot(side){
+    const drop = document.getElementById('drop'+side);
+    const input = document.getElementById('file'+side);
+    const nameEl = document.getElementById('name'+side);
+    const statusEl = document.getElementById('status'+side);
+
+    drop.addEventListener('click', ()=> input.click());
+    drop.addEventListener('dragover', e=>{ e.preventDefault(); });
+    drop.addEventListener('drop', e=>{
+      e.preventDefault();
+      if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', e=>{
+      if(e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    async function handleFile(file){
+      nameEl.textContent = file.name;
+      statusEl.textContent = '解析中...';
+      document.getElementById('stats'+side).innerHTML = '';
+      startBtn.disabled = true;
+      try{
+        const data = await analyzeFile(file);
+        state[side] = data;
+        statusEl.textContent = '解析完了';
+        renderStats(side, data);
+        if(state.A && state.B) startBtn.disabled = false;
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = '解析失敗: ' + err.message;
+      }
+    }
+  }
+
+  setupSlot('A');
+  setupSlot('B');
+
+  const startBtn = document.getElementById('startBtn');
+  const canvas = document.getElementById('battleCanvas');
+  const ctx = canvas.getContext('2d');
+  const logEl = document.getElementById('log');
+
+  function log(html, cls){
+    const line = document.createElement('div');
+    if(cls) line.className = cls;
+    line.innerHTML = html;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function centroidToHue(centroidVal){
+    // 500Hz(赤寄り) 〜 6000Hz(白〜水色寄り) を色相にざっくりマップ
+    const t = clamp01((centroidVal-500)/(6000-500));
+    return lerp(10, 200, t); // 10=赤系, 200=シアン系
+  }
+
+  function drawArenaBase(hpA, hpB, maxHpA, maxHpB){
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.fillStyle = '#05070c';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+
+    // 中央ライン
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2, 20);
+    ctx.lineTo(canvas.width/2, canvas.height-20);
+    ctx.stroke();
+
+    drawFighterBlock(60, hpA, maxHpA, '#ff2ea6', 'A');
+    drawFighterBlock(canvas.width-60, hpB, maxHpB, '#2ee6ff', 'B');
+  }
+
+  function drawFighterBlock(cx, hp, maxHp, color, label){
+    const barW = 220, barH = 14;
+    const x = cx - barW/2;
+    const y = 30;
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeRect(x, y, barW, barH);
+    const ratio = clamp01(hp/maxHp);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+    ctx.fillRect(x+2, y+2, (barW-4)*ratio, barH-4);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#eef1f8';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(label + '  HP ' + Math.max(0,Math.round(hp)), cx, y-8);
+
+    // 円(キャラの代わり)
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.15 + 0.15*ratio;
+    ctx.arc(cx, canvas.height/2+20, 46, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, canvas.height/2+20, 46, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  async function playAttackEffect(fromCx, toCx, hue, power){
+    const steps = 12;
+    for(let s=0;s<=steps;s++){
+      const t = s/steps;
+      const x = lerp(fromCx, toCx, t);
+      ctx.beginPath();
+      const r = lerp(6, 4+power*10, Math.sin(t*Math.PI));
+      ctx.fillStyle = `hsl(${hue}, 90%, 60%)`;
+      ctx.shadowColor = `hsl(${hue}, 90%, 60%)`;
+      ctx.shadowBlur = 20;
+      ctx.arc(x, canvas.height/2+20, r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      await sleep(16);
+    }
+  }
+
+  async function playImpactShake(cx, intensity){
+    const original = canvas.style.transform;
+    for(let i=0;i<6;i++){
+      const dx = (Math.random()-0.5)*intensity;
+      canvas.style.transform = `translateX(${dx}px)`;
+      await sleep(30);
+    }
+    canvas.style.transform = original || '';
+  }
+
+  function damage(attacker, defender){
+    const st = attacker.ST;
+    const df = defender.DF;
+    return st * (st/(st+df));
+  }
+
+  async function runBattle(){
+    canvas.classList.remove('hidden');
+    logEl.classList.remove('hidden');
+    logEl.innerHTML = '';
+    startBtn.disabled = true;
+
+    const A = { ...state.A, curHP: state.A.HP };
+    const B = { ...state.B, curHP: state.B.HP };
+
+    log(`<span class="me">${A.name}</span> vs <span class="me">${B.name}</span>`);
+    log(`LUCK &mdash; A: ${A.LUCK} / B: ${B.LUCK}`);
+
+    let attackerSide = A.LUCK >= B.LUCK ? 'A' : 'B';
+    log(`${attackerSide === 'A' ? A.name : B.name} が先攻!`);
+
+    drawArenaBase(A.curHP, B.curHP, state.A.HP, state.B.HP);
+    await sleep(400);
+
+    let turn = 0;
+    while(A.curHP > 0 && B.curHP > 0 && turn < 60){
+      turn++;
+      const attacker = attackerSide === 'A' ? A : B;
+      const defender = attackerSide === 'A' ? B : A;
+      const fromCx = attackerSide === 'A' ? 60 : canvas.width-60;
+      const toCx = attackerSide === 'A' ? canvas.width-60 : 60;
+      const hue = centroidToHue(attacker.debug.avgCentroid);
+
+      const dmg = damage(attacker, defender);
+      defender.curHP = Math.max(0, defender.curHP - dmg);
+
+      await playAttackEffect(fromCx, toCx, hue, dmg/attacker.ST);
+      drawArenaBase(A.curHP, B.curHP, state.A.HP, state.B.HP);
+      await playImpactShake(toCx, Math.min(16, dmg/300));
+      drawArenaBase(A.curHP, B.curHP, state.A.HP, state.B.HP);
+
+      log(`${attacker.name} の攻撃! ${defender.name} に ${Math.round(dmg).toLocaleString()} ダメージ (残りHP ${Math.max(0,Math.round(defender.curHP)).toLocaleString()})`);
+
+      attackerSide = attackerSide === 'A' ? 'B' : 'A';
+      await sleep(250);
+    }
+
+    const winner = A.curHP <= 0 ? B : A;
+    log(`<span class="win">${winner.name} の勝利!</span>`);
+
+    // 決着演出: 敗者側フェード
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#ffd23f';
+    ctx.font = 'bold 22px monospace';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ffd23f';
+    ctx.shadowBlur = 20;
+    ctx.fillText('WINNER: ' + winner.name, canvas.width/2, canvas.height/2);
+    ctx.restore();
+
+    startBtn.disabled = false;
+  }
+
+  startBtn.addEventListener('click', runBattle);
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!-- GitHub Pagesなど通常のヘッダー設定ができないホスティングでもSharedArrayBufferを使えるようにする(mp4変換に必要) -->
+<script src="./coi-serviceworker.js"></script>
+<meta charset="UTF-8">
+<title>EDIT Manager Pro :: STILL IMAGE MUSIC VIDEO EDITOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1b1621;
+    --panel:#241c2c;
+    --panel2:#2b2235;
+    --line:#3a2e46;
+    --pink:#ff8fc4;
+    --pink-soft:rgba(255,143,196,0.20);
+    --lavender:#b98ee8;
+    --lavender-soft:rgba(185,142,232,0.20);
+    --gold:#ffd166;
+    --gold-soft:rgba(255,209,102,0.22);
+    --text:#f7eefb;
+    --text-dim:#9a8aab;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at 15% -10%, rgba(255,143,196,0.10), transparent 45%),
+      radial-gradient(ellipse at 100% 0%, rgba(185,142,232,0.10), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif;
+    min-height:100vh;
+    padding:20px;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand img{
+    width:44px; height:44px; border-radius:50%; object-fit:cover;
+    border:2px solid var(--pink); box-shadow:0 0 14px rgba(255,143,196,0.5);
+  }
+  h1{ margin:0; font-size:22px; letter-spacing:1px; font-weight:800; }
+  h1 span{ color:var(--pink); }
+  .tag{ font-size:10px; letter-spacing:1.5px; color:var(--text-dim); margin-top:2px; }
+  .fps-set{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-dim); }
+  .fps-set input{
+    width:52px; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    font-family:inherit; font-size:11px; padding:5px 6px; border-radius:8px;
+  }
+  #statusTag{
+    background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:5px 12px;
+    font-size:10px; color:var(--pink);
+  }
+
+  .stage-wrap{ display:flex; flex-direction:column; align-items:center; }
+  .stage{
+    background:#000; border:1px solid var(--line); border-radius:12px; position:relative;
+    overflow:hidden; aspect-ratio:16/9; width:100%; max-width:820px;
+    box-shadow:0 0 0 1px rgba(255,143,196,0.08), 0 10px 40px rgba(0,0,0,0.4);
+  }
+  canvas{ width:100%; height:100%; display:block; background:#000; }
+  .stage-label{
+    position:absolute; top:8px; left:10px; font-size:10px; letter-spacing:1.5px;
+    color:var(--pink); opacity:0.9; pointer-events:none;
+  }
+
+  .transport{
+    width:100%; max-width:820px; display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap;
+  }
+  button{
+    background:var(--panel); border:1px solid var(--line); color:var(--text);
+    padding:8px 16px; font-family:inherit; font-size:11px; letter-spacing:1px;
+    border-radius:20px; cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  button:hover{ border-color:var(--pink); color:var(--pink); }
+  button.primary{ border-color:var(--pink); color:var(--pink); background:var(--pink-soft); }
+  button.small{ padding:4px 10px; font-size:9px; border-radius:14px; }
+  button.danger:hover{ border-color:#ff6b6b; color:#ff6b6b; }
+
+  .timecode{
+    font-size:13px; letter-spacing:1px; color:var(--text); min-width:150px; text-align:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:8px 10px;
+  }
+  .zoom-set{ display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-dim); }
+  input[type=range]{
+    -webkit-appearance:none; height:4px; background:var(--line); border-radius:3px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px;height:14px; border-radius:50%;
+    background:var(--pink); box-shadow:0 0 8px rgba(255,143,196,0.8); cursor:pointer; margin-top:-5px;
+  }
+  #zoomRange{ width:100px; }
+
+  /* ---- Timeline (EDIUS風) ---- */
+  .timeline-outer{
+    margin-top:26px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden;
+  }
+  .timeline-scroll{ overflow-x:auto; position:relative; }
+  .ruler{
+    height:26px; position:relative; background:var(--panel2); border-bottom:1px solid var(--line);
+    min-width:100%;
+  }
+  .ruler .tick{
+    position:absolute; top:0; bottom:0; border-left:1px solid var(--line);
+    font-size:9px; color:var(--text-dim); padding-left:4px; line-height:26px;
+  }
+  .track-row{ display:flex; border-bottom:1px solid var(--line); }
+  .track-row:last-child{ border-bottom:none; }
+  .track-head{
+    width:120px; flex-shrink:0; background:var(--panel2); border-right:1px solid var(--line);
+    padding:8px 10px; display:flex; flex-direction:column; justify-content:center; gap:4px;
+    position:sticky; left:0; z-index:3;
+  }
+  .track-head .name{ font-size:11px; font-weight:700; letter-spacing:0.5px; }
+  .track-head .name.b{ color:var(--pink); }
+  .track-head .name.a{ color:var(--lavender); }
+  .track-head .name.audio{ color:var(--gold); }
+  .track-head .name.lyric{ color:#7fe8c9; }
+  .lyric-block{
+    position:absolute; top:6px; bottom:6px; border-radius:8px; cursor:grab;
+    background:rgba(127,232,201,0.18); border:1px solid #7fe8c9; overflow:hidden;
+    display:flex; align-items:center; padding:0 8px; font-size:10px; color:#7fe8c9;
+    white-space:nowrap; text-overflow:ellipsis;
+  }
+  .lyric-block.selected{ box-shadow:0 0 0 2px var(--gold); }
+  .lyric-block.dragging{ opacity:0.85; z-index:20; }
+  .track-body{ position:relative; flex:1; min-height:56px; }
+  .track-body.audio-body{ min-height:40px; }
+
+  .clip-block{
+    position:absolute; top:4px; bottom:4px; border-radius:8px; overflow:hidden; cursor:pointer;
+    border:2px solid transparent; background-size:cover; background-position:center;
+    display:flex; align-items:flex-end;
+  }
+  .clip-block .label{
+    width:100%; font-size:9px; padding:3px 6px; background:rgba(0,0,0,0.55);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .clip-block.trackB{ box-shadow:inset 0 0 0 999px var(--pink-soft); }
+  .clip-block.trackA{ box-shadow:inset 0 0 0 999px var(--lavender-soft); }
+  .clip-block.selected{ border-color:var(--gold); }
+  .clip-block.dragging{ opacity:0.88; box-shadow:0 6px 18px rgba(0,0,0,0.55); cursor:grabbing; z-index:20; }
+  .resize-handle{
+    position:absolute; right:0; top:0; bottom:0; width:7px; cursor:ew-resize; z-index:6;
+  }
+  .resize-handle:hover{ background:rgba(255,255,255,0.28); }
+  .snap-line{
+    position:absolute; top:0; bottom:0; width:2px; background:var(--pink); z-index:15;
+    box-shadow:0 0 8px rgba(255,143,196,0.9); pointer-events:none; display:none;
+  }
+
+  .trans-block{
+    position:absolute; top:10px; bottom:10px; border-radius:6px; cursor:pointer;
+    background: repeating-linear-gradient(45deg, var(--gold-soft), var(--gold-soft) 4px, transparent 4px, transparent 8px);
+    border:1px solid var(--gold); display:flex; align-items:center; justify-content:center;
+    font-size:8px; color:var(--gold); letter-spacing:0.5px; white-space:nowrap; z-index:8;
+  }
+  .trans-block.selected{ box-shadow:0 0 0 2px var(--gold); }
+  .cut-marker{
+    position:absolute; top:50%; width:22px; height:22px; margin-left:-11px; margin-top:-11px;
+    border-radius:50%; background:var(--panel2); border:3px solid var(--text-dim); cursor:pointer;
+    z-index:8; transition:.15s;
+  }
+  .cut-marker:hover{ border-color:var(--gold); transform:scale(1.15); }
+  .cut-marker.selected{ border-color:var(--gold); background:var(--gold-soft); }
+
+  .audio-block{
+    position:absolute; top:6px; bottom:6px; border-radius:8px; background:var(--gold-soft);
+    border:1px solid var(--gold); display:flex; align-items:center; padding:0 8px;
+    font-size:9px; color:var(--gold); overflow:hidden; white-space:nowrap;
+  }
+
+  .playhead{
+    position:absolute; top:0; bottom:0; width:2px; background:var(--pink); z-index:5; pointer-events:none;
+    box-shadow:0 0 8px rgba(255,143,196,0.9);
+  }
+  .playhead::before{
+    content:''; position:absolute; top:0; left:-5px; border-width:6px 5px 0 5px;
+    border-style:solid; border-color:var(--pink) transparent transparent transparent;
+  }
+
+  .add-btn{
+    font-size:9px; background:var(--panel); border:1px dashed var(--line); color:var(--text-dim);
+    padding:3px 8px; border-radius:12px; cursor:pointer; align-self:flex-start;
+  }
+  .add-btn:hover{ border-color:var(--pink); color:var(--pink); }
+  input[type=file]{ display:none; }
+
+  /* ---- Inspector ---- */
+  .inspector{
+    margin-top:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:16px; min-height:60px;
+  }
+  .inspector h3{ margin:0 0 10px; font-size:11px; letter-spacing:1px; color:var(--pink); }
+  .inspector .empty{ font-size:11px; color:var(--text-dim); }
+  .insp-grid{ display:flex; gap:24px; flex-wrap:wrap; }
+  .insp-col h4{ margin:0 0 8px; font-size:10px; letter-spacing:1px; color:var(--text-dim); }
+  .insp-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; font-size:10px; color:var(--text-dim); }
+  .insp-row input[type=number], .insp-row select{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text); font-family:inherit;
+    font-size:10px; padding:4px 6px; border-radius:6px; width:70px;
+  }
+  .insp-row select{ width:auto; }
+
+  .hint{
+    font-size:10px; color:var(--text-dim); line-height:1.7; margin-top:14px;
+    border-top:1px dashed var(--line); padding-top:10px; max-width:820px;
+  }
+  .activation-overlay{
+    position:fixed; inset:0; z-index:1000; background:rgba(10,7,14,0.92);
+    backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;
+  }
+  .activation-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:36px 32px; width:90%; max-width:320px; text-align:center;
+    box-shadow:0 10px 50px rgba(0,0,0,0.5);
+  }
+  .activation-card h2{ margin:0 0 4px; font-size:20px; font-weight:800; }
+  .activation-card h2 span{ color:var(--pink); }
+  .activation-tag{ font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:16px; }
+  .activation-card p{ font-size:11px; color:var(--text-dim); margin:0 0 16px; }
+  .activation-card input{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    font-family:inherit; font-size:13px; padding:10px 12px; border-radius:20px;
+    text-align:center; letter-spacing:2px; margin-bottom:12px;
+  }
+  .activation-card input:focus{ outline:none; border-color:var(--pink); }
+  .activation-card button{
+    width:100%; background:var(--pink-soft); border:1px solid var(--pink); color:var(--pink);
+    padding:10px; font-family:inherit; font-size:12px; letter-spacing:2px;
+    border-radius:20px; cursor:pointer; transition:.15s;
+  }
+  .activation-card button:hover{ background:rgba(255,143,196,0.3); }
+  .activation-error{ font-size:10px; color:#ff6b6b; margin-top:10px; min-height:14px; }
+</style>
+</head>
+<body>
+
+<div id="activationOverlay" class="activation-overlay">
+  <div class="activation-card">
+    <h2>EDIT <span>Manager Pro</span></h2>
+    <div class="activation-tag">ACTIVATION REQUIRED</div>
+    <p>利用にはアクティベーションキーが必要です</p>
+    <input type="password" id="activationInput" placeholder="キーを入力" autocomplete="off">
+    <button id="activationBtn">起動する</button>
+    <div class="activation-error" id="activationError"></div>
+  </div>
+</div>
+
+<header>
+  <div class="brand">
+    <img src="data:image/jpeg;base64,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" alt="mascot">
+    <div>
+      <h1>EDIT <span>Manager Pro</span></h1>
+      <div class="tag">STILL IMAGE MUSIC VIDEO EDITOR</div>
+    </div>
+  </div>
+  <div class="fps-set">
+    FPS <input type="number" id="fpsInput" value="30" min="1" max="60">
+    <span id="statusTag">待機中</span>
+  </div>
+</header>
+
+<div class="transport" style="max-width:820px; margin:0 auto 18px;">
+  <button id="undoTopBtn">↺ 元に戻す(Ctrl+Z)</button>
+  <button id="saveProjectBtn">💾 プロジェクト保存</button>
+  <label class="loader" id="loadProjectBtn" style="display:inline-block; padding:8px 16px; border-radius:20px;">📂 プロジェクトを開く</label>
+  <input type="file" id="loadProjectInput" accept=".json">
+  <button class="primary" id="exportMp4Btn">🎬 MP4書き出し</button>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage">
+    <canvas id="stageCanvas" width="1920" height="1080"></canvas>
+    <div class="stage-label">PREVIEW 1920×1080</div>
+  </div>
+  <div class="transport">
+    <button class="primary" id="playBtn">▶ 再生</button>
+    <button id="stopBtn">■ 停止</button>
+    <input type="range" id="seek" min="0" max="100" value="0" step="1" style="flex:1;">
+    <div class="timecode" id="timecode">0000 / 0000 F</div>
+    <div class="zoom-set">ZOOM <input type="range" id="zoomRange" min="1" max="10" value="4"></div>
+  </div>
+  <div class="tag" id="exportStatus" style="margin-top:8px; min-height:14px;"></div>
+</div>
+
+<div class="timeline-outer">
+  <div class="timeline-scroll" id="timelineScroll">
+    <div class="ruler" id="ruler"></div>
+
+    <div class="track-row">
+      <div class="track-head">
+        <div class="name b">V2 ・ IMAGE B</div>
+        <label class="add-btn" id="loaderB">+ 追加</label>
+        <input type="file" id="fileInputB" accept="image/*" multiple>
+      </div>
+      <div class="track-body" id="bodyB"><div class="snap-line" id="snapB"></div></div>
+    </div>
+
+    <div class="track-row">
+      <div class="track-head">
+        <div class="name a">V1 ・ IMAGE A</div>
+        <label class="add-btn" id="loaderA">+ 追加</label>
+        <input type="file" id="fileInputA" accept="image/*" multiple>
+      </div>
+      <div class="track-body" id="bodyA"><div class="snap-line" id="snapA"></div></div>
+    </div>
+
+    <div class="track-row">
+      <div class="track-head">
+        <div class="name audio">A1 ・ MUSIC</div>
+        <label class="add-btn" id="loaderAudio">+ 読込</label>
+        <input type="file" id="audioInput" accept="audio/*">
+      </div>
+      <div class="track-body audio-body" id="bodyAudio"></div>
+    </div>
+
+    <div class="track-row">
+      <div class="track-head">
+        <div class="name lyric">T1 ・ LYRICS</div>
+        <label class="add-btn" id="loaderSrt">+ SRT読込</label>
+        <input type="file" id="srtInput" accept=".srt">
+      </div>
+      <div class="track-body" id="bodyLyric"></div>
+    </div>
+
+    <div class="playhead" id="playhead"></div>
+  </div>
+</div>
+
+<div class="panel" id="subtitleStylePanel" style="margin-top:14px; max-width:820px;">
+  <h3 style="margin:0 0 10px; font-size:11px; letter-spacing:1px; color:var(--pink);">字幕スタイル(全体設定)</h3>
+  <div class="insp-grid">
+    <div class="insp-col">
+      <div class="insp-row"><span>フォント名</span><input type="text" id="subFont" value="sans-serif" style="width:130px;"></div>
+      <div class="insp-row"><span>サイズ(px)</span><input type="number" id="subSize" value="64" min="10" max="300"></div>
+    </div>
+    <div class="insp-col">
+      <div class="insp-row"><span>色</span><input type="color" id="subColor" value="#ffffff" style="width:60px; padding:2px;"></div>
+      <div class="insp-row"><span>位置</span>
+        <select id="subPosition">
+          <option value="bottom" selected>下</option>
+          <option value="center">中央</option>
+          <option value="top">上</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="inspector" id="inspector">
+  <div class="empty">クリップやトランジションをクリックすると、ここで詳細を編集できます。</div>
+</div>
+
+<div class="hint">
+  V2(IMAGE B)は常にV1(IMAGE A)の上に重なって表示されます。交互に置けばA/Bロール、重ねれば上下レイヤーとして使えます。<br>
+  クリップとクリップの間にある丸い点(CUT)やしま模様のブロック(DISSOLVE/PUSH)をクリックすると、つなぎ方を編集できます。
+</div>
+
+<script>
+// ---------- アクティベーション ----------
+// ここを自分だけが知っているキーに書き換えてください
+const ACTIVATION_KEY = 'queensighs_manager1205';
+const ACTIVATION_STORAGE_KEY = 'editmanagerpro_activated';
+
+(function checkActivation(){
+  const overlay = document.getElementById('activationOverlay');
+  const input = document.getElementById('activationInput');
+  const btn = document.getElementById('activationBtn');
+  const errorEl = document.getElementById('activationError');
+
+  if (localStorage.getItem(ACTIVATION_STORAGE_KEY) === 'true'){
+    overlay.style.display = 'none';
+    return;
+  }
+
+  function tryActivate(){
+    if (input.value === ACTIVATION_KEY){
+      localStorage.setItem(ACTIVATION_STORAGE_KEY, 'true');
+      overlay.style.display = 'none';
+    } else {
+      errorEl.textContent = 'キーが違います';
+      input.value = '';
+      input.focus();
+    }
+  }
+  btn.addEventListener('click', tryActivate);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryActivate(); });
+  input.focus();
+})();
+
+const canvas = document.getElementById('stageCanvas');
+const ctx = canvas.getContext('2d');
+const statusTag = document.getElementById('statusTag');
+const timecodeEl = document.getElementById('timecode');
+const seekEl = document.getElementById('seek');
+const fpsInput = document.getElementById('fpsInput');
+const zoomRange = document.getElementById('zoomRange');
+const playhead = document.getElementById('playhead');
+const timelineScroll = document.getElementById('timelineScroll');
+const ruler = document.getElementById('ruler');
+const inspector = document.getElementById('inspector');
+
+let fps = 30;
+let pxPerFrame = 4;
+let playing = false;
+let currentFrame = 0;
+let internalStartTime = 0;
+let internalStartFrame = 0;
+let selected = null; // {type:'clip'|'transition', trackKey, clip}
+let exportingState = null;
+
+const audio = new Audio();
+let audioLoaded = false;
+let audioName = '';
+
+let tracks = {
+  A: { clips: [] },
+  B: { clips: [] }
+};
+let lyricClips = []; // { text, startFrame, durationFrames, transition:{type,frames} }
+let selectedLyric = null;
+
+const bodyLyric = document.getElementById('bodyLyric');
+const subFont = document.getElementById('subFont');
+const subSize = document.getElementById('subSize');
+const subColor = document.getElementById('subColor');
+const subPosition = document.getElementById('subPosition');
+[subFont, subSize, subColor, subPosition].forEach(el => el.addEventListener('input', () => renderFrame()));
+
+function defaultKf(){
+  return { startScale:100, startX:50, startY:50, endScale:112, endX:50, endY:50 };
+}
+function defaultTransition(){
+  return { type:'cut', frames:15, direction:'left' };
+}
+function defaultLyricTransition(){
+  return { type:'dissolve', frames:10 };
+}
+
+// ---------- UNDO(Ctrl+Z) ----------
+let undoStack = [];
+const UNDO_LIMIT = 50;
+function snapshotState(){
+  return JSON.stringify({
+    tracks: {
+      A: tracks.A.clips.map(c => ({ name:c.name, url:c.url, durationFrames:c.durationFrames, transitionIn:c.transitionIn, kf:c.kf })),
+      B: tracks.B.clips.map(c => ({ name:c.name, url:c.url, durationFrames:c.durationFrames, transitionIn:c.transitionIn, kf:c.kf }))
+    },
+    lyricClips: lyricClips.map(c => ({ text:c.text, startFrame:c.startFrame, durationFrames:c.durationFrames, transition:c.transition }))
+  });
+}
+function pushUndo(){
+  undoStack.push(snapshotState());
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+}
+function restoreSnapshot(snapStr){
+  const snap = JSON.parse(snapStr);
+  ['A','B'].forEach(k => {
+    tracks[k].clips = snap.tracks[k].map(c => {
+      const img = new Image();
+      img.src = c.url;
+      return { name:c.name, img, url:c.url, durationFrames:c.durationFrames, transitionIn:c.transitionIn, kf:c.kf };
+    });
+  });
+  lyricClips = (snap.lyricClips || []).map(c => ({ ...c, transition: { ...c.transition } }));
+  selected = null;
+  selectedLyric = null;
+  renderTimelineTrack('A'); renderTimelineTrack('B'); renderLyricTrack();
+  renderInspector(); updateSeekRange(); renderRuler(); renderFrame();
+}
+function undo(){
+  if (undoStack.length === 0) return;
+  const snap = undoStack.pop();
+  restoreSnapshot(snap);
+  statusTag.textContent = '元に戻しました';
+}
+document.getElementById('undoTopBtn').addEventListener('click', undo);
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){
+    if (tag === 'TEXTAREA') return; // テキスト入力中はブラウザ標準のUndoに任せる
+    e.preventDefault();
+    undo();
+    return;
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'){
+    if (selectedLyric){
+      pushUndo();
+      const idx = lyricClips.indexOf(selectedLyric);
+      if (idx >= 0) lyricClips.splice(idx, 1);
+      selectedLyric = null;
+      renderLyricTrack(); updateSeekRange(); renderRuler(); renderInspector();
+    } else if (selected && selected.type === 'clip'){
+      pushUndo();
+      const arr = tracks[selected.trackKey].clips;
+      const idx = arr.indexOf(selected.clip);
+      if (idx >= 0) arr.splice(idx, 1);
+      selected = null;
+      renderTimelineTrack('A'); renderTimelineTrack('B');
+      updateSeekRange(); renderRuler(); renderInspector();
+    }
+  }
+});
+
+// ---------- 読み込み ----------
+document.getElementById('loaderAudio').addEventListener('click', () => document.getElementById('audioInput').click());
+document.getElementById('audioInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  loadAudioFile(f);
+  e.target.value = '';
+});
+
+function loadAudioFile(f){
+  const reader = new FileReader();
+  reader.onload = () => {
+    audio.src = reader.result; // base64 dataURL(保存にそのまま使える)
+    audio.addEventListener('loadedmetadata', () => {
+      audioLoaded = true;
+      audioName = f.name;
+      renderAudioBlock();
+      updateSeekRange();
+      renderRuler();
+    }, { once:true });
+  };
+  reader.readAsDataURL(f);
+}
+
+function setupTrackLoader(trackKey, inputId, loaderId){
+  document.getElementById(loaderId).addEventListener('click', () => document.getElementById(inputId).click());
+  document.getElementById(inputId).addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(f => addImageFile(trackKey, f));
+    e.target.value = '';
+  });
+}
+
+function addImageFile(trackKey, f, presetClip){
+  pushUndo();
+  // 先に枠(プレースホルダー)を確保しておき、非同期読み込みが前後しても選択順を保つ
+  const clip = presetClip || {
+    name: f.name, img: new Image(), url: null,
+    durationFrames: Math.round(fps * 3),
+    transitionIn: defaultTransition(),
+    kf: defaultKf(),
+    loading: true
+  };
+  tracks[trackKey].clips.push(clip);
+  renderTimelineTrack(trackKey);
+  const reader = new FileReader();
+  reader.onload = () => {
+    clip.url = reader.result; // base64 dataURL
+    clip.img.src = clip.url;
+    clip.loading = false;
+    renderTimelineTrack(trackKey);
+    updateSeekRange();
+    renderRuler();
+  };
+  reader.readAsDataURL(f);
+}
+setupTrackLoader('A', 'fileInputA', 'loaderA');
+setupTrackLoader('B', 'fileInputB', 'loaderB');
+
+// ---------- SRT字幕読み込み ----------
+document.getElementById('loaderSrt').addEventListener('click', () => document.getElementById('srtInput').click());
+document.getElementById('srtInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    pushUndo();
+    const entries = parseSrt(reader.result);
+    lyricClips = entries.map(en => ({
+      text: en.text,
+      startFrame: Math.round(en.startSec * fps),
+      durationFrames: Math.max(1, Math.round((en.endSec - en.startSec) * fps)),
+      transition: defaultLyricTransition()
+    }));
+    selectedLyric = null;
+    renderLyricTrack();
+    updateSeekRange();
+    renderRuler();
+    renderInspector();
+  };
+  reader.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+
+function srtTimeToSec(t){
+  // "00:01:02,345" -> 秒
+  const m = t.match(/(\d+):(\d+):(\d+)[,.](\d+)/);
+  if (!m) return 0;
+  return (+m[1])*3600 + (+m[2])*60 + (+m[3]) + (+m[4])/1000;
+}
+function parseSrt(text){
+  const blocks = text.replace(/\r/g,'').split(/\n\n+/).filter(b => b.trim());
+  const out = [];
+  blocks.forEach(block => {
+    const lines = block.split('\n').filter(l => l.trim());
+    const timeLine = lines.find(l => l.includes('-->'));
+    if (!timeLine) return;
+    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
+    const textLines = lines.slice(lines.indexOf(timeLine) + 1);
+    out.push({
+      startSec: srtTimeToSec(startStr),
+      endSec: srtTimeToSec(endStr),
+      text: textLines.join('\n')
+    });
+  });
+  return out;
+}
+
+// ---------- タイムライン計算(追加区間方式) ----------
+// クリップの表示区間を「重なりあり」で計算する。
+// トランジションは追加区間ではなく、前クリップの終わりと次クリップの始まりを重ねる形にする。
+// これにより、前のズームは止まらず、次のズームも重なっている間からすでに始まる。
+function computeClipWindows(trackKey){
+  const clips = tracks[trackKey].clips;
+  const windows = [];
+  clips.forEach((clip, i) => {
+    let start;
+    if (i === 0){
+      start = 0;
+    } else {
+      const overlap = clip.transitionIn.type === 'cut' ? 0 : clip.transitionIn.frames;
+      start = windows[i-1].end - overlap;
+    }
+    const end = start + clip.durationFrames;
+    windows.push({ clip, start, end, transitionIn: clip.transitionIn });
+  });
+  return windows;
+}
+function trackTotalFrames(trackKey){
+  const w = computeClipWindows(trackKey);
+  return w.length ? w[w.length - 1].end : 0;
+}
+
+// ---------- タイムラインUI(EDIUS風ブロック) ----------
+function renderTimelineTrack(trackKey){
+  const body = document.getElementById(trackKey === 'A' ? 'bodyA' : 'bodyB');
+  body.innerHTML = '';
+  const snapLine = document.createElement('div');
+  snapLine.className = 'snap-line';
+  body.appendChild(snapLine);
+  const windows = computeClipWindows(trackKey);
+
+  windows.forEach((w, i) => {
+    const el = document.createElement('div');
+    el.className = 'clip-block track' + trackKey;
+    el.style.left = (w.start * pxPerFrame) + 'px';
+    el.style.width = Math.max((w.end - w.start) * pxPerFrame, 6) + 'px';
+    el.style.backgroundImage = `url(${w.clip.url})`;
+    if (selected && selected.type === 'clip' && selected.clip === w.clip) el.classList.add('selected');
+    if (dragging && dragging.clip === w.clip) el.classList.add('dragging');
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = `${w.clip.name} (${w.clip.durationFrames}F)`;
+    el.appendChild(label);
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.addEventListener('mousedown', (ev) => {
+      ev.stopPropagation();
+      startResize(ev, trackKey, w.clip);
+    });
+    el.appendChild(handle);
+    el.addEventListener('mousedown', (ev) => startDrag(ev, trackKey, w.clip, el));
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (dragMoved){ dragMoved = false; return; }
+      selectClip(trackKey, w.clip);
+    });
+    body.appendChild(el);
+
+    if (i > 0){
+      const prevW = windows[i-1];
+      if (w.transitionIn.type === 'cut'){
+        const marker = document.createElement('div');
+        marker.className = 'cut-marker';
+        marker.style.left = (w.start * pxPerFrame) + 'px';
+        if (selected && selected.type === 'transition' && selected.clip === w.clip) marker.classList.add('selected');
+        marker.addEventListener('click', (ev) => { ev.stopPropagation(); selectTransition(trackKey, w.clip); });
+        body.appendChild(marker);
+      } else {
+        // 重なっている区間(前クリップの終わり〜次クリップの始まり)そのものをトランジション表示にする
+        const ow = Math.max((prevW.end - w.start) * pxPerFrame, 10);
+        const marker = document.createElement('div');
+        marker.className = 'trans-block';
+        marker.style.left = (w.start * pxPerFrame) + 'px';
+        marker.style.width = ow + 'px';
+        const labelMap = { push:'PUSH ' + w.transitionIn.direction[0].toUpperCase(), splitV:'SPLIT V', splitH:'SPLIT H' };
+        marker.textContent = labelMap[w.transitionIn.type] || 'DIS';
+        if (selected && selected.type === 'transition' && selected.clip === w.clip) marker.classList.add('selected');
+        marker.addEventListener('click', (ev) => { ev.stopPropagation(); selectTransition(trackKey, w.clip); });
+        body.appendChild(marker);
+      }
+    }
+  });
+
+  const totalX = windows.length ? windows[windows.length - 1].end * pxPerFrame : 0;
+  body.style.minWidth = totalX + 'px';
+  syncBodyWidths();
+}
+
+function renderAudioBlock(){
+  const body = document.getElementById('bodyAudio');
+  body.innerHTML = '';
+  if (!audioLoaded) return;
+  const w = Math.round(audio.duration * fps) * pxPerFrame;
+  const el = document.createElement('div');
+  el.className = 'audio-block';
+  el.style.left = '0px';
+  el.style.width = w + 'px';
+  el.textContent = `♪ ${audioName}`;
+  body.appendChild(el);
+  syncBodyWidths();
+}
+
+function lyricTotalFrames(){
+  return lyricClips.reduce((max, c) => Math.max(max, c.startFrame + c.durationFrames), 0);
+}
+function syncBodyWidths(){
+  const total = Math.max(
+    trackTotalFrames('A') * pxPerFrame,
+    trackTotalFrames('B') * pxPerFrame,
+    audioLoaded ? Math.round(audio.duration * fps) * pxPerFrame : 0,
+    lyricTotalFrames() * pxPerFrame,
+    600
+  );
+  ['bodyA','bodyB','bodyAudio','bodyLyric','ruler'].forEach(id => {
+    document.getElementById(id).style.minWidth = total + 'px';
+  });
+}
+
+// ---------- ドラッグ&ドロップ並び替え(吸着) ----------
+let dragging = null; // { trackKey, clip, startX, baseLeft }
+let dragMoved = false;
+
+function computeClipCenters(trackKey){
+  return computeClipWindows(trackKey).map(w => ({
+    clip: w.clip,
+    x: w.start * pxPerFrame,
+    w: (w.end - w.start) * pxPerFrame,
+    center: (w.start + (w.end - w.start) / 2) * pxPerFrame
+  }));
+}
+
+function startDrag(ev, trackKey, clip, el){
+  if (ev.button !== 0) return;
+  ev.preventDefault();
+  const body = document.getElementById(trackKey === 'A' ? 'bodyA' : 'bodyB');
+  dragging = { trackKey, clip, startX: ev.clientX, baseLeft: parseFloat(el.style.left) || 0 };
+  dragMoved = false;
+  el.classList.add('dragging');
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const trackKey = dragging.trackKey;
+  const body = document.getElementById(trackKey === 'A' ? 'bodyA' : 'bodyB');
+  const el = body.querySelector('.clip-block.dragging');
+  const snapLine = body.querySelector('.snap-line');
+  if (!el) return;
+  const dx = e.clientX - dragging.startX;
+  if (Math.abs(dx) > 3 && !dragMoved) pushUndo(); // 実際に動かした最初の瞬間だけ記録
+  if (Math.abs(dx) > 3) dragMoved = true;
+  const newLeft = dragging.baseLeft + dx;
+  el.style.left = newLeft + 'px';
+
+  const clips = tracks[trackKey].clips;
+  const curIndex = clips.indexOf(dragging.clip);
+  const centers = computeClipCenters(trackKey);
+  const draggedW = el.offsetWidth;
+  const draggedCenter = newLeft + draggedW / 2;
+
+  let newIndex = 0;
+  let snapX = 0;
+  centers.forEach(c => {
+    if (c.clip === dragging.clip) return;
+    if (draggedCenter > c.center){ newIndex++; snapX = c.x + c.w; }
+  });
+
+  if (snapLine){
+    snapLine.style.display = 'block';
+    snapLine.style.left = snapX + 'px';
+  }
+
+  if (newIndex !== curIndex){
+    clips.splice(curIndex, 1);
+    clips.splice(newIndex, 0, dragging.clip);
+    renderTimelineTrack(trackKey);
+    const newEl = document.getElementById(trackKey === 'A' ? 'bodyA' : 'bodyB').querySelector('.clip-block.dragging');
+    if (newEl){
+      dragging.baseLeft = parseFloat(newEl.style.left) - dx;
+      newEl.style.left = newLeft + 'px';
+    }
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (!dragging) return;
+  const trackKey = dragging.trackKey;
+  const moved = dragMoved;
+  dragging = null;
+  const body = document.getElementById(trackKey === 'A' ? 'bodyA' : 'bodyB');
+  const snapLine = body.querySelector('.snap-line');
+  if (snapLine) snapLine.style.display = 'none';
+  if (moved){
+    renderTimelineTrack(trackKey); // 実際に並び替えた時だけ、隙間なくきれいな位置へ吸着
+    updateSeekRange(); renderRuler();
+  } else {
+    // ただのクリック(ドラッグしていない)。DOMを作り直すとclickイベントが握りつぶされるため何もしない。
+    const el = body.querySelector('.clip-block.dragging');
+    if (el) el.classList.remove('dragging');
+  }
+});
+
+// ---------- クリップ長さのドラッグリサイズ ----------
+let resizing = null; // { trackKey, clip, startX, startDuration }
+function startResize(ev, trackKey, clip){
+  if (ev.button !== 0) return;
+  ev.preventDefault();
+  pushUndo();
+  resizing = { trackKey, clip, startX: ev.clientX, startDuration: clip.durationFrames };
+}
+document.addEventListener('mousemove', (e) => {
+  if (!resizing) return;
+  const dx = e.clientX - resizing.startX;
+  const deltaFrames = Math.round(dx / pxPerFrame);
+  resizing.clip.durationFrames = Math.max(1, resizing.startDuration + deltaFrames);
+  renderTimelineTrack(resizing.trackKey);
+  updateSeekRange(); renderRuler();
+  if (selected && selected.type === 'clip' && selected.clip === resizing.clip) renderInspector();
+});
+document.addEventListener('mouseup', () => {
+  if (!resizing) return;
+  const trackKey = resizing.trackKey;
+  resizing = null;
+  renderTimelineTrack(trackKey);
+  updateSeekRange(); renderRuler();
+});
+
+// ---------- 字幕(LYRIC)クリップのドラッグ・リサイズ ----------
+let lyricDragging = null; // { clip, startX, baseStartFrame }
+let lyricResizing = null; // { clip, startX, startDuration }
+let lyricDragMoved = false;
+function startLyricDrag(ev, clip){
+  if (ev.button !== 0) return;
+  ev.preventDefault();
+  lyricDragging = { clip, startX: ev.clientX, baseStartFrame: clip.startFrame };
+  lyricDragMoved = false;
+}
+function startLyricResize(ev, clip){
+  if (ev.button !== 0) return;
+  ev.preventDefault(); ev.stopPropagation();
+  pushUndo();
+  lyricResizing = { clip, startX: ev.clientX, startDuration: clip.durationFrames };
+}
+document.addEventListener('mousemove', (e) => {
+  if (lyricDragging){
+    const dx = e.clientX - lyricDragging.startX;
+    if (Math.abs(dx) > 3 && !lyricDragMoved){ pushUndo(); lyricDragMoved = true; }
+    const deltaFrames = Math.round(dx / pxPerFrame);
+    lyricDragging.clip.startFrame = Math.max(0, lyricDragging.baseStartFrame + deltaFrames);
+    renderLyricTrack();
+    updateSeekRange(); renderRuler();
+    if (selectedLyric === lyricDragging.clip) renderInspector();
+  }
+  if (lyricResizing){
+    const dx = e.clientX - lyricResizing.startX;
+    const deltaFrames = Math.round(dx / pxPerFrame);
+    lyricResizing.clip.durationFrames = Math.max(1, lyricResizing.startDuration + deltaFrames);
+    renderLyricTrack();
+    updateSeekRange(); renderRuler();
+    if (selectedLyric === lyricResizing.clip) renderInspector();
+  }
+});
+document.addEventListener('mouseup', () => {
+  if (lyricDragging){ lyricDragging = null; renderLyricTrack(); updateSeekRange(); renderRuler(); }
+  if (lyricResizing){ lyricResizing = null; renderLyricTrack(); updateSeekRange(); renderRuler(); }
+});
+
+function renderLyricTrack(){
+  bodyLyric.innerHTML = '';
+  lyricClips.forEach(clip => {
+    const el = document.createElement('div');
+    el.className = 'lyric-block';
+    if (selectedLyric === clip) el.classList.add('selected');
+    if (lyricDragging && lyricDragging.clip === clip) el.classList.add('dragging');
+    el.style.left = (clip.startFrame * pxPerFrame) + 'px';
+    el.style.width = Math.max(clip.durationFrames * pxPerFrame, 10) + 'px';
+    el.textContent = clip.text.replace(/\n/g, ' / ');
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.addEventListener('mousedown', (ev) => startLyricResize(ev, clip));
+    el.appendChild(handle);
+    el.addEventListener('mousedown', (ev) => startLyricDrag(ev, clip));
+    el.addEventListener('click', (ev) => { ev.stopPropagation(); selectLyric(clip); });
+    bodyLyric.appendChild(el);
+  });
+  syncBodyWidths();
+}
+
+function renderRuler(){
+  ruler.innerHTML = '';
+  const total = Math.max(
+    trackTotalFrames('A'), trackTotalFrames('B'), lyricTotalFrames(),
+    audioLoaded ? Math.round(audio.duration * fps) : 0, fps * 10
+  );
+  const totalSec = Math.ceil(total / fps);
+  for (let s = 0; s <= totalSec; s++){
+    const tick = document.createElement('div');
+    tick.className = 'tick';
+    tick.style.left = (s * fps * pxPerFrame) + 'px';
+    const mm = String(Math.floor(s/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    tick.textContent = `${mm}:${ss}`;
+    ruler.appendChild(tick);
+  }
+  syncBodyWidths();
+}
+
+let rulerScrubbing = false;
+function scrubAtRuler(e){
+  const rect = ruler.getBoundingClientRect();
+  const x = e.clientX - rect.left + timelineScroll.scrollLeft;
+  seekToFrame(x / pxPerFrame);
+}
+ruler.addEventListener('mousedown', (e) => {
+  rulerScrubbing = true;
+  scrubAtRuler(e);
+});
+document.addEventListener('mousemove', (e) => {
+  if (rulerScrubbing) scrubAtRuler(e);
+});
+document.addEventListener('mouseup', () => { rulerScrubbing = false; });
+document.querySelectorAll('.track-body').forEach(b => {
+  b.addEventListener('click', (e) => {
+    if (e.target !== b) return;
+    const rect = b.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    seekToFrame(x / pxPerFrame);
+  });
+});
+
+zoomRange.addEventListener('input', () => {
+  pxPerFrame = parseInt(zoomRange.value, 10);
+  renderTimelineTrack('A'); renderTimelineTrack('B'); renderAudioBlock(); renderRuler();
+});
+
+// ---------- インスペクタ ----------
+function selectClip(trackKey, clip){
+  selected = { type:'clip', trackKey, clip };
+  selectedLyric = null;
+  renderTimelineTrack('A'); renderTimelineTrack('B'); renderLyricTrack();
+  renderInspector();
+}
+function selectTransition(trackKey, clip){
+  selected = { type:'transition', trackKey, clip };
+  selectedLyric = null;
+  renderTimelineTrack('A'); renderTimelineTrack('B'); renderLyricTrack();
+  renderInspector();
+}
+function selectLyric(clip){
+  selected = null;
+  selectedLyric = clip;
+  renderTimelineTrack('A'); renderTimelineTrack('B'); renderLyricTrack();
+  renderInspector();
+}
+
+function renderInspector(){
+  inspector.innerHTML = '';
+  if (selectedLyric){
+    renderLyricInspector();
+    return;
+  }
+  if (!selected){
+    inspector.innerHTML = '<div class="empty">クリップやトランジションをクリックすると、ここで詳細を編集できます。</div>';
+    return;
+  }
+  if (selected.type === 'clip'){
+    const clip = selected.clip;
+    const h = document.createElement('h3');
+    h.textContent = `CLIP: ${clip.name}`;
+    inspector.appendChild(h);
+
+    const grid = document.createElement('div');
+    grid.className = 'insp-grid';
+
+    const durCol = document.createElement('div');
+    durCol.className = 'insp-col';
+    durCol.innerHTML = '<h4>DURATION</h4>';
+    const durRow = document.createElement('div');
+    durRow.className = 'insp-row';
+    durRow.innerHTML = '<span>フレーム数</span>';
+    const durInput = document.createElement('input');
+    durInput.type = 'number'; durInput.min = 1; durInput.value = clip.durationFrames;
+    durInput.addEventListener('input', () => {
+      clip.durationFrames = Math.max(1, parseInt(durInput.value || '1', 10));
+      renderTimelineTrack(selected.trackKey); updateSeekRange(); renderRuler();
+    });
+    durRow.appendChild(durInput);
+    durCol.appendChild(durRow);
+    grid.appendChild(durCol);
+
+    const modeCol = document.createElement('div');
+    modeCol.className = 'insp-col';
+    modeCol.innerHTML = '<h4>表示モード</h4>';
+    const modeRow = document.createElement('div');
+    modeRow.style.display = 'flex';
+    modeRow.style.flexDirection = 'column';
+    modeRow.style.gap = '4px';
+    [
+      ['固定', () => ({ startScale:100, startX:50, startY:50, endScale:100, endX:50, endY:50 })],
+      ['ズームイン', () => ({ startScale:100, startX:50, startY:50, endScale:115, endX:50, endY:50 })],
+      ['ズームアウト', () => ({ startScale:115, startX:50, startY:50, endScale:100, endX:50, endY:50 })]
+    ].forEach(([label, makeKf]) => {
+      const btn = document.createElement('button');
+      btn.className = 'small';
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        Object.assign(clip.kf, makeKf());
+        renderInspector();
+        renderFrame();
+      });
+      modeRow.appendChild(btn);
+    });
+    modeCol.appendChild(modeRow);
+    grid.appendChild(modeCol);
+
+    grid.appendChild(buildKfCol('開始(START)', clip.kf, 'start'));
+    grid.appendChild(buildKfCol('終了(END)', clip.kf, 'end'));
+
+    const delCol = document.createElement('div');
+    delCol.className = 'insp-col';
+    delCol.innerHTML = '<h4>操作</h4>';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'small danger';
+    delBtn.textContent = '✕ このクリップを削除';
+    delBtn.addEventListener('click', () => {
+      pushUndo();
+      const arr = tracks[selected.trackKey].clips;
+      const idx = arr.indexOf(clip);
+      if (idx >= 0) arr.splice(idx, 1);
+      selected = null;
+      renderTimelineTrack('A'); renderTimelineTrack('B');
+      updateSeekRange(); renderRuler(); renderInspector();
+    });
+    delCol.appendChild(delBtn);
+    grid.appendChild(delCol);
+
+    inspector.appendChild(grid);
+  } else {
+    const clip = selected.clip; // transitionIn owner
+    const h = document.createElement('h3');
+    h.textContent = `TRANSITION → ${clip.name}`;
+    inspector.appendChild(h);
+
+    const grid = document.createElement('div');
+    grid.className = 'insp-grid';
+    const col = document.createElement('div');
+    col.className = 'insp-col';
+    col.innerHTML = '<h4>つなぎ方</h4>';
+
+    const typeRow = document.createElement('div');
+    typeRow.className = 'insp-row';
+    typeRow.innerHTML = '<span>TYPE</span>';
+    const typeSel = document.createElement('select');
+    const typeLabels = { cut:'CUT', dissolve:'DISSOLVE', push:'PUSH', splitV:'SPLIT(上下)', splitH:'SPLIT(左右)' };
+    ['cut','dissolve','push','splitV','splitH'].forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = typeLabels[t];
+      if (clip.transitionIn.type === t) opt.selected = true;
+      typeSel.appendChild(opt);
+    });
+    typeSel.addEventListener('change', () => {
+      pushUndo();
+      clip.transitionIn.type = typeSel.value;
+      renderTimelineTrack(selected.trackKey); updateSeekRange(); renderRuler(); renderInspector();
+    });
+    typeRow.appendChild(typeSel);
+    col.appendChild(typeRow);
+
+    if (clip.transitionIn.type !== 'cut'){
+      const framesRow = document.createElement('div');
+      framesRow.className = 'insp-row';
+      framesRow.innerHTML = '<span>フレーム数</span>';
+      const framesInput = document.createElement('input');
+      framesInput.type = 'number'; framesInput.min = 1; framesInput.value = clip.transitionIn.frames;
+      framesInput.addEventListener('input', () => {
+        clip.transitionIn.frames = Math.max(1, parseInt(framesInput.value || '1', 10));
+        renderTimelineTrack(selected.trackKey); updateSeekRange(); renderRuler();
+      });
+      framesRow.appendChild(framesInput);
+      col.appendChild(framesRow);
+    }
+
+    if (clip.transitionIn.type === 'push'){
+      const dirRow = document.createElement('div');
+      dirRow.className = 'insp-row';
+      dirRow.innerHTML = '<span>方向</span>';
+      const dirSel = document.createElement('select');
+      ['left','right','up','down'].forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d; opt.textContent = d.toUpperCase();
+        if (clip.transitionIn.direction === d) opt.selected = true;
+        dirSel.appendChild(opt);
+      });
+      dirSel.addEventListener('change', () => {
+        clip.transitionIn.direction = dirSel.value;
+        renderTimelineTrack(selected.trackKey);
+      });
+      dirRow.appendChild(dirSel);
+      col.appendChild(dirRow);
+    }
+
+    grid.appendChild(col);
+    inspector.appendChild(grid);
+  }
+}
+
+function renderLyricInspector(){
+  const clip = selectedLyric;
+  const h = document.createElement('h3');
+  h.textContent = 'LYRIC CLIP';
+  inspector.appendChild(h);
+
+  const grid = document.createElement('div');
+  grid.className = 'insp-grid';
+
+  const textCol = document.createElement('div');
+  textCol.className = 'insp-col';
+  textCol.style.minWidth = '220px';
+  textCol.innerHTML = '<h4>テキスト</h4>';
+  const textArea = document.createElement('textarea');
+  textArea.value = clip.text;
+  textArea.style.cssText = 'width:100%; min-height:60px; background:var(--panel2); border:1px solid var(--line); color:var(--text); font-family:inherit; font-size:12px; border-radius:6px; padding:6px;';
+  textArea.addEventListener('input', () => { clip.text = textArea.value; renderLyricTrack(); renderFrame(); });
+  textCol.appendChild(textArea);
+  grid.appendChild(textCol);
+
+  const timeCol = document.createElement('div');
+  timeCol.className = 'insp-col';
+  timeCol.innerHTML = '<h4>タイミング</h4>';
+  const startRow = document.createElement('div');
+  startRow.className = 'insp-row';
+  startRow.innerHTML = '<span>開始フレーム</span>';
+  const startInput = document.createElement('input');
+  startInput.type = 'number'; startInput.min = 0; startInput.value = clip.startFrame;
+  startInput.addEventListener('input', () => {
+    clip.startFrame = Math.max(0, parseInt(startInput.value || '0', 10));
+    renderLyricTrack(); updateSeekRange(); renderRuler();
+  });
+  startRow.appendChild(startInput);
+  timeCol.appendChild(startRow);
+
+  const durRow = document.createElement('div');
+  durRow.className = 'insp-row';
+  durRow.innerHTML = '<span>長さ(F)</span>';
+  const durInput = document.createElement('input');
+  durInput.type = 'number'; durInput.min = 1; durInput.value = clip.durationFrames;
+  durInput.addEventListener('input', () => {
+    clip.durationFrames = Math.max(1, parseInt(durInput.value || '1', 10));
+    renderLyricTrack(); updateSeekRange(); renderRuler();
+  });
+  durRow.appendChild(durInput);
+  timeCol.appendChild(durRow);
+  grid.appendChild(timeCol);
+
+  const transCol = document.createElement('div');
+  transCol.className = 'insp-col';
+  transCol.innerHTML = '<h4>表示トランジション</h4>';
+  const typeRow = document.createElement('div');
+  typeRow.className = 'insp-row';
+  typeRow.innerHTML = '<span>TYPE</span>';
+  const typeSel = document.createElement('select');
+  [['cut','CUT'],['dissolve','DISSOLVE'],['slide','SLIDE(下から)']].forEach(([v,l]) => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = l;
+    if (clip.transition.type === v) opt.selected = true;
+    typeSel.appendChild(opt);
+  });
+  typeSel.addEventListener('change', () => {
+    pushUndo();
+    clip.transition.type = typeSel.value;
+    renderLyricInspector();
+    renderFrame();
+  });
+  typeRow.appendChild(typeSel);
+  transCol.appendChild(typeRow);
+
+  if (clip.transition.type !== 'cut'){
+    const framesRow = document.createElement('div');
+    framesRow.className = 'insp-row';
+    framesRow.innerHTML = '<span>フレーム数</span>';
+    const framesInput = document.createElement('input');
+    framesInput.type = 'number'; framesInput.min = 1; framesInput.value = clip.transition.frames;
+    framesInput.addEventListener('input', () => {
+      clip.transition.frames = Math.max(1, parseInt(framesInput.value || '1', 10));
+    });
+    framesRow.appendChild(framesInput);
+    transCol.appendChild(framesRow);
+  }
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'small danger';
+  delBtn.style.marginTop = '8px';
+  delBtn.textContent = '✕ この字幕を削除';
+  delBtn.addEventListener('click', () => {
+    pushUndo();
+    const idx = lyricClips.indexOf(clip);
+    if (idx >= 0) lyricClips.splice(idx, 1);
+    selectedLyric = null;
+    renderLyricTrack(); updateSeekRange(); renderRuler(); renderInspector();
+  });
+  transCol.appendChild(delBtn);
+  grid.appendChild(transCol);
+
+  inspector.appendChild(grid);
+}
+
+function buildKfCol(label, kf, prefix){
+  const col = document.createElement('div');
+  col.className = 'insp-col';
+  col.innerHTML = `<h4>${label}</h4>`;
+  [['SCALE(%)','Scale'],['FOCUS X(%)','X'],['FOCUS Y(%)','Y']].forEach(([lbl,key]) => {
+    const row = document.createElement('div');
+    row.className = 'insp-row';
+    const span = document.createElement('span'); span.textContent = lbl;
+    const input = document.createElement('input');
+    input.type = 'number';
+    const fieldKey = prefix + key;
+    input.value = kf[fieldKey];
+    input.addEventListener('input', () => { kf[fieldKey] = parseFloat(input.value || '0'); });
+    row.appendChild(span); row.appendChild(input);
+    col.appendChild(row);
+  });
+  return col;
+}
+
+// ---------- 再生・シーク ----------
+function updateSeekRange(){
+  const total = Math.max(trackTotalFrames('A'), trackTotalFrames('B'), lyricTotalFrames(), audioLoaded ? Math.round(audio.duration*fps) : 0, 1);
+  seekEl.max = total;
+  updateTimecode(total);
+}
+function updateTimecode(totalOverride){
+  const total = totalOverride !== undefined ? totalOverride :
+    Math.max(trackTotalFrames('A'), trackTotalFrames('B'), lyricTotalFrames(), audioLoaded ? Math.round(audio.duration*fps) : 0, 1);
+  timecodeEl.textContent = `${String(Math.round(currentFrame)).padStart(4,'0')} / ${String(total).padStart(4,'0')} F`;
+}
+function seekToFrame(f){
+  currentFrame = Math.max(0, f);
+  seekEl.value = Math.round(currentFrame);
+  if (audioLoaded) audio.currentTime = currentFrame / fps;
+  internalStartTime = performance.now();
+  internalStartFrame = currentFrame;
+  renderFrame(); updateTimecode(); updatePlayheadPos();
+}
+seekEl.addEventListener('input', () => seekToFrame(parseInt(seekEl.value, 10)));
+fpsInput.addEventListener('input', () => {
+  fps = Math.max(1, parseInt(fpsInput.value || '30', 10));
+  updateSeekRange(); renderRuler(); renderAudioBlock();
+});
+
+function doPlay(){
+  if (playing) return;
+  playing = true;
+  statusTag.textContent = '再生中';
+  if (audioLoaded){ audio.currentTime = currentFrame / fps; audio.play(); }
+  else { internalStartTime = performance.now(); internalStartFrame = currentFrame; }
+}
+function doStop(){
+  playing = false;
+  if (audioLoaded) audio.pause();
+  seekToFrame(0);
+  statusTag.textContent = '停止';
+}
+document.getElementById('playBtn').addEventListener('click', doPlay);
+document.getElementById('stopBtn').addEventListener('click', doStop);
+
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return; // 入力中は誤動作させない
+  e.preventDefault();
+  if (playing) doStop(); else doPlay();
+});
+
+// ---------- 描画(合成ロジック) ----------
+function kfInterp(kf, t){
+  return {
+    scale: kf.startScale + (kf.endScale - kf.startScale) * t,
+    x: kf.startX + (kf.endX - kf.startX) * t,
+    y: kf.startY + (kf.endY - kf.startY) * t
+  };
+}
+function drawClipState(targetCtx, img, state, offsetX, offsetY){
+  if (!img || !img.complete || !img.naturalWidth) return;
+  const cw = canvas.width, ch = canvas.height;
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const coverScale = Math.max(cw / iw, ch / ih);
+  const effScale = coverScale * (state.scale / 100);
+  const dw = iw * effScale, dh = ih * effScale;
+  const focalX = iw * (state.x / 100), focalY = ih * (state.y / 100);
+  const dx = cw/2 - focalX*effScale + (offsetX||0);
+  const dy = ch/2 - focalY*effScale + (offsetY||0);
+  targetCtx.drawImage(img, dx, dy, dw, dh);
+}
+function renderTrack(targetCtx, trackKey, frame){
+  const windows = computeClipWindows(trackKey);
+  if (!windows.length) return;
+  const active = windows.filter(w => frame >= w.start && frame < w.end);
+
+  if (active.length === 0){
+    const last = windows[windows.length - 1];
+    drawClipState(targetCtx, last.clip.img, kfInterp(last.clip.kf, 1));
+    return;
+  }
+  if (active.length === 1){
+    const w = active[0];
+    const len = w.end - w.start;
+    const t = len <= 1 ? 1 : (frame - w.start) / (len - 1);
+    const state = kfInterp(w.clip.kf, Math.min(1, Math.max(0, t)));
+    drawClipState(targetCtx, w.clip.img, state);
+    return;
+  }
+
+  // 重なっている区間: 前後どちらのクリップも自分のズームを継続したまま、重なり部分だけブレンドする
+  const prevW = active[0], nextW = active[1];
+  const prevLen = prevW.end - prevW.start;
+  const nextLen = nextW.end - nextW.start;
+  const prevT = prevLen <= 1 ? 1 : (frame - prevW.start) / (prevLen - 1);
+  const nextT = nextLen <= 1 ? 1 : (frame - nextW.start) / (nextLen - 1);
+  const prevState = kfInterp(prevW.clip.kf, Math.min(1, Math.max(0, prevT)));
+  const nextState = kfInterp(nextW.clip.kf, Math.min(1, Math.max(0, nextT)));
+
+  const overlapLen = prevW.end - nextW.start;
+  const p = overlapLen <= 1 ? 1 : (frame - nextW.start) / (overlapLen - 1);
+  const pc = Math.min(1, Math.max(0, p));
+  const transition = nextW.transitionIn;
+
+  if (transition.type === 'dissolve'){
+    targetCtx.globalAlpha = 1 - pc; drawClipState(targetCtx, prevW.clip.img, prevState);
+    targetCtx.globalAlpha = pc; drawClipState(targetCtx, nextW.clip.img, nextState);
+    targetCtx.globalAlpha = 1;
+  } else if (transition.type === 'push'){
+    const cw = canvas.width, ch = canvas.height;
+    let fromOX=0, fromOY=0, toOX=0, toOY=0;
+    const dir = transition.direction;
+    if (dir === 'left'){ fromOX=-pc*cw; toOX=cw*(1-pc); }
+    else if (dir === 'right'){ fromOX=pc*cw; toOX=-cw*(1-pc); }
+    else if (dir === 'up'){ fromOY=-pc*ch; toOY=ch*(1-pc); }
+    else if (dir === 'down'){ fromOY=pc*ch; toOY=-ch*(1-pc); }
+    drawClipState(targetCtx, prevW.clip.img, prevState, fromOX, fromOY);
+    drawClipState(targetCtx, nextW.clip.img, nextState, toOX, toOY);
+  } else if (transition.type === 'splitV'){
+    // 画面中央から上下に割れて、前クリップが上下に分かれて抜けていく
+    const cw = canvas.width, ch = canvas.height, halfH = ch / 2;
+    drawClipState(targetCtx, nextW.clip.img, nextState);
+    drawClipClipped(targetCtx, prevW.clip.img, prevState, {x:0, y:0, w:cw, h:halfH}, 0, -pc*halfH);
+    drawClipClipped(targetCtx, prevW.clip.img, prevState, {x:0, y:halfH, w:cw, h:halfH}, 0, pc*halfH);
+  } else if (transition.type === 'splitH'){
+    // 画面中央から左右に割れて、前クリップが左右に分かれて抜けていく
+    const cw = canvas.width, ch = canvas.height, halfW = cw / 2;
+    drawClipState(targetCtx, nextW.clip.img, nextState);
+    drawClipClipped(targetCtx, prevW.clip.img, prevState, {x:0, y:0, w:halfW, h:ch}, -pc*halfW, 0);
+    drawClipClipped(targetCtx, prevW.clip.img, prevState, {x:halfW, y:0, w:halfW, h:ch}, pc*halfW, 0);
+  } else {
+    // cut(理論上ここには来ないが保険で次クリップを表示)
+    drawClipState(targetCtx, nextW.clip.img, nextState);
+  }
+}
+function drawClipClipped(targetCtx, img, state, clipRect, offsetX, offsetY){
+  targetCtx.save();
+  // クリップ窓と画像を同時に平行移動させることで、パネルの中身を保ったまま
+  // そのままスライドして画面外へ抜けていく見た目にする(窓だけ/画像だけを動かすと中身がずれてしまう)
+  targetCtx.translate(offsetX, offsetY);
+  targetCtx.beginPath();
+  targetCtx.rect(clipRect.x, clipRect.y, clipRect.w, clipRect.h);
+  targetCtx.clip();
+  drawClipState(targetCtx, img, state, 0, 0);
+  targetCtx.restore();
+}
+function renderFrame(){
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  renderTrack(ctx, 'A', Math.round(currentFrame));
+  renderTrack(ctx, 'B', Math.round(currentFrame));
+  renderSubtitle(ctx, Math.round(currentFrame));
+}
+
+function renderSubtitle(targetCtx, frame){
+  const clip = lyricClips.find(c => frame >= c.startFrame && frame < c.startFrame + c.durationFrames);
+  if (!clip) return;
+  const local = frame - clip.startFrame;
+  const dur = clip.durationFrames;
+  const tFrames = Math.min(clip.transition.frames || 0, Math.floor(dur / 2));
+  let alpha = 1, offsetY = 0;
+
+  if (clip.transition.type === 'dissolve' && tFrames > 0){
+    if (local < tFrames) alpha = local / tFrames;
+    else if (local > dur - tFrames) alpha = (dur - local) / tFrames;
+  } else if (clip.transition.type === 'slide' && tFrames > 0){
+    const slideDist = 80;
+    if (local < tFrames) offsetY = slideDist * (1 - local / tFrames);
+    else if (local > dur - tFrames) offsetY = slideDist * (1 - (dur - local) / tFrames);
+  }
+
+  const cw = canvas.width, ch = canvas.height;
+  const size = parseInt(subSize.value || '64', 10);
+  const font = subFont.value.trim() || 'sans-serif';
+  const color = subColor.value || '#ffffff';
+  const pos = subPosition.value;
+  let baseY;
+  if (pos === 'top') baseY = size + 40;
+  else if (pos === 'center') baseY = ch / 2;
+  else baseY = ch - 80;
+
+  targetCtx.save();
+  targetCtx.globalAlpha = alpha;
+  targetCtx.font = `bold ${size}px "${font}", sans-serif`;
+  targetCtx.textAlign = 'center';
+  targetCtx.textBaseline = 'middle';
+  targetCtx.lineJoin = 'round';
+  targetCtx.lineWidth = Math.max(4, size * 0.12);
+  targetCtx.strokeStyle = 'rgba(0,0,0,0.85)';
+  targetCtx.fillStyle = color;
+
+  const lines = clip.text.split('\n');
+  const lineHeight = size * 1.2;
+  const startY = baseY - ((lines.length - 1) * lineHeight) / 2 + offsetY;
+  lines.forEach((line, i) => {
+    const y = startY + i * lineHeight;
+    targetCtx.strokeText(line, cw / 2, y);
+    targetCtx.fillText(line, cw / 2, y);
+  });
+  targetCtx.restore();
+}
+function updatePlayheadPos(){
+  playhead.style.left = (120 + currentFrame * pxPerFrame - timelineScroll.scrollLeft) + 'px';
+}
+timelineScroll.addEventListener('scroll', updatePlayheadPos);
+
+function loop(){
+  requestAnimationFrame(loop);
+  if (playing){
+    if (audioLoaded){
+      currentFrame = audio.currentTime * fps;
+      if (audio.ended){ playing = false; statusTag.textContent = '再生終了'; }
+    } else {
+      currentFrame = internalStartFrame + (performance.now() - internalStartTime) / 1000 * fps;
+    }
+    const total = Math.max(trackTotalFrames('A'), trackTotalFrames('B'), 1);
+    if (currentFrame >= total){
+      currentFrame = total; playing = false;
+      if (audioLoaded) audio.pause();
+      statusTag.textContent = '再生終了';
+      if (exportingState && exportingState.active){
+        exportingState.active = false;
+        exportingState.onEnd();
+      }
+    }
+    seekEl.value = Math.round(currentFrame);
+  }
+  renderFrame();
+  updateTimecode();
+  updatePlayheadPos();
+}
+// ---------- プロジェクト保存・読込 ----------
+function saveProject(){
+  const data = {
+    version: 1,
+    fps,
+    audio: audioLoaded ? { name: audioName, dataUrl: audio.src } : null,
+    tracks: {
+      A: tracks.A.clips.map(c => ({ name:c.name, dataUrl:c.url, durationFrames:c.durationFrames, transitionIn:c.transitionIn, kf:c.kf })),
+      B: tracks.B.clips.map(c => ({ name:c.name, dataUrl:c.url, durationFrames:c.durationFrames, transitionIn:c.transitionIn, kf:c.kf }))
+    }
+  };
+  const blob = new Blob([JSON.stringify(data)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'editmanager-project.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('saveProjectBtn').addEventListener('click', saveProject);
+
+document.getElementById('loadProjectBtn').addEventListener('click', () => document.getElementById('loadProjectInput').click());
+document.getElementById('loadProjectInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      fps = data.fps || 30;
+      fpsInput.value = fps;
+      selected = null;
+      if (data.audio){
+        audio.src = data.audio.dataUrl;
+        audioName = data.audio.name;
+        audio.addEventListener('loadedmetadata', () => {
+          audioLoaded = true; renderAudioBlock(); updateSeekRange(); renderRuler();
+        }, { once:true });
+      } else {
+        audioLoaded = false; audioName = ''; renderAudioBlock();
+      }
+      ['A','B'].forEach(trackKey => {
+        const list = (data.tracks && data.tracks[trackKey]) || [];
+        tracks[trackKey].clips = list.map(c => {
+          const img = new Image();
+          img.src = c.dataUrl;
+          return { name:c.name, img, url:c.dataUrl, durationFrames:c.durationFrames, transitionIn:c.transitionIn, kf:c.kf };
+        });
+        renderTimelineTrack(trackKey);
+      });
+      renderInspector();
+      updateSeekRange(); renderRuler();
+      seekToFrame(0);
+    } catch(err){
+      alert('プロジェクトファイルの読み込みに失敗しました');
+      console.error(err);
+    }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+});
+
+// ---------- MP4書き出し ----------
+function loadScript(src){
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('読み込み失敗: ' + src));
+    document.head.appendChild(s);
+  });
+}
+async function loadFfmpegIfNeeded(){
+  if (window.FFmpeg) return;
+  const sources = [
+    'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js',
+    'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js'
+  ];
+  let lastErr = null;
+  for (const src of sources){
+    try { await loadScript(src); return; }
+    catch(err){ lastErr = err; }
+  }
+  throw new Error('ffmpeg.wasmの読み込みに失敗しました(ネット接続、または広告ブロッカー等の拡張機能を確認してください): ' + (lastErr ? lastErr.message : ''));
+}
+
+let sharedAudioCtx = null;
+let sharedAudioDest = null;
+function getAudioDestStream(){
+  // createMediaElementSourceは同じaudio要素に対して一度しか呼べないため、使い回す
+  if (!sharedAudioCtx){
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const srcNode = sharedAudioCtx.createMediaElementSource(audio);
+    sharedAudioDest = sharedAudioCtx.createMediaStreamDestination();
+    srcNode.connect(sharedAudioDest);
+    srcNode.connect(sharedAudioCtx.destination);
+  }
+  if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+  return sharedAudioDest.stream;
+}
+
+async function exportMp4(){
+  const total = Math.max(trackTotalFrames('A'), trackTotalFrames('B'), 1);
+  if (total <= 1){ alert('タイムラインに何も配置されていません'); return; }
+  const exportStatus = document.getElementById('exportStatus');
+  const btn = document.getElementById('exportMp4Btn');
+  btn.disabled = true;
+
+  try {
+    exportStatus.textContent = '準備中...';
+
+    const canvasStream = canvas.captureStream(fps);
+    let mixedStream = canvasStream;
+
+    if (audioLoaded){
+      const audioStream = getAudioDestStream();
+      mixedStream = new MediaStream([...canvasStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
+    }
+
+    let mimeType = 'video/webm;codecs=vp9,opus';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+    const recorder = new MediaRecorder(mixedStream, { mimeType, videoBitsPerSecond: 8000000 });
+    const chunks = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    const recordingDone = new Promise((resolve) => { recorder.onstop = resolve; });
+
+    seekToFrame(0);
+    recorder.start();
+    doPlay();
+    exportingState = { active:true, onEnd: () => recorder.stop() };
+
+    const progressTimer = setInterval(() => {
+      const pct = Math.min(100, Math.round((currentFrame / total) * 100));
+      exportStatus.textContent = `録画中... ${pct}%`;
+    }, 200);
+
+    await recordingDone;
+    clearInterval(progressTimer);
+    exportingState = null;
+
+    const webmBlob = new Blob(chunks, { type: 'video/webm' });
+
+    try {
+      exportStatus.textContent = 'MP4に変換中...(初回はライブラリ読み込みで数十秒かかります)';
+      await loadFfmpegIfNeeded();
+      const { createFFmpeg, fetchFile } = FFmpeg;
+      const ffmpeg = createFFmpeg({
+        log:false,
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' // SharedArrayBuffer不要なシングルスレッド版を明示指定
+      });
+      await ffmpeg.load();
+      ffmpeg.FS('writeFile', 'input.webm', await fetchFile(webmBlob));
+      await ffmpeg.run('-i','input.webm','-c:v','libx264','-preset','fast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','output.mp4');
+      const data = ffmpeg.FS('readFile', 'output.mp4');
+      const mp4Blob = new Blob([data.buffer], { type:'video/mp4' });
+      const url = URL.createObjectURL(mp4Blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'editmanagerpro-output.mp4';
+      a.click();
+      URL.revokeObjectURL(url);
+      exportStatus.textContent = '書き出し完了!(mp4)';
+    } catch(err){
+      console.error(err);
+      exportStatus.textContent = 'MP4変換に失敗しました(' + (err && err.message ? err.message : err) + ')。webm形式でダウンロードします。';
+      const url = URL.createObjectURL(webmBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'editmanagerpro-output.webm';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch(outerErr){
+    console.error(outerErr);
+    exportStatus.textContent = '書き出し処理でエラーが発生しました(' + (outerErr && outerErr.message ? outerErr.message : outerErr) + ')';
+    exportingState = null;
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById('exportMp4Btn').addEventListener('click', exportMp4);
+
+renderRuler();
+loop();
+</script>
+</body>
+</html>

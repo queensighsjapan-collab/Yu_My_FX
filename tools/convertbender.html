@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!-- SharedArrayBufferを使えるようにする(このファイルと同じ場所にcoi-serviceworker.jsを置く必要あり) -->
+<script src="./coi-serviceworker.js"></script>
+<meta charset="UTF-8">
+<title>CONVERTBENDER :: WEBM → MP4</title>
+<style>
+  :root{
+    --bg:#08090c; --panel:#0f1218; --line:#1c212b;
+    --cyan:#39f2e0; --magenta:#ff2ea6; --amber:#ffb020; --red:#ff5b5b;
+    --text:#d9e2ea; --text-dim:#5c6b7a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:
+      radial-gradient(ellipse at 20% -10%, rgba(57,242,224,0.08), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(255,46,166,0.08), transparent 45%),
+      var(--bg);
+    color:var(--text); font-family:'Courier New', ui-monospace, monospace;
+    min-height:100vh; padding:20px; display:flex; flex-direction:column; align-items:center;
+  }
+  header{ width:100%; max-width:640px; border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:20px; }
+  h1{ margin:0; font-size:22px; letter-spacing:3px; font-weight:700; }
+  h1 span{ color:var(--cyan); text-shadow:0 0 12px rgba(57,242,224,0.6); }
+  .tag{ font-size:10px; letter-spacing:2px; color:var(--text-dim); margin-top:4px; }
+
+  .diag{
+    width:100%; max-width:640px; background:var(--panel); border:1px solid var(--line);
+    border-radius:6px; padding:12px 16px; margin-bottom:18px; font-size:11px;
+  }
+  .diag .row{ display:flex; justify-content:space-between; padding:3px 0; }
+  .diag .ok{ color:var(--cyan); }
+  .diag .ng{ color:var(--red); }
+
+  .panel{
+    width:100%; max-width:640px; background:var(--panel); border:1px solid var(--line);
+    border-radius:6px; padding:24px; text-align:center;
+  }
+  .drop{
+    border:2px dashed var(--line); border-radius:8px; padding:40px 20px; cursor:pointer;
+    transition:.15s; font-size:12px; color:var(--text-dim); letter-spacing:1px;
+  }
+  .drop:hover, .drop.dragover{ border-color:var(--cyan); color:var(--cyan); }
+  input[type=file]{ display:none; }
+
+  button{
+    margin-top:16px; background:var(--panel); border:1px solid var(--cyan); color:var(--cyan);
+    padding:10px 24px; font-family:inherit; font-size:12px; letter-spacing:2px;
+    border-radius:4px; cursor:pointer; transition:.15s;
+  }
+  button:hover{ background:rgba(57,242,224,0.1); }
+  button:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .status{ margin-top:16px; font-size:11px; color:var(--text-dim); min-height:16px; white-space:pre-wrap; }
+  .fname{ margin-top:10px; font-size:11px; color:var(--cyan); word-break:break-all; }
+
+  .log{
+    margin-top:14px; text-align:left; background:#0a0d12; border:1px solid var(--line);
+    border-radius:4px; padding:10px; font-size:9px; color:var(--text-dim); max-height:140px;
+    overflow-y:auto; white-space:pre-wrap; display:none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CONVERT<span>BENDER</span></h1>
+  <div class="tag">WEBM → MP4 LOCAL CONVERTER</div>
+</header>
+
+<div class="diag" id="diag">診断チェック中...</div>
+
+<div class="panel">
+  <label class="drop" id="dropZone">
+    ここにwebmファイルをドラッグ&ドロップ<br>またはクリックして選択
+  </label>
+  <input type="file" id="fileInput" accept="video/webm,.webm">
+  <div class="fname" id="fname"></div>
+  <button id="convertBtn" disabled>▶ MP4に変換</button>
+  <div class="status" id="status"></div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const diag = document.getElementById('diag');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fnameEl = document.getElementById('fname');
+const convertBtn = document.getElementById('convertBtn');
+const statusEl = document.getElementById('status');
+const logEl = document.getElementById('log');
+
+let selectedFile = null;
+
+function updateDiag(){
+  const isolated = !!window.crossOriginIsolated;
+  const hasSAB = typeof SharedArrayBuffer !== 'undefined';
+  diag.innerHTML = `
+    <div class="row"><span>crossOriginIsolated</span><span class="${isolated?'ok':'ng'}">${isolated ? 'OK' : 'NG(未有効)'}</span></div>
+    <div class="row"><span>SharedArrayBuffer</span><span class="${hasSAB?'ok':'ng'}">${hasSAB ? '利用可能' : '利用不可'}</span></div>
+    <div class="row"><span>Service Worker</span><span class="${navigator.serviceWorker && navigator.serviceWorker.controller ? 'ok':'ng'}">${navigator.serviceWorker && navigator.serviceWorker.controller ? '有効' : '未制御(要リロード)'}</span></div>
+  `;
+}
+updateDiag();
+// coi-serviceworkerがページを制御し始めるとリロードが走ることがあるため、少し遅れて再チェック
+setTimeout(updateDiag, 1500);
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) setFile(e.target.files[0]);
+});
+function setFile(f){
+  selectedFile = f;
+  fnameEl.textContent = `選択中: ${f.name}(${(f.size/1024/1024).toFixed(1)}MB)`;
+  convertBtn.disabled = false;
+  statusEl.textContent = '';
+}
+
+function log(msg){
+  logEl.style.display = 'block';
+  logEl.textContent += msg + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function loadScript(src){
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('読み込み失敗: ' + src));
+    document.head.appendChild(s);
+  });
+}
+async function loadFfmpegIfNeeded(){
+  if (window.FFmpeg) return;
+  const sources = [
+    'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js',
+    'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js'
+  ];
+  let lastErr = null;
+  for (const src of sources){
+    try { await loadScript(src); log('ffmpeg.min.js 読み込みOK: ' + src); return; }
+    catch(err){ lastErr = err; log('失敗: ' + err.message); }
+  }
+  throw new Error('ffmpeg.min.jsの読み込みに失敗しました: ' + (lastErr ? lastErr.message : ''));
+}
+
+convertBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  convertBtn.disabled = true;
+  logEl.textContent = '';
+  statusEl.textContent = '準備中...';
+  try {
+    await loadFfmpegIfNeeded();
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({
+      log: true,
+      logger: ({ message }) => log(message),
+      corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+    });
+    statusEl.textContent = 'ffmpeg.wasm 読み込み中...';
+    await ffmpeg.load();
+    statusEl.textContent = '変換中...(ファイルサイズによって数十秒〜数分かかります)';
+    ffmpeg.FS('writeFile', 'input.webm', await fetchFile(selectedFile));
+    await ffmpeg.run('-i','input.webm','-c:v','libx264','-preset','fast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','output.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const blob = new Blob([data.buffer], { type:'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = selectedFile.name.replace(/\.webm$/i, '') + '.mp4';
+    a.click();
+    URL.revokeObjectURL(url);
+    statusEl.textContent = '✓ 変換完了しました';
+  } catch(err){
+    console.error(err);
+    statusEl.textContent = '✗ 変換に失敗しました: ' + (err && err.message ? err.message : err);
+    log('ERROR: ' + (err && err.stack ? err.stack : err));
+  } finally {
+    convertBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

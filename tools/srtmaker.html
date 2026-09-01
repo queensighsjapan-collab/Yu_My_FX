@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>SRT MAKER :: LYRIC TIMING TOOL</title>
+<style>
+  :root{
+    --bg:#08090c; --panel:#0f1218; --line:#1c212b;
+    --cyan:#39f2e0; --magenta:#ff2ea6; --amber:#ffb020;
+    --text:#d9e2ea; --text-dim:#5c6b7a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:
+      radial-gradient(ellipse at 20% -10%, rgba(57,242,224,0.08), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(255,46,166,0.08), transparent 45%),
+      var(--bg);
+    color:var(--text); font-family:'Courier New', ui-monospace, monospace;
+    min-height:100vh; padding:20px;
+  }
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:1px solid var(--line); padding-bottom:14px; margin-bottom:18px; flex-wrap:wrap; gap:10px;
+  }
+  h1{ margin:0; font-size:22px; letter-spacing:3px; font-weight:700; }
+  h1 span{ color:var(--cyan); text-shadow:0 0 12px rgba(57,242,224,0.6); }
+  .tag{ font-size:10px; letter-spacing:2px; color:var(--text-dim); }
+
+  .layout{ display:grid; grid-template-columns:1fr 360px; gap:18px; }
+  @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  .panel + .panel{ margin-top:16px; }
+  .panel h2{
+    margin:0 0 12px; font-size:11px; letter-spacing:2px; color:var(--text-dim);
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel h2::before{
+    content:''; width:6px;height:6px; background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan); display:inline-block; border-radius:50%;
+  }
+
+  .loader{
+    display:inline-block; border:1px dashed var(--line); border-radius:6px; padding:10px 16px;
+    font-size:11px; letter-spacing:1px; color:var(--text-dim); cursor:pointer; transition:.15s;
+  }
+  .loader:hover{ border-color:var(--cyan); color:var(--cyan); }
+  input[type=file]{ display:none; }
+
+  textarea{
+    width:100%; min-height:120px; background:#0a0d12; border:1px solid var(--line); color:var(--text);
+    font-family:inherit; font-size:12px; padding:10px; border-radius:6px; resize:vertical;
+  }
+
+  .transport{ display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  button{
+    background:var(--panel); border:1px solid var(--line); color:var(--text);
+    padding:9px 16px; font-family:inherit; font-size:11px; letter-spacing:1.5px;
+    border-radius:4px; cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  button:hover{ border-color:var(--cyan); color:var(--cyan); }
+  button.primary{ border-color:var(--cyan); color:var(--cyan); background:rgba(57,242,224,0.08); }
+  button.tap{
+    font-size:16px; padding:16px 32px; border-color:var(--magenta); color:var(--magenta);
+    background:rgba(255,46,166,0.08); letter-spacing:3px;
+  }
+  button.tap:hover{ background:rgba(255,46,166,0.18); }
+  button:disabled{ opacity:0.3; cursor:not-allowed; }
+  button.small{ padding:4px 10px; font-size:9px; }
+
+  input[type=range]{ flex:1; -webkit-appearance:none; height:3px; background:var(--line); border-radius:2px; outline:none; }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:13px;height:13px; border-radius:50%;
+    background:var(--cyan); box-shadow:0 0 8px rgba(57,242,224,0.8); cursor:pointer; margin-top:-5px;
+  }
+  .timecode{
+    font-size:13px; color:var(--text); background:#0a0d12; border:1px solid var(--line);
+    border-radius:4px; padding:6px 10px; min-width:150px; text-align:center;
+  }
+
+  .now-line{
+    margin-top:16px; padding:16px; background:#0a0d12; border:1px solid var(--line); border-radius:6px;
+    text-align:center; min-height:30px; font-size:15px;
+  }
+  .now-line .idx{ font-size:10px; color:var(--text-dim); letter-spacing:1px; margin-bottom:6px; }
+  .now-line .done{ color:var(--text-dim); font-size:11px; }
+
+  .line-list{ max-height:520px; overflow-y:auto; }
+  .line-row{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:4px;
+    font-size:11px; cursor:pointer; border:1px solid transparent;
+  }
+  .line-row:hover{ border-color:var(--line); }
+  .line-row.current{ border-color:var(--magenta); background:rgba(255,46,166,0.08); }
+  .line-row.tapped{ color:var(--cyan); }
+  .line-row .num{ width:24px; color:var(--text-dim); flex-shrink:0; }
+  .line-row .txt{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .line-row .time{
+    width:78px; flex-shrink:0; background:#0a0d12; border:1px solid var(--line); color:var(--text);
+    font-family:inherit; font-size:9px; padding:3px 4px; border-radius:3px; text-align:center;
+  }
+
+  .hint{ font-size:10px; color:var(--text-dim); line-height:1.7; margin-top:12px; border-top:1px dashed var(--line); padding-top:10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>SRT <span>MAKER</span></h1>
+    <div class="tag">LYRIC TIMING TOOL — mp3 + テキストからSRTを作る</div>
+  </div>
+  <span class="tag" id="statusTag">待機中</span>
+</header>
+
+<div class="layout">
+  <div>
+    <div class="panel">
+      <h2>AUDIO</h2>
+      <label class="loader" id="audioLoader">+ mp3を読み込む</label>
+      <input type="file" id="audioInput" accept="audio/*">
+      <div id="audioInfo" class="tag" style="margin-top:8px;">未読み込み</div>
+      <div class="transport">
+        <button class="primary" id="playBtn" disabled>▶ 再生</button>
+        <button id="stopBtn" disabled>■ 停止</button>
+        <input type="range" id="seek" min="0" max="100" value="0" step="0.01" disabled>
+        <div class="timecode" id="timecode">00:00.00</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>TAP TIMING</h2>
+      <div class="now-line" id="nowLine">
+        <div class="idx" id="nowIdx">歌詞を読み込んでください</div>
+        <div id="nowText">-</div>
+      </div>
+      <div class="transport" style="justify-content:center;">
+        <button class="tap" id="tapBtn" disabled>TAP ここで表示</button>
+      </div>
+      <div class="transport" style="justify-content:center;">
+        <button class="small" id="undoBtn">↺ 1つ戻す</button>
+        <button class="small" id="resetTapBtn">全部やり直す</button>
+      </div>
+      <div class="hint">
+        再生しながら、その歌詞を表示したい瞬間に「TAP」ボタン(またはスペースキー)を押してください。押すたびに次の行へ進みます。行の終了時刻は「次の行の開始時刻」として自動計算されます。<br>
+        タップし終わったあとも、右のリストで各行の開始時刻を直接編集できます(秒単位、例:12.5)。
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>LYRICS</h2>
+      <label class="loader" id="lyricsLoader">+ .txtを読み込む</label>
+      <input type="file" id="lyricsInput" accept=".txt">
+      <div class="tag" style="margin:8px 0 4px;">またはここに直接貼り付け(1行=1フレーズ)</div>
+      <textarea id="lyricsArea" placeholder="1行目の歌詞&#10;2行目の歌詞&#10;..."></textarea>
+      <button class="small" id="applyLyricsBtn" style="margin-top:8px;">この歌詞を反映</button>
+    </div>
+
+    <div class="panel">
+      <h2>LINE LIST</h2>
+      <div class="line-list" id="lineList">
+        <div class="tag">歌詞を読み込むとここに一覧が出ます</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>EXPORT</h2>
+      <button class="primary" id="exportSrtBtn" disabled style="width:100%;">💾 SRTを書き出す</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const audio = new Audio();
+let audioLoaded = false;
+
+const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopBtn');
+const seekEl = document.getElementById('seek');
+const timecodeEl = document.getElementById('timecode');
+const statusTag = document.getElementById('statusTag');
+const tapBtn = document.getElementById('tapBtn');
+const nowIdx = document.getElementById('nowIdx');
+const nowText = document.getElementById('nowText');
+const lineListEl = document.getElementById('lineList');
+const exportBtn = document.getElementById('exportSrtBtn');
+
+let lines = [];       // 歌詞テキストの配列
+let starts = [];      // 各行の開始秒(null = 未タップ)
+let tapIndex = 0;     // 次にタップする行
+
+// ---------- 音声読み込み ----------
+document.getElementById('audioLoader').addEventListener('click', () => document.getElementById('audioInput').click());
+document.getElementById('audioInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  audio.src = URL.createObjectURL(f);
+  audio.addEventListener('loadedmetadata', () => {
+    audioLoaded = true;
+    document.getElementById('audioInfo').textContent = `${f.name}(${audio.duration.toFixed(1)}秒)`;
+    seekEl.max = audio.duration;
+    seekEl.disabled = false;
+    playBtn.disabled = false;
+    stopBtn.disabled = false;
+    updateTapEnabled();
+  }, { once:true });
+  e.target.value = '';
+});
+
+playBtn.addEventListener('click', () => { audio.play(); statusTag.textContent = '再生中'; });
+stopBtn.addEventListener('click', () => { audio.pause(); audio.currentTime = 0; statusTag.textContent = '停止'; });
+seekEl.addEventListener('input', () => { audio.currentTime = parseFloat(seekEl.value); });
+audio.addEventListener('timeupdate', () => {
+  if (!seekEl.matches(':active')) seekEl.value = audio.currentTime;
+  timecodeEl.textContent = fmtShort(audio.currentTime);
+});
+
+function fmtShort(sec){
+  const m = Math.floor(sec/60), s = (sec%60).toFixed(2).padStart(5,'0');
+  return `${String(m).padStart(2,'0')}:${s}`;
+}
+function fmtSrt(sec){
+  sec = Math.max(0, sec);
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = Math.floor(sec%60);
+  const ms = Math.round((sec - Math.floor(sec)) * 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+}
+
+// ---------- 歌詞読み込み ----------
+document.getElementById('lyricsLoader').addEventListener('click', () => document.getElementById('lyricsInput').click());
+document.getElementById('lyricsInput').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('lyricsArea').value = reader.result;
+    applyLyrics();
+  };
+  reader.readAsText(f, 'utf-8');
+  e.target.value = '';
+});
+document.getElementById('applyLyricsBtn').addEventListener('click', applyLyrics);
+
+function applyLyrics(){
+  const text = document.getElementById('lyricsArea').value;
+  lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  starts = lines.map(() => null);
+  tapIndex = 0;
+  renderLineList();
+  updateNowLine();
+  updateTapEnabled();
+  updateExportEnabled();
+}
+
+// ---------- タップタイミング ----------
+tapBtn.addEventListener('click', doTap);
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  e.preventDefault();
+  doTap();
+});
+function doTap(){
+  if (!audioLoaded || lines.length === 0) return;
+  if (tapIndex >= lines.length) return;
+  starts[tapIndex] = audio.currentTime;
+  tapIndex++;
+  renderLineList();
+  updateNowLine();
+  updateExportEnabled();
+}
+document.getElementById('undoBtn').addEventListener('click', () => {
+  if (tapIndex <= 0) return;
+  tapIndex--;
+  starts[tapIndex] = null;
+  renderLineList();
+  updateNowLine();
+  updateExportEnabled();
+});
+document.getElementById('resetTapBtn').addEventListener('click', () => {
+  starts = lines.map(() => null);
+  tapIndex = 0;
+  renderLineList();
+  updateNowLine();
+  updateExportEnabled();
+});
+
+function updateTapEnabled(){
+  tapBtn.disabled = !(audioLoaded && lines.length > 0);
+}
+function updateExportEnabled(){
+  exportBtn.disabled = !(lines.length > 0 && starts.some(s => s !== null));
+}
+
+function updateNowLine(){
+  if (lines.length === 0){
+    nowIdx.textContent = '歌詞を読み込んでください';
+    nowText.textContent = '-';
+    return;
+  }
+  if (tapIndex >= lines.length){
+    nowIdx.textContent = '全行タップ済み';
+    nowText.innerHTML = '<span class="done">お疲れさまでした。右のリストで微調整してSRTを書き出してください。</span>';
+    return;
+  }
+  nowIdx.textContent = `${tapIndex + 1} / ${lines.length} 行目`;
+  nowText.textContent = lines[tapIndex];
+}
+
+function renderLineList(){
+  lineListEl.innerHTML = '';
+  if (lines.length === 0){
+    lineListEl.innerHTML = '<div class="tag">歌詞を読み込むとここに一覧が出ます</div>';
+    return;
+  }
+  lines.forEach((line, i) => {
+    const row = document.createElement('div');
+    row.className = 'line-row';
+    if (i === tapIndex) row.classList.add('current');
+    if (starts[i] !== null) row.classList.add('tapped');
+
+    const num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = i + 1;
+
+    const txt = document.createElement('div');
+    txt.className = 'txt';
+    txt.textContent = line;
+
+    const time = document.createElement('input');
+    time.className = 'time';
+    time.type = 'text';
+    time.placeholder = '未タップ';
+    time.value = starts[i] !== null ? starts[i].toFixed(2) : '';
+    time.addEventListener('click', (ev) => ev.stopPropagation());
+    time.addEventListener('change', () => {
+      const v = parseFloat(time.value);
+      starts[i] = isNaN(v) ? null : v;
+      renderLineList();
+      updateExportEnabled();
+    });
+
+    row.appendChild(num);
+    row.appendChild(txt);
+    row.appendChild(time);
+
+    row.addEventListener('click', () => {
+      tapIndex = i;
+      if (audioLoaded && starts[i] !== null) audio.currentTime = starts[i];
+      renderLineList();
+      updateNowLine();
+    });
+
+    lineListEl.appendChild(row);
+  });
+}
+
+// ---------- SRT書き出し ----------
+exportBtn.addEventListener('click', () => {
+  const defaultDur = 3; // 最後の行の長さ(秒)、未タップ行にも使う保険値
+  let srt = '';
+  let block = 1;
+  for (let i = 0; i < lines.length; i++){
+    if (starts[i] === null) continue; // 未タップ行はスキップ
+    const start = starts[i];
+    let end;
+    // 次に「タップ済みの」行を探して終了時刻にする
+    let next = null;
+    for (let j = i + 1; j < lines.length; j++){
+      if (starts[j] !== null){ next = starts[j]; break; }
+    }
+    end = next !== null ? next : start + defaultDur;
+    srt += `${block}\n${fmtSrt(start)} --> ${fmtSrt(end)}\n${lines[i]}\n\n`;
+    block++;
+  }
+  const blob = new Blob([srt], { type:'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'lyrics.srt';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
