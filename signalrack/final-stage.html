@@ -98,6 +98,11 @@
     color: var(--sub); font-size: 9.5px; font-weight: 800; cursor: pointer; }
   .power-toggle.on { background: linear-gradient(135deg, var(--accent), #2a9fd8); color: #0a0d11; border-color: transparent; }
   .module-body { margin-top: 10px; }
+  .solo-btn { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid #2a3340; background: #131820;
+    color: var(--sub); font-size: 12px; font-weight: 800; letter-spacing: 0.06em; cursor: pointer; transition: all .15s; }
+  .solo-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .solo-btn.on { background: linear-gradient(135deg, var(--accent), #2a9fd8); color: #0a0d11; border-color: transparent; }
+  .solo-note { font-size: 10.5px; color: var(--sub); margin-top: 6px; line-height: 1.5; }
   .row { margin-bottom: 12px; }
   .row:last-child { margin-bottom: 0; }
   .row-head { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--sub); margin-bottom: 5px; }
@@ -266,6 +271,7 @@
       params: [
         { key: 'freq', label: 'FREQUENCY', min: 0, max: 100, val: 55, fmt: v => Math.round(freqFromExciterSlider(v)) + 'Hz' },
         { key: 'drive', label: 'DRIVE', min: 0, max: 100, val: 40, fmt: v => v + '%' },
+        { key: 'character', label: 'CHARACTER (TUBE ⇔ TAPE)', min: 0, max: 100, val: 50, fmt: v => (v < 35 ? 'TUBE寄り ' : v > 65 ? 'TAPE寄り ' : '中間 ') + v + '%' },
         { key: 'mix', label: 'MIX', min: 0, max: 100, val: 35, fmt: v => v + '%' }
       ]
     },
@@ -293,7 +299,7 @@
   function toneFreqFromSlider(v) { return 800 * Math.pow(20, v / 100); }
 
   let moduleOrder = ['exciter', 'imager', 'reverb'];
-  const moduleState = { exciter: { on: true }, imager: { on: true }, reverb: { on: true } };
+  const moduleState = { exciter: { on: true, solo: false }, imager: { on: true }, reverb: { on: true } };
   Object.keys(moduleDefs).forEach(key => { moduleDefs[key].params.forEach(p => { moduleState[key][p.key] = p.val; }); });
   const modules = {};
   let limiterNodes = null;
@@ -346,20 +352,69 @@
     return curve;
   }
 
+  // ---- Exciter (harmonic generator) ----
+  // Signal path:  input ──────────────────────────────► dryGain ──► output
+  //               input ► HP(freq) ► preGain ► shaper ► postGain ► HP(freq) ► harmGain ► output
+  // The high band is pushed into a soft-saturation curve, which creates new
+  // harmonics. The 2nd high-pass removes low-frequency distortion products and DC.
+  const EXC_RANGE = 8;     // curve covers -8 .. +8 (after drive gain)
+  const EXC_CURVE_N = 4097;
+
+  function exciterDriveGain(drive) { return Math.pow(10, (drive / 100) * 1.8); }   // 1x .. 63x (0 .. 36 dB)
+
+  // character: 0 = TUBE (asymmetric, even harmonics)  ...  100 = TAPE (symmetric, odd harmonics)
+  function buildExciterCurve(character) {
+    const c = character / 100;
+    const bias = (1 - c) * 0.6;
+    const d = 1 - Math.pow(Math.tanh(bias), 2);        // keeps small-signal gain at 1
+    const tb = Math.tanh(bias);
+    const curve = new Float32Array(EXC_CURVE_N);
+    for (let i = 0; i < EXC_CURVE_N; i++) {
+      const s = (i / (EXC_CURVE_N - 1)) * 2 - 1;
+      const u = s * EXC_RANGE;
+      curve[i] = (Math.tanh(u + bias) - tb) / d;
+    }
+    return curve;
+  }
+
+  function exciterGains(state) {
+    const active = state.on;
+    const solo = active && state.solo;
+    const G = exciterDriveGain(state.drive);
+    return {
+      pre: G / EXC_RANGE,
+      post: 1 / Math.sqrt(G),
+      harm: active ? (state.mix / 100) * 0.5 : 0,
+      dry: solo ? 0 : 1
+    };
+  }
+
   function buildExciter(ctx, state) {
     const input = ctx.createGain();
     const output = ctx.createGain();
+    const dryGain = ctx.createGain();
     const hp = ctx.createBiquadFilter(); hp.type = 'highpass';
-    hp.frequency.value = freqFromExciterSlider(state.freq);
+    const hp2 = ctx.createBiquadFilter(); hp2.type = 'highpass';
+    const f = freqFromExciterSlider(state.freq);
+    hp.frequency.value = f;
+    hp2.frequency.value = f;
+    const preGain = ctx.createGain();
     const shaper = ctx.createWaveShaper();
-    shaper.oversample = '2x';
+    shaper.curve = buildExciterCurve(state.character);
+    shaper.oversample = '4x';
+    const postGain = ctx.createGain();
     const harmGain = ctx.createGain();
-    harmGain.gain.value = state.on ? (state.drive / 100) * (state.mix / 100) * 1.4 : 0;
+    const g = exciterGains(state);
+    preGain.gain.value = g.pre;
+    postGain.gain.value = g.post;
+    harmGain.gain.value = g.harm;
+    dryGain.gain.value = g.dry;
 
-    input.connect(output);
-    input.connect(hp); hp.connect(shaper); shaper.connect(harmGain); harmGain.connect(output);
+    input.connect(dryGain); dryGain.connect(output);
+    input.connect(hp); hp.connect(preGain); preGain.connect(shaper); shaper.connect(postGain);
+    postGain.connect(hp2); hp2.connect(harmGain); harmGain.connect(output);
 
-    return { input, output, hp, shaper, harmGain };
+    return { input, output, dryGain, hp, hp2, preGain, shaper, postGain, harmGain };
   }
 
   function buildImager(ctx, state) {
@@ -447,7 +502,11 @@
   function buildFullChain(ctx) {
     const limiter = buildLimiter(ctx, limiterState);
     const built = {};
-    moduleOrder.forEach(key => { built[key] = BUILDERS[key](ctx, moduleState[key]); });
+    moduleOrder.forEach(key => {
+      // HARMONICS ONLY is a monitoring aid: it is never printed into the exported file.
+      const st = key === 'exciter' ? Object.assign({}, moduleState[key], { solo: false }) : moduleState[key];
+      built[key] = BUILDERS[key](ctx, st);
+    });
     let prev = limiter.output;
     moduleOrder.forEach(key => { prev.connect(built[key].input); prev = built[key].output; });
     return { input: limiter.input, output: prev, limiter, modulesBuilt: built };
@@ -579,7 +638,11 @@
           <button class="order-btn" data-key="${key}" data-dir="down" ${idx === moduleOrder.length - 1 ? 'disabled' : ''}>↓</button>
           <button class="power-toggle ${state.on ? 'on' : ''}" data-key="${key}">${state.on ? 'ON' : 'OFF'}</button>
         </div>
-        <div class="module-body">${paramsHtml}</div>
+        <div class="module-body">${paramsHtml}${key === 'exciter' ? `
+          <div class="row">
+            <button class="solo-btn ${state.solo ? 'on' : ''}" id="exciterSoloBtn">HARMONICS ONLY　${state.solo ? 'ON' : 'OFF'}</button>
+            <div class="solo-note">足している倍音だけを聴くモニター用ボタンです。試聴専用で、書き出しには入りません。</div>
+          </div>` : ''}</div>
       `;
       moduleListEl.appendChild(card);
     });
@@ -606,6 +669,15 @@
       });
     });
 
+    const soloBtn = root.querySelector('#exciterSoloBtn');
+    if (soloBtn) {
+      soloBtn.addEventListener('click', () => {
+        moduleState.exciter.solo = !moduleState.exciter.solo;
+        applyModuleParams('exciter');
+        renderModuleList();
+      });
+    }
+
     Object.keys(moduleDefs).forEach(key => {
       moduleDefs[key].params.forEach(p => {
         const slider = root.querySelector(`#slider-${key}-${p.key}`);
@@ -625,8 +697,16 @@
     const s = moduleState[key];
     const now = audioCtx.currentTime;
     if (key === 'exciter') {
-      modules.exciter.hp.frequency.setTargetAtTime(freqFromExciterSlider(s.freq), now, 0.02);
-      modules.exciter.harmGain.gain.setTargetAtTime(s.on ? (s.drive / 100) * (s.mix / 100) * 1.4 : 0, now, 0.02);
+      const ex = modules.exciter;
+      const g = exciterGains(s);
+      const f = freqFromExciterSlider(s.freq);
+      ex.hp.frequency.setTargetAtTime(f, now, 0.02);
+      ex.hp2.frequency.setTargetAtTime(f, now, 0.02);
+      ex.preGain.gain.setTargetAtTime(g.pre, now, 0.02);
+      ex.postGain.gain.setTargetAtTime(g.post, now, 0.02);
+      ex.harmGain.gain.setTargetAtTime(g.harm, now, 0.02);
+      ex.dryGain.gain.setTargetAtTime(g.dry, now, 0.02);
+      ex.shaper.curve = buildExciterCurve(s.character);
     } else if (key === 'imager') {
       modules.imager.sideHP.frequency.setTargetAtTime(s.bassFreq, now, 0.02);
       modules.imager.sideLP.frequency.setTargetAtTime(s.bassFreq, now, 0.02);
