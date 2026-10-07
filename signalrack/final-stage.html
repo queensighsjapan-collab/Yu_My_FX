@@ -272,6 +272,7 @@
         { key: 'freq', label: 'FREQUENCY', min: 0, max: 100, val: 55, fmt: v => Math.round(freqFromExciterSlider(v)) + 'Hz' },
         { key: 'drive', label: 'DRIVE', min: 0, max: 100, val: 40, fmt: v => v + '%' },
         { key: 'character', label: 'CHARACTER (TUBE ⇔ TAPE)', min: 0, max: 100, val: 50, fmt: v => (v < 35 ? 'TUBE寄り ' : v > 65 ? 'TAPE寄り ' : '中間 ') + v + '%' },
+        { key: 'phase', label: 'PHASE', min: 0, max: 100, val: 0, fmt: v => (v < 1 ? 'OFF' : v + '%') },
         { key: 'mix', label: 'MIX', min: 0, max: 100, val: 35, fmt: v => v + '%' }
       ]
     },
@@ -377,15 +378,25 @@
     return curve;
   }
 
+  // PHASE: the generated harmonics are passed through two all-pass filters, which only
+  // shift their timing (phase) and never change their level. 0% = bypass.
+  // Higher % = the all-pass turning point moves lower, so more of the band is rotated.
+  function exciterPhaseFreq(phase) { return 20000 * Math.pow(500 / 20000, phase / 100); }
+
   function exciterGains(state) {
     const active = state.on;
     const solo = active && state.solo;
     const G = exciterDriveGain(state.drive);
+    const phaseOn = state.phase >= 1;
     return {
       pre: G / EXC_RANGE,
       post: 1 / Math.sqrt(G),
       harm: active ? (state.mix / 100) * 0.5 : 0,
-      dry: solo ? 0 : 1
+      dry: solo ? 0 : 1,
+      bypass: phaseOn ? 0 : 1,
+      apOn: phaseOn ? 1 : 0,
+      apFreq1: exciterPhaseFreq(state.phase),
+      apFreq2: exciterPhaseFreq(state.phase) * 2.5
     };
   }
 
@@ -404,17 +415,28 @@
     shaper.oversample = '4x';
     const postGain = ctx.createGain();
     const harmGain = ctx.createGain();
+    const bypassGate = ctx.createGain();
+    const apGate = ctx.createGain();
+    const ap1 = ctx.createBiquadFilter(); ap1.type = 'allpass'; ap1.Q.value = 0.7;
+    const ap2 = ctx.createBiquadFilter(); ap2.type = 'allpass'; ap2.Q.value = 0.7;
     const g = exciterGains(state);
     preGain.gain.value = g.pre;
     postGain.gain.value = g.post;
     harmGain.gain.value = g.harm;
     dryGain.gain.value = g.dry;
+    bypassGate.gain.value = g.bypass;
+    apGate.gain.value = g.apOn;
+    ap1.frequency.value = g.apFreq1;
+    ap2.frequency.value = g.apFreq2;
 
     input.connect(dryGain); dryGain.connect(output);
     input.connect(hp); hp.connect(preGain); preGain.connect(shaper); shaper.connect(postGain);
-    postGain.connect(hp2); hp2.connect(harmGain); harmGain.connect(output);
+    postGain.connect(hp2);
+    hp2.connect(bypassGate); bypassGate.connect(harmGain);
+    hp2.connect(ap1); ap1.connect(ap2); ap2.connect(apGate); apGate.connect(harmGain);
+    harmGain.connect(output);
 
-    return { input, output, dryGain, hp, hp2, preGain, shaper, postGain, harmGain };
+    return { input, output, dryGain, hp, hp2, preGain, shaper, postGain, harmGain, bypassGate, apGate, ap1, ap2 };
   }
 
   function buildImager(ctx, state) {
@@ -706,6 +728,10 @@
       ex.postGain.gain.setTargetAtTime(g.post, now, 0.02);
       ex.harmGain.gain.setTargetAtTime(g.harm, now, 0.02);
       ex.dryGain.gain.setTargetAtTime(g.dry, now, 0.02);
+      ex.bypassGate.gain.setTargetAtTime(g.bypass, now, 0.02);
+      ex.apGate.gain.setTargetAtTime(g.apOn, now, 0.02);
+      ex.ap1.frequency.setTargetAtTime(g.apFreq1, now, 0.02);
+      ex.ap2.frequency.setTargetAtTime(g.apFreq2, now, 0.02);
       ex.shaper.curve = buildExciterCurve(s.character);
     } else if (key === 'imager') {
       modules.imager.sideHP.frequency.setTargetAtTime(s.bassFreq, now, 0.02);
