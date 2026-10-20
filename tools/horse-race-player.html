@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HORSE RACE PLAYER</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0f14;color:#e8eef4;font-family:"Hiragino Sans","Yu Gothic","Meiryo",sans-serif}
+#app{max-width:1280px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 12px;letter-spacing:.08em;font-weight:500}
+h1 small{font-size:13px;color:#8fa3b5;margin-left:10px;letter-spacing:0}
+.stage{background:#000;border:2px solid #2a3846;border-radius:10px;overflow:hidden}
+canvas{display:block;width:100%;height:auto}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.btn{background:#95CF67;color:#1d2a10;border:0;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.sub{background:#2a3846;color:#e8eef4}
+.btn.gold{background:#D3AE5B;color:#2a1f08}
+.btn:disabled{opacity:.4;cursor:default}
+#seek{flex:1;min-width:200px;accent-color:#95CF67}
+#time{font-variant-numeric:tabular-nums;color:#8fa3b5;font-size:14px;min-width:100px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.meta label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px;font-size:12px;color:#8fa3b5}
+.meta input{background:#121a22;color:#e8eef4;border:1px solid #2a3846;border-radius:8px;padding:9px 12px;font-size:15px;font-family:inherit}
+.meta input:focus{outline:none;border-color:#95CF67}
+#info{margin-top:10px;color:#8fa3b5;font-size:13px;line-height:1.7;min-height:22px}
+</style>
+</head>
+<body>
+<div id="app">
+<h1>HORSE RACE PLAYER<small>mp3動画化プレーヤー</small></h1>
+<div class="stage"><canvas id="cv" width="1280" height="720"></canvas></div>
+<div class="ctrl">
+<label class="btn" for="file">MP3を選ぶ</label><input id="file" type="file" accept="audio/*,.mp3" hidden>
+<button id="play" class="btn" disabled>再生</button>
+<input id="seek" type="range" min="0" max="1000" value="0" disabled>
+<span id="time">0:00 / 0:00</span>
+<button id="reroll" class="btn sub" disabled>勝ち馬を変える</button>
+<button id="export" class="btn gold" disabled>mp4に書き出し</button>
+</div>
+<div class="meta">
+<label>曲名(MP3から自動で入ります。書き換えるとすぐ画面に反映)<input id="inTitle" type="text" placeholder="曲名を入力"></label>
+<label>アーティスト名(同じく自動。空のときは枠を出しません)<input id="inArtist" type="text" placeholder="アーティスト名を入力"></label>
+</div>
+<div id="info">MP3を選ぶと、曲の長さに合わせたレースが作られます。</div>
+</div>
+
+<script>
+const W=1280,H=720,TAIL=2.0,DT=0.05,LEADX=W*0.62,MPS=10;
+function inkOn(col){const n=parseInt(col.slice(1),16),r=n>>16&255,gg=n>>8&255,b=n&255;return (0.299*r+0.587*gg+0.114*b)>150?'#222222':'#ffffff'}
+const cv=document.getElementById('cv'),g=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const sstep=(a,b,x)=>{x=clamp((x-a)/(b-a),0,1);return x*x*(3-2*x)};
+const lerp=(a,b,t)=>a+(b-a)*t;
+const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const HORSES=[
+ {coat:'#A0522D',dark:'#6E3519',silk:'#D63A3A',silk2:'#FFFFFF',num:1},
+ {coat:'#4A342A',dark:'#241812',silk:'#2F6FD6',silk2:'#FFFFFF',num:2},
+ {coat:'#BFC3C8',dark:'#8D9299',silk:'#F2C230',silk2:'#222222',num:3},
+ {coat:'#7A4A2A',dark:'#4A2B17',silk:'#2E9E5B',silk2:'#FFFFFF',num:4},
+ {coat:'#C98A4B',dark:'#8F5E2E',silk:'#8A4FD0',silk2:'#FFD86B',num:5}
+];
+const LANE=[{s:1.20,gy:440,sf:0.40},{s:1.40,gy:505,sf:0.60},{s:1.55,gy:570,sf:0.80},{s:1.75,gy:632,sf:1.0},{s:1.95,gy:696,sf:1.25}];
+
+const S={buf:null,D:120,title:'MP3を読み込んでください',artist:'',fileTitle:'',bpm:128,beat0:0,E:null,seed:1,race:null,
+ playing:false,offset:0,startCtx:0,src:null,exporting:false,loaded:false};
+let AC=null,master=null,recDest=null,rec=null,recChunks=[],recMime='';
+
+/* ---------- 解析 ---------- */
+function analyze(buf){
+ const sr=buf.sampleRate,n=buf.length;
+ const a=buf.getChannelData(0),b=buf.numberOfChannels>1?buf.getChannelData(1):a;
+ const hop=Math.round(sr/100),M=Math.floor(n/hop);
+ const env=new Float32Array(M);
+ for(let m=0;m<M;m++){let s=0;const st=m*hop;for(let i=0;i<hop;i++){const v=(a[st+i]+b[st+i])*0.5;s+=v*v}env[m]=Math.sqrt(s/hop)}
+ const lg=new Float32Array(M);for(let m=0;m<M;m++)lg[m]=Math.log(1+env[m]*200);
+ const flux=new Float32Array(M);for(let m=1;m<M;m++)flux[m]=Math.max(0,lg[m]-lg[m-1]);
+ const pre=new Float32Array(M+1);for(let m=0;m<M;m++)pre[m+1]=pre[m]+flux[m];
+ const on=new Float32Array(M),w=25;
+ for(let m=0;m<M;m++){const lo=Math.max(0,m-w),hi=Math.min(M,m+w+1);const mean=(pre[hi]-pre[lo])/(hi-lo);on[m]=Math.max(0,flux[m]-mean*1.2)}
+ const ML=Math.min(M,18000),ac={};let bestLag=60,bestSc=-1;
+ for(let lag=30;lag<=90;lag++){let s=0;for(let m=0;m+lag<ML;m++)s+=on[m]*on[m+lag];s/=(ML-lag);ac[lag]=s;
+  const bpm=6000/lag,wt=Math.exp(-0.5*Math.pow(Math.log2(bpm/120)/0.9,2));const sc=s*wt;if(sc>bestSc){bestSc=sc;bestLag=lag}}
+ let lagf=bestLag;
+ if(ac[bestLag-1]!==undefined&&ac[bestLag+1]!==undefined){const y0=ac[bestLag-1],y1=ac[bestLag],y2=ac[bestLag+1];const d=y0-2*y1+y2;if(d<0)lagf=bestLag+clamp(0.5*(y0-y2)/d,-0.5,0.5)}
+ let bpm=6000/lagf;while(bpm<80)bpm*=2;while(bpm>170)bpm/=2;
+ const P=6000/bpm;let bo=0,bs=-1;
+ for(let off=0;off<Math.ceil(P);off++){let s=0;for(let j=0;;j++){const idx=Math.round(off+j*P);if(idx>=M)break;s+=on[idx]}if(s>bs){bs=s;bo=off}}
+ const beat0=bo/100;
+ const K=Math.floor(M/5),e20=new Float32Array(K);
+ for(let k=0;k<K;k++){let s=0;for(let i=0;i<5;i++)s+=env[k*5+i];e20[k]=s/5}
+ const sm=new Float32Array(K),win=30,p2=new Float32Array(K+1);
+ for(let k=0;k<K;k++)p2[k+1]=p2[k]+e20[k];
+ for(let k=0;k<K;k++){const lo=Math.max(0,k-win),hi=Math.min(K,k+win+1);sm[k]=(p2[hi]-p2[lo])/(hi-lo)}
+ const sorted=Array.from(sm).sort((x,y)=>x-y);const p95=sorted[Math.floor(sorted.length*0.95)]||1;
+ const E=new Float32Array(K);for(let k=0;k<K;k++)E[k]=clamp(sm[k]/(p95||1),0,1.3);
+ return{bpm,beat0,E};
+}
+
+/* ---------- レース計算 ---------- */
+function buildRace(){
+ const D=S.D,N=Math.ceil(D/DT)+2,rnd=mulberry(S.seed*7919+13);
+ const E=S.E,Em=E.reduce((s,x)=>s+x,0)/E.length;
+ const lanes=[0,1,2,3,4];for(let i=4;i>0;i--){const j=Math.floor(rnd()*(i+1));[lanes[i],lanes[j]]=[lanes[j],lanes[i]]}
+ const winner=Math.floor(rnd()*5);
+ const others=[0,1,2,3,4].filter(i=>i!==winner);for(let i=others.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[others[i],others[j]]=[others[j],others[i]]}
+ const L=D*220,hs=[];
+ for(let i=0;i<5;i++){
+  const rank=others.indexOf(i);
+  const h={idx:i,lane:lanes[i],k:0.6+0.8*rnd(),A1:0.30+0.15*rnd(),T1:10+14*rnd(),p1:rnd()*6.283,A2:0.15+0.12*rnd(),T2:25+25*rnd(),p2:rnd()*6.283,
+   gap:i===winner?0:130+rank*85+rnd()*30,phOff:i*0.17+rnd()*0.05,C:new Float32Array(N)};
+  for(let n=1;n<N;n++){const t=(n-0.5)*DT,ramp=sstep(0,8,t);
+   const wv=ramp*(h.A1*Math.sin(6.283*t/h.T1+h.p1)+h.A2*Math.sin(6.283*t/h.T2+h.p2));
+   const e=E[Math.min(Math.floor(t*20),E.length-1)];
+   const v=clamp(1+1.3*(e-Em)*h.k+wv,0.25,2.6);h.C[n]=h.C[n-1]+v*DT}
+  h.Cend=interpC(h,D);hs.push(h);
+ }
+ S.race={hs,L,winner,D};
+}
+function interpC(h,t){const u=t/DT,i=Math.min(Math.floor(u),h.C.length-2),f=u-i;return h.C[i]*(1-f)+h.C[i+1]*f}
+function posPx(h,t){
+ const R=S.race,D=S.D;
+ if(t<=D){const base=interpC(h,t)/h.Cend,f=1-(h.gap/R.L)*sstep(0.5,1,t/D);return base*f*R.L}
+ return R.L-h.gap+380*(1-Math.exp(-(t-D)/0.9));
+}
+function Eat(t){const E=S.E;return E[clamp(Math.floor(t*20),0,E.length-1)]}
+
+/* ---------- ID3 ---------- */
+function decodeText(b){const enc=b[0],d=b.subarray(1);let s='';
+ try{if(enc===0){const hi=d.some(x=>x>127);try{s=new TextDecoder(hi?'shift_jis':'iso-8859-1').decode(d)}catch(e){s=new TextDecoder('iso-8859-1').decode(d)}}
+ else if(enc===1)s=new TextDecoder('utf-16').decode(d);
+ else if(enc===2)s=new TextDecoder('utf-16be').decode(d);
+ else s=new TextDecoder('utf-8').decode(d)}catch(e){}
+ return s.replace(/\0/g,'').trim()}
+function decodeBytes(d){const hi=d.some(x=>x>127);try{return new TextDecoder(hi?'shift_jis':'iso-8859-1').decode(d).replace(/\0/g,'').trim()}catch(e){return ''}}
+function parseID3(ab){
+ const r={title:'',artist:''};
+ try{const u=new Uint8Array(ab);
+  if(u[0]===0x49&&u[1]===0x44&&u[2]===0x33&&u[3]>=3){
+   const ver=u[3],size=(u[6]<<21)|(u[7]<<14)|(u[8]<<7)|u[9];let p=10;const end=Math.min(10+size,u.length);
+   if(u[5]&0x40){const es=ver===4?((u[10]<<21)|(u[11]<<14)|(u[12]<<7)|u[13]):(((u[10]<<24)|(u[11]<<16)|(u[12]<<8)|u[13])+4);p+=es}
+   while(p+10<end){const id=String.fromCharCode(u[p],u[p+1],u[p+2],u[p+3]);if(!/^[A-Z0-9]{4}$/.test(id))break;
+    const fs=ver===4?((u[p+4]<<21)|(u[p+5]<<14)|(u[p+6]<<7)|u[p+7]):((u[p+4]<<24)|(u[p+5]<<16)|(u[p+6]<<8)|u[p+7]);
+    if(fs<=0)break;
+    if(id==='TIT2')r.title=decodeText(u.subarray(p+10,p+10+fs));
+    else if(id==='TPE1')r.artist=decodeText(u.subarray(p+10,p+10+fs));
+    if(r.title&&r.artist)break;
+    p+=10+fs}
+  }
+  if((!r.title||!r.artist)&&u.length>128){const o=u.length-128;
+   if(u[o]===0x54&&u[o+1]===0x41&&u[o+2]===0x47){
+    if(!r.title)r.title=decodeBytes(u.subarray(o+3,o+33));
+    if(!r.artist)r.artist=decodeBytes(u.subarray(o+33,o+63))}}
+ }catch(e){}
+ return r;
+}
+
+/* ---------- 馬の描画 ---------- */
+const P={
+ tail:new Path2D('M62,46 C44,38 26,46 12,64 C28,60 42,60 60,60 Z'),
+ body:new Path2D('M60,45 C65,30 100,28 125,35 C138,40 142,52 138,62 C130,75 95,78 70,72 C58,66 55,55 60,45 Z'),
+ neck:new Path2D('M116,36 C126,24 136,14 146,8 L160,20 C152,30 150,44 142,60 Z'),
+ head:new Path2D('M144,6 C154,2 162,10 172,22 C178,30 180,34 176,38 C171,41 165,37 160,31 C153,26 147,21 143,14 Z'),
+ ear:new Path2D('M146,6 L148,-1 L152,5 Z'),
+ mane:new Path2D('M116,34 C124,20 134,10 144,5 L146,14 C138,20 131,30 127,42 Z'),
+ torso:new Path2D('M84,38 C88,18 106,12 118,18 L114,32 C106,32 98,36 92,44 Z')
+};
+const LEGS={
+ fh:{A:[[76,68],[64,86],[52,100]],B:[[76,68],[92,84],[80,98]],off:0.10},
+ ff:{A:[[120,68],[138,84],[152,98]],B:[[120,68],[124,86],[112,96]],off:0.30},
+ nh:{A:[[70,66],[48,80],[24,88]],B:[[70,66],[86,82],[70,94]],off:0.00},
+ nf:{A:[[126,66],[150,76],[176,82]],B:[[126,66],[132,84],[144,94]],off:0.40}
+};
+function seg(c,a,b){c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.stroke()}
+function drawLeg(c,L,col,ph){
+ const w=0.5+0.5*Math.cos((ph+L.off)*6.2832);
+ const hp=[lerp(L.A[0][0],L.B[0][0],w),lerp(L.A[0][1],L.B[0][1],w)];
+ const k=[lerp(L.A[1][0],L.B[1][0],w),lerp(L.A[1][1],L.B[1][1],w)];
+ const f=[lerp(L.A[2][0],L.B[2][0],w),lerp(L.A[2][1],L.B[2][1],w)];
+ c.lineCap='round';c.lineJoin='round';c.strokeStyle=col;
+ c.lineWidth=8;seg(c,hp,k);c.lineWidth=5;seg(c,k,f);
+ c.fillStyle='#222';c.beginPath();c.arc(f[0],f[1]+1,3.5,0,6.2832);c.fill();
+}
+function drawHorse(c,h,noseX,gy,s,ph,E){
+ const bw=0.5+0.5*Math.cos(ph*6.2832),amp=0.5+0.8*E;
+ c.save();c.fillStyle='#2d5a1a';c.globalAlpha=0.28-0.1*bw;
+ c.beginPath();c.ellipse(noseX-85*s,gy,85*s,6*s,0,0,6.2832);c.fill();c.restore();
+ c.save();c.translate(noseX-180*s,gy-101*s-bw*6*amp*s);c.scale(s,s);
+ drawLeg(c,LEGS.fh,h.dark,ph);drawLeg(c,LEGS.ff,h.dark,ph);
+ c.save();c.translate(62,46);c.rotate(Math.sin(ph*6.2832+1)*0.12);c.translate(-62,-46);c.fillStyle=h.dark;c.fill(P.tail);c.restore();
+ c.fillStyle=h.coat;c.fill(P.body);c.fill(P.neck);c.fill(P.head);
+ c.fillStyle=h.dark;c.fill(P.ear);
+ c.save();c.translate(144,8);c.rotate(Math.sin(ph*6.2832+2)*0.05);c.translate(-144,-8);c.fillStyle=h.dark;c.fill(P.mane);c.restore();
+ c.fillStyle='#1a1a1a';c.beginPath();c.arc(158,14,1.8,0,6.2832);c.fill();
+ c.beginPath();c.arc(175,31,1.2,0,6.2832);c.fill();
+ c.strokeStyle='#2b2b2b';c.lineWidth=1;c.lineCap='round';c.beginPath();c.moveTo(164,18);c.lineTo(170,32);c.stroke();
+ c.fillStyle=h.silk2;rr(c,92,36,22,10,2);c.fill();
+ c.fillStyle=inkOn(h.silk2);c.font='bold 9px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(String(h.num),103,41.5);c.textBaseline='alphabetic';
+ c.strokeStyle='#f5f5f5';c.lineWidth=4;c.beginPath();c.moveTo(96,44);c.lineTo(104,56);c.stroke();
+ c.fillStyle=h.silk;c.fill(P.torso);
+ c.strokeStyle=h.silk;c.lineWidth=4;c.beginPath();c.moveTo(112,22);c.lineTo(142,24);c.stroke();
+ c.strokeStyle='#222';c.lineWidth=0.8;c.beginPath();c.moveTo(142,24);c.lineTo(162,18);c.stroke();
+ c.fillStyle=h.silk2;c.beginPath();c.arc(121,14,6,0,6.2832);c.fill();
+ c.fillStyle='#f0c8a0';c.beginPath();c.ellipse(125.5,16,2.5,2.2,0,0,6.2832);c.fill();
+ drawLeg(c,LEGS.nh,h.coat,ph);drawLeg(c,LEGS.nf,h.coat,ph);
+ c.restore();
+}
+function rr(c,x,y,w,h,r){r=Math.min(r,h/2,w/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+
+/* ---------- 背景 ---------- */
+const TREES=(()=>{const r=mulberry(5),a=[];for(let i=0;i<22;i++)a.push({x:i*82+r()*40,r:34+r()*24,c:['#3F7F3C','#4C9142','#5BA04C'][Math.floor(r()*3)]});return a})();
+const CLOUDS=(()=>{const r=mulberry(9),a=[];for(let i=0;i<6;i++)a.push({x:i*400+r()*200,y:40+r()*140,w:60+r()*60});return a})();
+const TUFTS=(()=>{const r=mulberry(21),a=[];for(let i=0;i<34;i++)a.push({x:r()*1400,y:560+r()*155,l:40+r()*60});return a})();
+const CONF=(()=>{const r=mulberry(77),a=[];for(let i=0;i<90;i++)a.push({x:r()*W,y0:r()*H,vy:80+r()*140,ph:r()*6.28,c:['#ff5a5a','#ffd23f','#4fd1c5','#7aa2ff','#ff9de2','#ffffff'][Math.floor(r()*6)]});return a})();
+function mod(a,b){return ((a%b)+b)%b}
+function drawScene(c,cam,t,gx){
+ const sky=c.createLinearGradient(0,0,0,340);sky.addColorStop(0,'#4FA3E8');sky.addColorStop(1,'#BFE3F7');
+ c.fillStyle=sky;c.fillRect(0,0,W,345);
+ c.fillStyle='rgba(255,255,255,0.9)';
+ for(const k of CLOUDS){const x=mod(k.x-cam*0.03-t*6,2400)-200;c.beginPath();c.ellipse(x,k.y,k.w,k.w*0.28,0,0,6.2832);c.fill();c.beginPath();c.ellipse(x+k.w*0.4,k.y-k.w*0.14,k.w*0.55,k.w*0.2,0,0,6.2832);c.fill()}
+ for(let pass=0;pass<2;pass++)for(const tr of TREES){const x=mod(tr.x+(pass?30:0)-cam*(pass?0.10:0.14),1800)-100;c.fillStyle=pass?tr.c:'#2f6a35';c.beginPath();c.arc(x,330-tr.r*0.25-(pass?0:14),tr.r*(pass?1:1.1),0,6.2832);c.fill()}
+ c.fillStyle='#86B847';c.fillRect(0,335,W,H-335);
+ const bands=[[335,420,0.35],[420,490,0.55],[490,560,0.75],[560,630,0.95],[630,720,1.25]];
+ for(const b of bands){c.fillStyle='rgba(110,160,50,0.55)';const o=mod(-cam*b[2],480);for(let x=-480+o;x<W+480;x+=480)c.fillRect(x,b[0],240,b[1]-b[0])}
+ // goal arch
+ const ay=190;c.lineCap='butt';
+ c.strokeStyle='#fff';c.lineWidth=46;c.beginPath();c.moveTo(gx-150,420);c.lineTo(gx-150,ay);c.arc(gx,ay,150,Math.PI,0);c.lineTo(gx+150,420);c.stroke();
+ c.strokeStyle='#2D52A8';c.lineWidth=32;c.beginPath();c.moveTo(gx-150,420);c.lineTo(gx-150,ay);c.arc(gx,ay,150,Math.PI,0);c.lineTo(gx+150,420);c.stroke();
+ c.fillStyle='#F2EEDF';c.strokeStyle='#cfc8b0';c.lineWidth=4;c.beginPath();c.arc(gx,48,46,0,6.2832);c.fill();c.stroke();
+ c.fillStyle='#2E8B57';c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?16:36;c.lineTo(gx+Math.cos(a)*r,48+Math.sin(a)*r)}c.closePath();c.fill();
+ // fence
+ const fo=mod(-cam*0.5,170);
+ for(let x=-170+fo;x<W+170;x+=170){c.fillStyle='#2A8C86';c.fillRect(x,340,9,80)}
+ c.fillStyle='#fff';c.fillRect(0,342,W,16);c.fillStyle='#E8B923';c.fillRect(0,394,W,9);
+ // goal plate & line
+ if(gx>-400&&gx<W+400){
+  c.fillStyle='#F4F1EA';c.strokeStyle='#c9c5b8';c.lineWidth=2;rr(c,gx-150,408,260,56,5);c.fill();c.stroke();
+  c.fillStyle='#1F4E9C';c.font='500 36px sans-serif';c.textAlign='center';c.fillText('GOAL',gx-20,448);
+  for(let i=0;i<21;i++){c.fillStyle=i%2?'#111':'#fff';c.fillRect(gx-9,420+i*15,9,15);c.fillStyle=i%2?'#fff':'#111';c.fillRect(gx,420+i*15,9,15)}
+ }
+}
+function drawTufts(c,cam){
+ c.strokeStyle='rgba(50,100,30,0.35)';c.lineWidth=3;c.lineCap='round';
+ for(const k of TUFTS){const x=mod(k.x-cam*1.8,1500)-100;c.beginPath();c.moveTo(x,k.y);c.lineTo(x+k.l,k.y);c.stroke()}
+}
+
+/* ---------- HUD ---------- */
+function plateBox(c,x,y,w,h,ins,text,maxFs,minFs){
+ const L=[['#95CF67',0],['#D3AE5B',ins[0]],['#7A6036',ins[1]],['#FFFFFF',ins[2]]];
+ for(const [col,i] of L){c.fillStyle=col;rr(c,x+i,y+i,w-i*2,h-i*2,(h-i*2)/2);c.fill()}
+ let fs=maxFs;const fam='"Hiragino Sans","Yu Gothic","Meiryo",sans-serif',maxW=w-90;
+ c.font='bold '+fs+'px '+fam;while(c.measureText(text).width>maxW&&fs>minFs){fs--;c.font='bold '+fs+'px '+fam}
+ c.fillStyle='#3a3226';c.textAlign='center';c.textBaseline='middle';c.fillText(text,x+w/2,y+h/2+1);c.textBaseline='alphabetic';
+}
+function drawPlate(c){plateBox(c,36,30,620,84,[7,14,19],S.title,30,14)}
+function drawArtist(c){if(!S.artist)return;plateBox(c,36,122,460,54,[5,9,13],S.artist,22,12)}
+function remainM(pxs){const R=S.race,lead=Math.max(...pxs),tot=S.D*MPS;return Math.max(0,Math.ceil((R.L-lead)/R.L*tot-1e-6))}
+function drawDist(c,pxs){
+ const y=S.artist?190:130,rem=remainM(pxs);
+ c.fillStyle='rgba(0,0,0,0.45)';rr(c,36,y,300,62,14);c.fill();
+ c.fillStyle='#fff';c.font='bold 36px "Hiragino Sans","Yu Gothic","Meiryo",sans-serif';c.textAlign='center';c.textBaseline='middle';
+ c.fillText('残り '+rem+'m',186,y+32);c.textBaseline='alphabetic';
+}
+function drawMini(c,pxs){
+ const R=S.race;c.fillStyle='rgba(0,0,0,0.38)';rr(c,700,40,544,64,12);c.fill();
+ c.strokeStyle='rgba(255,255,255,0.6)';c.lineWidth=3;c.beginPath();c.moveTo(730,84);c.lineTo(1190,84);c.stroke();
+ for(let i=0;i<4;i++)for(let j=0;j<2;j++){c.fillStyle=(i+j)%2?'#111':'#fff';c.fillRect(1196+j*8,60+i*8,8,8)}
+ const order=[0,1,2,3,4].sort((a,b)=>R.hs[a].lane-R.hs[b].lane);
+ for(const i of order){const h=R.hs[i],H0=HORSES[i],px=clamp(pxs[i]/R.L,0,1),x=730+px*460,y=84+(h.lane-2)*7;
+  c.fillStyle=H0.silk;c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.arc(x,y,10,0,6.2832);c.fill();c.stroke();
+  c.fillStyle=H0.silk2==='#FFFFFF'||H0.silk2==='#FFD0DD'?'#222':'#222';c.font='bold 12px sans-serif';c.textAlign='center';c.textBaseline='middle';
+  c.fillStyle=inkOn(H0.silk);c.fillText(String(H0.num),x,y+1);c.textBaseline='alphabetic'}
+}
+function drawFinish(c,t){
+ const tt=t-S.D;if(tt<0)return;
+ if(tt<7){for(const k of CONF){const y=mod(k.y0+tt*k.vy,H+40)-20,x=k.x+Math.sin(tt*2+k.ph)*30;c.save();c.translate(x,y);c.rotate(tt*3+k.ph);c.fillStyle=k.c;c.fillRect(-6,-3,12,6);c.restore()}}
+ const sc=1+0.35*Math.exp(-tt*4);c.save();c.translate(W/2+90,250);c.scale(sc,sc);
+ c.font='bold 130px sans-serif';c.textAlign='center';c.lineJoin='round';c.lineWidth=14;c.strokeStyle='#fff';c.strokeText('GOAL!',0,0);c.fillStyle='#E8B923';c.fillText('GOAL!',0,0);
+ c.font='bold 44px "Hiragino Sans","Yu Gothic","Meiryo",sans-serif';c.lineWidth=9;c.strokeStyle='#fff';
+ const txt=HORSES[S.race.winner].num+'番 1着';c.strokeText(txt,0,70);c.fillStyle='#2D52A8';c.fillText(txt,0,70);c.restore();
+}
+
+/* ---------- 描画本体 ---------- */
+function draw(t){
+ const D=S.D,R=S.race,c=g;
+ const pxs=R.hs.map(h=>posPx(h,t)),lead=Math.max(...pxs),gx=LEADX+(R.L-lead);
+ const te=t<=D?t:D+0.9*(1-Math.exp(-(t-D)/0.9));
+ const E=Eat(Math.min(t,D))*(t<=D?1:Math.exp(-(t-D)/0.9));
+ const beatInt=60/S.bpm;let m=1;const sHz=S.bpm/60;while(sHz*m<1.8)m*=2;while(sHz*m>3.2)m/=2;
+ const tb=(te-S.beat0)/beatInt,pulse=Math.exp(-(tb-Math.floor(tb))*5);
+ c.save();c.clearRect(0,0,W,H);
+ const z=1+0.010*pulse;c.translate(W/2,H/2);c.scale(z,z);c.translate(-W/2,-H/2);
+ drawScene(c,lead,t,gx);
+ const order=[0,1,2,3,4].sort((a,b)=>R.hs[a].lane-R.hs[b].lane);
+ for(const i of order){const h=R.hs[i],ln=LANE[h.lane];let dx=pxs[i]-lead;const lim=-W*0.5;if(dx<lim)dx=lim-120*(1-Math.exp(-(lim-dx)/120));
+  drawHorse(c,HORSES[i],LEADX+dx,ln.gy,ln.s,tb*m+h.phOff,E)}
+ drawTufts(c,lead);
+ c.restore();
+ drawPlate(c);drawArtist(c);drawDist(c,pxs);drawMini(c,pxs);drawFinish(c,t);
+ if(!S.loaded){c.fillStyle='rgba(0,0,0,0.5)';rr(c,W/2-330,320,660,70,14);c.fill();c.fillStyle='#fff';c.font='bold 28px "Hiragino Sans","Yu Gothic","Meiryo",sans-serif';c.textAlign='center';c.fillText('「MP3を選ぶ」から曲を読み込んでください',W/2,365)}
+}
+
+/* ---------- 再生 ---------- */
+function ensureAC(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.connect(AC.destination)}if(AC.state==='suspended')AC.resume()}
+function curT(){return S.playing?S.offset+(AC.currentTime-S.startCtx):S.offset}
+function stopSource(){if(S.src){try{S.src.onended=null;S.src.stop()}catch(e){}try{S.src.disconnect()}catch(e){}S.src=null}}
+function startSource(off){stopSource();if(off<S.D){const s=AC.createBufferSource();s.buffer=S.buf;s.connect(master);s.start(0,off);S.src=s}S.startCtx=AC.currentTime;S.offset=off}
+function play(){if(!S.buf||S.playing)return;ensureAC();if(S.offset>=S.D+TAIL)S.offset=0;startSource(S.offset);S.playing=true}
+function pause(){if(!S.playing)return;S.offset=curT();stopSource();S.playing=false}
+function seek(t){S.offset=clamp(t,0,S.D);if(S.playing){startSource(S.offset)}}
+function finishPlayback(){S.playing=false;S.offset=S.D+TAIL;stopSource();if(S.exporting)stopRecording()}
+
+/* ---------- 書き出し ---------- */
+function pickMime(){const c=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+ for(const m of c){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m}return ''}
+function startExport(){
+ if(!S.buf||S.exporting)return;
+ if(!window.MediaRecorder||!cv.captureStream){info('このブラウザは動画の書き出しに対応していません。Chrome や Edge でお試しください。');return}
+ pause();ensureAC();S.offset=0;
+ const stream=cv.captureStream(60);recDest=AC.createMediaStreamDestination();master.connect(recDest);
+ recDest.stream.getAudioTracks().forEach(tr=>stream.addTrack(tr));
+ recMime=pickMime();recChunks=[];
+ try{rec=new MediaRecorder(stream,recMime?{mimeType:recMime,videoBitsPerSecond:8000000,audioBitsPerSecond:192000}:undefined)}catch(e){info('書き出しを始められませんでした: '+e.message);master.disconnect(recDest);return}
+ rec.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data)};
+ rec.onstop=saveRecording;
+ S.exporting=true;setUI();rec.start(500);play();
+ info('書き出し中です。曲の長さ(+2秒)だけ時間がかかります。このタブを開いたままにしてください。');
+}
+function stopRecording(){if(rec&&rec.state!=='inactive')rec.stop()}
+function saveRecording(){
+ try{master.disconnect(recDest)}catch(e){}
+ const mt=(rec&&rec.mimeType)||recMime||'video/webm',ext=mt.indexOf('mp4')>=0?'mp4':'webm';
+ const blob=new Blob(recChunks,{type:mt}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=(S.title||'horse-race').replace(/[\\/:*?"<>|]/g,'_')+'_race.'+ext;
+ document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);
+ S.exporting=false;S.offset=0;setUI();
+ info(ext==='mp4'?'mp4を保存しました。':'このブラウザはmp4での書き出しに対応していないため、webm形式で保存しました。');
+}
+
+/* ---------- UI ---------- */
+function info(s){$('info').textContent=s}
+function setUI(){const has=!!S.buf,ex=S.exporting;
+ $('play').disabled=!has||ex;$('seek').disabled=!has||ex;$('reroll').disabled=!has||ex;$('export').disabled=!has||ex;
+ $('play').textContent=S.playing?'一時停止':'再生'}
+async function loadFile(f){
+ info('読み込み中です…');
+ try{
+  const ab=await f.arrayBuffer();const tag=parseID3(ab);const title=tag.title||f.name.replace(/\.[^.]+$/,'');
+  ensureAC();pause();
+  const buf=await AC.decodeAudioData(ab.slice(0));
+  info('曲を解析中です…');await new Promise(r=>setTimeout(r,30));
+  const a=analyze(buf);
+  S.buf=buf;S.D=buf.duration;S.fileTitle=title;$('inTitle').value=title;$('inArtist').value=tag.artist;applyMeta();S.bpm=a.bpm;S.beat0=a.beat0;S.E=a.E;S.seed=Math.floor(Math.random()*1000000)+1;S.offset=0;S.loaded=true;
+  buildRace();setUI();
+  info('BPM '+Math.round(S.bpm)+'  /  曲の長さ '+fmt(S.D)+'  /  勝ち馬 '+HORSES[S.race.winner].num+'番(曲の終わりにゴールします)');
+ }catch(e){info('この音声ファイルを読み込めませんでした: '+e.message)}
+}
+function applyMeta(){S.title=$('inTitle').value.trim()||S.fileTitle||'MP3を読み込んでください';S.artist=$('inArtist').value.trim()}
+$('inTitle').addEventListener('input',applyMeta);
+$('inArtist').addEventListener('input',applyMeta);
+$('file').addEventListener('change',e=>{const f=e.target.files[0];if(f)loadFile(f);e.target.value=''});
+$('play').addEventListener('click',()=>{S.playing?pause():play();setUI()});
+$('seek').addEventListener('input',e=>{if(S.buf)seek(e.target.value/1000*S.D)});
+$('reroll').addEventListener('click',()=>{const old=S.race.winner;let n=0;do{S.seed=Math.floor(Math.random()*1000000)+1;buildRace();n++}while(S.race.winner===old&&n<30);info('BPM '+Math.round(S.bpm)+'  /  曲の長さ '+fmt(S.D)+'  /  勝ち馬 '+HORSES[S.race.winner].num+'番')});
+$('export').addEventListener('click',startExport);
+
+/* ---------- 起動 ---------- */
+S.E=new Float32Array(2400).fill(0.5);buildRace();
+function loop(){
+ const raw=S.buf?curT():0;
+ if(S.playing&&raw>=S.D+TAIL)finishPlayback();
+ const t=clamp(S.buf?curT():0,0,S.D+TAIL);
+ draw(t);
+ if(S.buf){$('seek').value=Math.min(1000,t/S.D*1000);$('time').textContent=fmt(Math.min(t,S.D))+' / '+fmt(S.D);$('play').textContent=S.playing?'一時停止':'再生'}
+ requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
