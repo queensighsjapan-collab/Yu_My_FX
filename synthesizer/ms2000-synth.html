@@ -28,9 +28,19 @@ body{
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
 }
-.top{max-width:760px;margin:0 0 16px}
+.top{max-width:980px;margin:0 0 16px}
 h1{font:500 20px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
 .sub{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.midi{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:14px 0 0;font:500 12px/1.4 var(--f-ui);color:var(--muted)}
+.midi label{display:flex;align-items:center;gap:6px}
+.midi select{background:var(--bg);color:var(--fg);border:1px solid var(--muted);border-radius:4px;padding:5px 8px;font:inherit;max-width:260px}
+.midi select:focus-visible,.mbtn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.mbtn{appearance:none;background:transparent;color:var(--fg);border:1px solid var(--muted);border-radius:20px;padding:6px 14px;font:inherit;cursor:pointer}
+.mbtn:hover{border-color:var(--fg)}
+.mbtn.on{color:var(--lcd-bg);border-color:var(--lcd-bg)}
+.mled{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--led-off)}
+.mled.on{background:var(--led);box-shadow:0 0 6px var(--led)}
+.mstat{min-width:12em}
 .back{display:inline-block;margin:0 0 14px;padding:6px 14px;border:1px solid var(--muted);border-radius:20px;color:var(--muted);font:500 11px/1 var(--f-label);letter-spacing:.18em;text-decoration:none;transition:color .2s,border-color .2s}
 .back:hover,.back:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
 .foot{margin:14px 0 0;color:var(--muted);font-size:12px;line-height:1.7}
@@ -151,7 +161,13 @@ h1{font:500 20px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
 <header class="top">
   <a class="back" href="index.html">&larr; SYNTHESIZER</a>
   <h1>MS2000風シンセ</h1>
-  <p class="sub">最初にどこかをクリックすると音が出る状態になります。つまみは上下にドラッグ、ダブルクリックで初期値に戻ります。鍵盤はクリックのほか、パソコンのキーボード(Z〜M、Q〜P)でも弾けます。</p>
+  <p class="sub">最初にどこかをクリックすると音が出る状態になります。つまみは上下にドラッグ、ダブルクリックで初期値に戻ります。鍵盤はクリックのほか、パソコンのキーボード(Z〜M、Q〜P)や、MIDIキーボード・DAWからも弾けます。</p>
+  <div class="midi" id="midibar">
+    <button type="button" class="mbtn" id="midibtn">MIDI接続</button>
+    <label for="midiin">入力<select id="midiin"><option value="all">すべての入力</option></select></label>
+    <label for="midich">チャンネル<select id="midich"></select></label>
+    <span><i class="mled" id="midiled"></i> <span class="mstat" id="midistat">未接続</span></span>
+  </div>
 </header>
 
 <div class="scroller" id="scroller">
@@ -1021,6 +1037,8 @@ makeBars($('#vlev'), vLev, i => vocBandSet(i), 'VOC CH LEVEL');
 makeBars($('#vpan'), vPan, i => vocBandSet(i), 'VOC CH PAN');
 
 const phys = new Map();
+let sus = false;
+const sustained = new Set();
 let oct = 0, arpHeld = [], arpCur = [], arpOffT = null, arpIdx = 0, arpVel = 100;
 let clk = null, clkNext = 0, seqIdx = 0;
 
@@ -1099,9 +1117,10 @@ for (let i = 0; i < 44; i++) {
 }
 const hilite = (m, on) => { const e = keyEl[m]; if (e) e.classList.toggle('down', on); };
 
-function noteOn(id, base, vel = 100) {
+function noteOn(id, base, vel = 100, useOct = true) {
   if (phys.has(id)) return;
-  const m = cl(base + oct * 12, 0, 127);
+  const m = cl(base + (useOct ? oct * 12 : 0), 0, 127);
+  sustained.delete(m);
   const wasEmpty = phys.size === 0;
   phys.set(id, { m, base });
   hilite(base, true);
@@ -1116,8 +1135,23 @@ function noteOff(id) {
   const o = phys.get(id);
   if (!o) return;
   phys.delete(id); hilite(o.base, false);
-  if (V.arpon) { if (!V.arplt) arpHeld = arpHeld.filter(x => x !== o.m); }
+  if (V.arpon) { if (!V.arplt && !sus) arpHeld = arpHeld.filter(x => x !== o.m); }
+  else if (sus) sustained.add(o.m);
   else playOff(o.m);
+}
+const isHeld = m => [...phys.values()].some(o => o.m === m);
+function pedal(on) {
+  if (on === sus) return;
+  sus = on;
+  if (on) return;
+  sustained.forEach(m => { if (!isHeld(m)) playOff(m); });
+  sustained.clear();
+  if (V.arpon && !V.arplt) arpHeld = arpHeld.filter(isHeld);
+}
+function allNotesOff() {
+  [...phys.keys()].forEach(noteOff);
+  sus = false; sustained.clear(); arpHeld = []; arpStop();
+  if (eng) eng.panic();
 }
 keys.addEventListener('pointerdown', e => {
   const k = e.target.closest('[data-m]'); if (!k) return;
@@ -1146,7 +1180,7 @@ window.addEventListener('keydown', e => {
   noteOn('k' + e.code, 48 + o, 100);
 });
 window.addEventListener('keyup', e => { if (PCK[e.code] !== undefined) noteOff('k' + e.code); });
-window.addEventListener('blur', () => { [...phys.keys()].forEach(noteOff); });
+window.addEventListener('blur', () => { [...phys.keys()].filter(k => k[0] !== 'm').forEach(noteOff); });
 
 /* ================= wheels and octave ================= */
 function wheel(node, name, init, spring, fmt, cb) {
@@ -1168,9 +1202,77 @@ function wheel(node, name, init, spring, fmt, cb) {
     }
   };
   node.addEventListener('pointerup', end); node.addEventListener('pointercancel', end);
+  return { set(x) { cancelAnimationFrame(raf); on = false; v = x; paint(); } };
 }
-wheel($('#whp'), 'PITCH BEND', 0.5, true, v => sg(Math.round((v - 0.5) * 254)), v => { V.bend = (v - 0.5) * 2; changed('bend'); });
-wheel($('#whm'), 'MOD WHEEL', 0, false, v => String(Math.round(v * 127)), v => { V.mod = v; changed('mod'); });
+const wheelP = wheel($('#whp'), 'PITCH BEND', 0.5, true, v => sg(Math.round((v - 0.5) * 254)), v => { V.bend = (v - 0.5) * 2; changed('bend'); });
+const wheelM = wheel($('#whm'), 'MOD WHEEL', 0, false, v => String(Math.round(v * 127)), v => { V.mod = v; changed('mod'); });
+
+/* ================= MIDI input (Web MIDI) ================= */
+const midi = { access: null, ch: 0 };
+const mSel = $('#midiin'), mCh = $('#midich'), mBtn = $('#midibtn'), mStat = $('#midistat'), mLed = $('#midiled');
+mCh.innerHTML = '<option value="0">全チャンネル (OMNI)</option>' + Array.from({ length: 16 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } }
+};
+let ledT = 0;
+const blink = () => { mLed.classList.add('on'); clearTimeout(ledT); ledT = setTimeout(() => mLed.classList.remove('on'), 90); };
+function bendExt(raw) {
+  const b = cl((raw - 8192) / 8192, -1, 1);
+  V.bend = b; changed('bend'); wheelP.set((b + 1) / 2);
+}
+function modExt(x) { V.mod = x; changed('mod'); wheelM.set(x); }
+function onMidi(e) {
+  const d = e.data;
+  if (!d || d.length < 1 || d[0] >= 0xF0) return;
+  const ch = (d[0] & 15) + 1, type = d[0] & 0xF0, a = d[1] | 0, b = d[2] | 0;
+  if (midi.ch && ch !== midi.ch) return;
+  blink();
+  if (!ctx || ctx.state !== 'running') mStat.textContent = '音を出すには、画面を1回クリックしてください';
+  if (type === 0x90 && b > 0) noteOn('m' + ch + ':' + a, a, b, false);
+  else if (type === 0x80 || type === 0x90) noteOff('m' + ch + ':' + a);
+  else if (type === 0xE0) bendExt((b << 7) | a);
+  else if (type === 0xB0) {
+    if (a === 1) modExt(b / 127);
+    else if (a === 64) pedal(b >= 64);
+    else if (a === 120 || a === 123) allNotesOff();
+  }
+}
+function bindInputs() {
+  if (!midi.access) return;
+  const ins = [...midi.access.inputs.values()];
+  const want = mSel.value && mSel.value !== 'all' ? mSel.value : (store.get('ms2000.midiin') || 'all');
+  mSel.textContent = '';
+  const add = (val, label) => { const o = document.createElement('option'); o.value = val; o.textContent = label; mSel.appendChild(o); };
+  add('all', 'すべての入力');
+  ins.forEach(i => add(i.id, i.name || i.id));
+  mSel.value = ins.some(i => i.id === want) ? want : 'all';
+  ins.forEach(i => { i.onmidimessage = (mSel.value === 'all' || mSel.value === i.id) ? onMidi : null; });
+  mStat.textContent = ins.length ? `入力 ${ins.length} 台 接続中` : '入力機器が見つかりません';
+}
+async function midiConnect() {
+  if (!navigator.requestMIDIAccess) { mStat.textContent = 'このブラウザはMIDIに未対応です(Chrome / Edge を使ってください)'; return; }
+  try {
+    midi.access = await navigator.requestMIDIAccess({ sysex: false });
+    midi.access.onstatechange = bindInputs;
+    bindInputs();
+    mBtn.textContent = 'MIDI接続済み'; mBtn.classList.add('on');
+    store.set('ms2000.midi', '1');
+  } catch (err) {
+    mStat.textContent = 'MIDIを使えません(許可されていないか、この表示では未対応です)';
+  }
+}
+mBtn.addEventListener('click', midiConnect);
+mSel.addEventListener('change', () => { store.set('ms2000.midiin', mSel.value); bindInputs(); });
+mCh.addEventListener('change', () => { midi.ch = +mCh.value; store.set('ms2000.midich', mCh.value); });
+{
+  const c = store.get('ms2000.midich');
+  if (c !== null && c !== '') { mCh.value = c; midi.ch = +mCh.value || 0; }
+  if (store.get('ms2000.midi') === '1' && navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'midi' }).then(p => { if (p.state === 'granted') midiConnect(); }).catch(() => { /* not supported */ });
+  }
+}
+
 const octLed = () => { $('#octd').classList.toggle('on', oct < 0); $('#octu').classList.toggle('on', oct > 0); };
 $('#octdb').addEventListener('click', () => { oct = Math.max(-2, oct - 1); octLed(); flash('OCTAVE SHIFT', sg(oct)); });
 $('#octub').addEventListener('click', () => { oct = Math.min(2, oct + 1); octLed(); flash('OCTAVE SHIFT', sg(oct)); });
