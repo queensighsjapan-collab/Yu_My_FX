@@ -1402,6 +1402,10 @@ function onMidi(e) {
   if (!ctx || ctx.state !== 'running') mStat.textContent = '音を出すには、画面を1回クリックしてください';
   if (type === 0x90 && b > 0) noteOn('m' + ch + ':' + a, a, b, false);
   else if (type === 0x80 || type === 0x90) noteOff('m' + ch + ':' + a);
+  else if (type === 0xC0) {
+    if (wm || d.length < 2) return;
+    V.prog = a; paintK(C.prog); loadSlot(a);
+  }
   else if (type === 0xE0) bendExt((b << 7) | a);
   else if (type === 0xB0) {
     if (a === 1) modExt(b / 127);
