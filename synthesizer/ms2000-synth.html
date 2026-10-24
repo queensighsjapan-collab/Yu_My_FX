@@ -43,6 +43,10 @@ h1{font:500 24px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
 .mstat{min-width:12em}
 .back{display:inline-block;margin:0 0 14px;padding:7px 16px;border:1px solid var(--muted);border-radius:20px;color:var(--muted);font:500 14px/1 var(--f-label);letter-spacing:.18em;text-decoration:none;transition:color .2s,border-color .2s}
 .back:hover,.back:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
+.ch.cur{text-decoration:underline;animation:cb 1s steps(1) infinite}
+@keyframes cb{50%{background:rgba(24,36,10,.28)}}
+@media (prefers-reduced-motion:reduce){.ch.cur{animation:none;background:rgba(24,36,10,.28)}}
+.lcd{cursor:default}
 .foot{margin:14px 0 0;color:var(--muted);font-size:15px;line-height:1.7}
 
 .scroller{overflow-x:auto;overflow-y:hidden}
@@ -168,6 +172,12 @@ h1{font:500 24px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
     <label for="midich">チャンネル<select id="midich"></select></label>
     <span><i class="mled" id="midiled"></i> <span class="mstat" id="midistat">未接続</span></span>
   </div>
+  <div class="midi" id="pbar">
+    <span>音色メモリー</span>
+    <button type="button" class="mbtn" id="pexp">音色を書き出し</button>
+    <button type="button" class="mbtn" id="pimp">音色を読み込み</button>
+    <input type="file" id="pfile" accept=".json,application/json" hidden>
+  </div>
 </header>
 
 <div class="scroller" id="scroller">
@@ -231,9 +241,27 @@ const sec = (title, items, cls = '') =>
   `<section class="sec ${cls}"><h3>${title}</h3><div class="row">${items.map(x => item(x, title)).join('')}</div></section>`;
 
 /* ---------- program names / LCD ---------- */
-const NAMES = ['Init Prog','Dance Lead','Analog Bs','Fat Pad','Pluck Seq','Brass Hit','Strings','Sync Lead',
-  'Vocoder 1','Arp Rise','Noise FX','Glass Bell','Organ Mix','Sweep Pad','Acid Line','Poly Synth'];
-const progTxt = i => `${'ABCDEFGH'[i >> 4]}.${String((i & 15) + 1).padStart(2, '0')} ${NAMES[i & 15]}`;
+const SAVE_EXCL = new Set(['vol', 'prog', 't1', 't2', 'shift', 'write', 'micon', 'vload', 'vsrc']);
+const SEQ0 = [64, 96, 40, 112, 64, 24, 100, 72, 50, 120, 36, 88, 64, 104, 28, 80];
+const lab = i => `${'ABCDEFGH'[i >> 4]}.${String((i & 15) + 1).padStart(2, '0')}`;
+const CH = ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!#+&/';
+const FACTORY = [
+  { n: 'Init Prog', v: {} },
+  { n: 'Bass', v: { o1w: 0, o1c1: 40, o1c2: 60, o2w: 0, o2t: 10, mx1: 110, mx2: 90, ft: 0, cut: 45, res: 30, f1: 35,
+    e1a: 0, e1d: 50, e1s: 20, e1r: 20, e2a: 0, e2d: 60, e2s: 100, e2r: 20, ptr: -12 } },
+  { n: 'Pad', v: { o1w: 0, o1c1: 30, o2w: 0, o2t: 12, mx1: 100, mx2: 100, ft: 1, cut: 70, res: 15, f1: 10,
+    e1a: 60, e1d: 70, e1s: 90, e1r: 70, e2a: 70, e2d: 70, e2s: 110, e2r: 80, mft: 1, mfs: 40, mfd: 70, dt: 0, dtm: 70, ddp: 40 } },
+  { n: 'Sync Lead', v: { o1w: 1, o1c1: 60, o1c2: 40, o2w: 1, o2s: 7, o2m: 2, mx1: 110, mx2: 40, ft: 0, cut: 95, res: 40,
+    e2a: 0, e2d: 50, e2s: 127, e2r: 30, pvi: 20, ppo: 40 } },
+  { n: 'Arp Pluck', v: { o1w: 0, ft: 0, cut: 55, res: 50, f1: 40, e1a: 0, e1d: 30, e1s: 0, e1r: 20, e2a: 0, e2d: 40, e2s: 60, e2r: 30,
+    arpon: true, arpt: 0, arpr: 2, arpg: 40, arptm: 125, dt: 0, dtm: 60, ddp: 40 } },
+  { n: 'Vox Lead', v: { o1w: 4, o1c1: 64, o1c2: 0, l1w: 2, l1f: 55, vs1: 2, vd1: 2, vi1: 50, e2a: 5, e2d: 50, e2s: 127, e2r: 40 } },
+  { n: 'Vocoder', v: { vmode: 1, o1w: 0, o1c1: 25, o2w: 0, o2t: 15, mx1: 100, mx2: 100, ft: 0, cut: 110, res: 0,
+    e2a: 0, e2s: 127, e2r: 30, ai1: 80, vcl: 40, vfs: 0 } },
+  { n: 'Mod Seq', v: { o1w: 0, o1c1: 35, ft: 0, cut: 60, res: 40, msq: true, msk: true, arptm: 120 } }
+];
+let cur = 0, curName = 'Init Prog', dirty = false, loading = false, wm = null, wDest = 0, nameBuf = [], npos = 0;
+const progTxt = i => `${lab(i)} ${curName}`;
 
 /* ---------- build panel ---------- */
 const SRC = ['EG1','EG2','LFO1','LFO2','VELOCITY','P.BEND','MOD WHL','KEY TRK'];
@@ -259,7 +287,7 @@ $('#left').innerHTML = `
   <div class="lcd" id="lcd" aria-live="polite"></div>
   ${sec('MASTER', [
     K('vol', 'VOLUME', { def: 100 }), K('ai1', 'AUDIO IN 1', { def: 80 }), K('ai2', 'AUDIO IN 2', { def: 0 }),
-    K('prog', 'PROGRAM', { def: 11, int: 1 })])}
+    K('prog', 'PROGRAM', { def: 0, int: 1 })])}
   <div class="brow">${[
     B('t1', 'TIMBRE 1', { def: true, radio: 'tb' }), B('t2', 'TIMBRE 2', { radio: 'tb' }),
     B('shift', 'SHIFT', { mom: 1 }), B('write', 'WRITE', { mom: 1 })].map(b => ctl(b, 'PANEL')).join('')}</div>
@@ -328,7 +356,10 @@ lcd.innerHTML = [0, 1].map(() => `<div class="ln">${'<span class="ch"> </span>'.
 const lines = [...lcd.querySelectorAll('.ln')].map(l => [...l.children]);
 const put = (i, t) => { t = (t + ' '.repeat(16)).slice(0, 16); lines[i].forEach((s, k) => { s.textContent = t[k]; }); };
 let tm;
-const dflt = () => { put(0, progTxt(Math.round(V.prog))); put(1, `Timbre${V.t2 ? 2 : 1}  Single`); };
+const dflt = () => {
+  if (wm) { renderWM(); return; }
+  put(0, `${lab(cur)} Timbre${V.t2 ? 2 : 1}${dirty ? ' *' : ''}`); put(1, curName);
+};
 const flash = (a, b) => { put(0, a); put(1, b); clearTimeout(tm); tm = setTimeout(dflt, 2200); };
 
 /* ---------- knobs ---------- */
@@ -401,9 +432,9 @@ function setV(d, v, show = true) {
   const lo = d.labels ? 0 : d.min, hi = d.labels ? d.labels.length - 1 : d.max;
   v = Math.min(hi, Math.max(lo, v));
   if (d.labels || d.int) v = Math.round(v);
-  V[d.id] = v; paintK(d); changed(d.id);
+  V[d.id] = v; paintK(d); if (d.id !== 'prog') changed(d.id);
   if (!show) return;
-  if (d.id === 'prog') { flash(progTxt(v), 'Program Select'); return; }
+  if (d.id === 'prog') { progChanged(v); return; }
   flash(d.lcd || `${d.sec} ${d.label}`, String(fmtV(d, v)));
 }
 function attach(d) {
@@ -446,7 +477,8 @@ function buildBtn(h, d) {
   d.paint = () => { led.classList.toggle('on', !!V[d.id]); cap.setAttribute('aria-pressed', String(!!V[d.id])); };
   d.paint();
   if (d.mom) {
-    const down = () => { V[d.id] = true; d.paint(); changed(d.id); if (!d.action) flash(d.label, d.id === 'write' ? 'Write? (demo)' : 'ON'); };
+    const down = () => { V[d.id] = true; d.paint(); changed(d.id);
+      if (d.id === 'write') writePress(); else if (d.id === 'shift') shiftPress(); else if (!d.action) flash(d.label, 'ON'); };
     const up = () => { if (!V[d.id]) return; V[d.id] = false; d.paint(); changed(d.id); };
     cap.addEventListener('pointerdown', down);
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => cap.addEventListener(ev, up));
@@ -459,6 +491,7 @@ function buildBtn(h, d) {
         return;
       }
       if (d.radio) {
+        if (wm) { tbPress(d.id); return; }
         Object.values(C).forEach(o => { if (o.radio === d.radio) { V[o.id] = false; o.paint(); } });
         V[d.id] = true; d.paint(); changed(d.id); flash(d.label, 'Selected');
       } else {
@@ -1031,15 +1064,15 @@ const playOn = (m, vel) => A(() => eng.on(m, vel / 127));
 const playOff = m => A(() => eng.off(m));
 
 /* ================= mod sequence, arpeggiator, clock ================= */
-const seqV = [64, 96, 40, 112, 64, 24, 100, 72, 50, 120, 36, 88, 64, 104, 28, 80];
-const seqBars = makeBars($('#steps'), seqV, () => {}, 'MOD SEQ STEP');
+const seqV = SEQ0.slice();
+const seqBars = makeBars($('#steps'), seqV, () => markDirty(), 'MOD SEQ STEP');
 const vocBandSet = i => {
   const b = N && N.voc.bands[i]; if (!b) return;
   b.lv.gain.setTargetAtTime(vLev[i] / 127 * 1.4, ctx.currentTime, 0.02);
   b.pn.pan.setTargetAtTime((vPan[i] - 64) / 64, ctx.currentTime, 0.02);
 };
-makeBars($('#vlev'), vLev, i => vocBandSet(i), 'VOC CH LEVEL');
-makeBars($('#vpan'), vPan, i => vocBandSet(i), 'VOC CH PAN');
+const levBars = makeBars($('#vlev'), vLev, i => { vocBandSet(i); markDirty(); }, 'VOC CH LEVEL');
+const panBars = makeBars($('#vpan'), vPan, i => { vocBandSet(i); markDirty(); }, 'VOC CH PAN');
 
 const phys = new Map();
 let sus = false;
@@ -1098,6 +1131,7 @@ function clockStart() {
 
 function changed(id) {
   if (eng) pushNow(id);
+  if (!loading && C[id] && !SAVE_EXCL.has(id) && !dirty) { dirty = true; if (!wm) dflt(); }
   if (id === 'arpon') {
     if (!V.arpon) { arpStop(); arpHeld = []; phys.forEach(o => playOn(o.m, 100)); }
     else { phys.forEach(o => { playOff(o.m); if (!arpHeld.includes(o.m)) arpHeld.push(o.m); }); if (arpHeld.length) clockStart(); }
@@ -1211,6 +1245,138 @@ function wheel(node, name, init, spring, fmt, cb) {
 }
 const wheelP = wheel($('#whp'), 'PITCH BEND', 0.5, true, v => sg(Math.round((v - 0.5) * 254)), v => { V.bend = (v - 0.5) * 2; changed('bend'); });
 const wheelM = wheel($('#whm'), 'MOD WHEEL', 0, false, v => String(Math.round(v * 127)), v => { V.mod = v; changed('mod'); });
+
+/* ================= patch memory (128 programs, localStorage) ================= */
+const SAVE_IDS = Object.keys(C).filter(id => !SAVE_EXCL.has(id) && !C[id].action);
+const PKEY = 'ms2000.patches';
+let user = {};
+const arr16 = (a, lo, hi, dv) => Array.from({ length: 16 }, (_, i) => { const x = a && Number(a[i]); return Number.isFinite(x) ? cl(Math.round(x), lo, hi) : dv[i]; });
+const cleanName = n => String(n == null ? '' : n).replace(/[^\x20-\x7e]/g, '').slice(0, 12).trimEnd() || 'No Name';
+function clean(p) {
+  if (!p || typeof p !== 'object') return null;
+  const v = {};
+  if (p.v && typeof p.v === 'object') SAVE_IDS.forEach(id => {
+    if (!(id in p.v)) return;
+    const d = C[id], x = p.v[id];
+    if (d.t === 'b') v[id] = !!x;
+    else { const q = Number(x); if (Number.isFinite(q)) v[id] = cl(d.int || d.labels ? Math.round(q) : q, d.labels ? 0 : d.min, d.labels ? d.labels.length - 1 : d.max); }
+  });
+  return { n: cleanName(p.n), v, s: arr16(p.s, 0, 127, SEQ0), l: arr16(p.l, 0, 127, Array(16).fill(100)), p: arr16(p.p, 0, 127, Array(16).fill(64)) };
+}
+const getPatch = i => user[i] || clean(FACTORY[i] || { n: 'Init Prog', v: {} });
+const persist = () => { try { localStorage.setItem(PKEY, JSON.stringify(user)); return true; } catch (e) { return false; } };
+(() => {
+  let raw = null;
+  try { raw = localStorage.getItem(PKEY); } catch (e) { /* unavailable */ }
+  if (!raw) return;
+  try {
+    const o = JSON.parse(raw);
+    for (const k in o) { const i = Number(k); const c = clean(o[k]); if (Number.isInteger(i) && i >= 0 && i < 128 && c) user[i] = c; }
+  } catch (e) { /* corrupted */ }
+})();
+function markDirty() { if (!loading && !dirty) { dirty = true; if (!wm) dflt(); } }
+function capture(name) {
+  const v = {};
+  SAVE_IDS.forEach(id => { v[id] = V[id]; });
+  return { n: name, v, s: seqV.slice(), l: vLev.slice(), p: vPan.slice() };
+}
+function applyPatch(p) {
+  loading = true;
+  SAVE_IDS.forEach(id => {
+    const d = C[id];
+    V[id] = id in p.v ? p.v[id] : d.def;
+    if (d.t === 'b') d.paint(); else paintK(d);
+    changed(id);
+  });
+  for (let i = 0; i < 16; i++) { seqV[i] = p.s[i]; vLev[i] = p.l[i]; vPan[i] = p.p[i]; vocBandSet(i); }
+  seqBars.paint(); levBars.paint(); panBars.paint();
+  loading = false; dirty = false;
+}
+function loadSlot(i) {
+  const p = getPatch(i);
+  cur = i; curName = p.n; applyPatch(p);
+  clearTimeout(tm); put(0, `${lab(i)} Timbre${V.t2 ? 2 : 1}`); put(1, curName); tm = setTimeout(dflt, 2200);
+}
+function setKnobRaw(d, max, v) { d.max = max; V[d.id] = v; paintK(d); }
+function renderWM() {
+  lines[0].forEach(s => s.classList.remove('cur'));
+  if (wm === 'name') {
+    put(0, nameBuf.join('')); put(1, `Name Edit ${npos + 1}/12`);
+    lines[0][npos].classList.add('cur');
+  } else if (wm === 'dest') {
+    put(0, `Write To ${lab(wDest)}`); put(1, getPatch(wDest).n);
+  } else if (wm === 'ok') {
+    put(0, `Write ${lab(wDest)} ?`); put(1, 'WRITE:OK SHIFT:NO');
+  }
+}
+function nameKnob() { const k = CH.indexOf(nameBuf[npos]); setKnobRaw(C.prog, CH.length - 1, k < 0 ? 0 : k); }
+function endWrite() {
+  wm = null; lines[0].forEach(s => s.classList.remove('cur'));
+  setKnobRaw(C.prog, 127, cur);
+}
+function writePress() {
+  if (wm === null) {
+    wm = 'name'; nameBuf = curName.padEnd(12, ' ').slice(0, 12).split(''); npos = 0; nameKnob(); renderWM();
+  } else if (wm === 'name') {
+    wm = 'dest'; wDest = cur; setKnobRaw(C.prog, 127, cur); renderWM();
+  } else if (wm === 'dest') {
+    wm = 'ok'; renderWM();
+  } else {
+    const name = cleanName(nameBuf.join(''));
+    user[wDest] = clean(capture(name));
+    const ok = persist();
+    cur = wDest; curName = name; dirty = false; endWrite();
+    flash('Written!', ok ? `${lab(cur)} ${name}` : 'Not saved (temp)');
+  }
+}
+function shiftPress() {
+  if (wm === null) { flash('SHIFT', 'ON'); return; }
+  endWrite(); flash('Write Canceled', '');
+}
+function tbPress(id) {
+  if (wm !== 'name') return;
+  npos = cl(npos + (id === 't1' ? -1 : 1), 0, 11); nameKnob(); renderWM();
+}
+function progChanged(v) {
+  if (wm === 'name') { nameBuf[npos] = CH[v] || ' '; renderWM(); return; }
+  if (wm === 'dest') { wDest = v; renderWM(); return; }
+  if (wm === 'ok') { setKnobRaw(C.prog, 127, wDest); return; }
+  if (v !== cur) loadSlot(v);
+}
+lcd.addEventListener('click', e => {
+  if (wm !== 'name') return;
+  const t = e.target;
+  const k = lines[0].indexOf(t);
+  if (k >= 0 && k < 12) { npos = k; nameKnob(); renderWM(); }
+});
+
+/* export / import */
+const pBtnX = $('#pexp'), pBtnI = $('#pimp'), pFile = $('#pfile');
+pBtnX.addEventListener('click', () => {
+  const obj = { format: 'yu-my-ms2000-patches', version: 1, patches: user };
+  const blob = new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'ms2000-patches.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  flash('Export', `${Object.keys(user).length} programs`);
+});
+pBtnI.addEventListener('click', () => pFile.click());
+pFile.addEventListener('change', async () => {
+  const f = pFile.files[0]; pFile.value = '';
+  if (!f) return;
+  try {
+    if (f.size > 4e6) throw new Error('size');
+    const o = JSON.parse(await f.text());
+    if (!o || o.format !== 'yu-my-ms2000-patches' || typeof o.patches !== 'object') throw new Error('format');
+    let n = 0;
+    for (const k in o.patches) { const i = Number(k); const c = clean(o.patches[k]); if (Number.isInteger(i) && i >= 0 && i < 128 && c) { user[i] = c; n++; } }
+    const ok = persist();
+    if (wm) endWrite();
+    if (user[cur]) loadSlot(cur);
+    flash('Import OK', ok ? `${n} programs` : `${n} (not saved)`);
+  } catch (e) { flash('Import Error', 'Bad file'); }
+});
 
 /* ================= MIDI input (Web MIDI) ================= */
 const midi = { access: null, ch: 0 };
