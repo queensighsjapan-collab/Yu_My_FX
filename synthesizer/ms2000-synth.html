@@ -31,6 +31,8 @@ body{
 .top{max-width:760px;margin:0 0 16px}
 h1{font:500 20px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
 .sub{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.back{display:inline-block;margin:0 0 14px;padding:6px 14px;border:1px solid var(--muted);border-radius:20px;color:var(--muted);font:500 11px/1 var(--f-label);letter-spacing:.18em;text-decoration:none;transition:color .2s,border-color .2s}
+.back:hover,.back:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
 .foot{margin:14px 0 0;color:var(--muted);font-size:12px;line-height:1.7}
 
 .scroller{overflow-x:auto;overflow-y:hidden}
@@ -147,6 +149,7 @@ h1{font:500 20px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
 </style>
 
 <header class="top">
+  <a class="back" href="index.html">&larr; SYNTHESIZER</a>
   <h1>MS2000風シンセ</h1>
   <p class="sub">最初にどこかをクリックすると音が出る状態になります。つまみは上下にドラッグ、ダブルクリックで初期値に戻ります。鍵盤はクリックのほか、パソコンのキーボード(Z〜M、Q〜P)でも弾けます。</p>
 </header>
