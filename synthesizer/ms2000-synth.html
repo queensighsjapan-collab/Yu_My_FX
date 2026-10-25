@@ -534,6 +534,9 @@ function Core(sr) {
   const p = {};
   'o1w o1c1 o1c2 dwgs o2w o2m o2s o2t mx1 mx2 mxn ft cut res f1 fv fk al ap dist ak e1a e1d e1s e1r e2a e2d e2s e2r l1w l1f l1k l1t l2w l2f l2k ptn pbr ptr pvi ppo arptm vs1 vs2 vs3 vs4 vd1 vd2 vd3 vd4 vi1 vi2 vi3 vi4 msq msd seqv bend mod'.split(' ').forEach(k => { p[k] = 0; });
   p.ap = 64; p.arptm = 120; p.seqv = 64; p.dwgs = 1;
+  const SMK = ['c1b', 'c2b', 'mx1', 'mx2', 'mxn', 'kres', 'cutB', 'f1k', 'fvk', 'fkk', 'alv', 'akk', 'bend', 'modw', 'tune100', 'vibInt', 'o2t126', 'panB'];
+  const sm = {}, tg = {};
+  let smInit = false;
   const TAU = Math.PI * 2;
   const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
   const pow2 = x => Math.pow(2, x);
@@ -648,12 +651,14 @@ function Core(sr) {
   function process(L, R, len, inp) {
     const osw = p.o1w | 0, o2w = p.o2w | 0, o2m = p.o2m | 0;
     const ring = o2m === 1 || o2m === 3, sync = o2m === 2 || o2m === 3;
-    const c1b = p.o1c1 / 127, c2b = p.o1c2 / 127;
-    const mx1 = p.mx1 / 127, mx2 = p.mx2 / 127, mxn = p.mxn / 127;
-    const ftype = p.ft | 0, resv = clamp(p.res / 127, 0, 1), kres = 1.414 - resv * 1.394;
+    /* targets of the click-prone parameters; the values actually used are smoothed per sample below */
+    tg.c1b = p.o1c1 / 127; tg.c2b = p.o1c2 / 127;
+    tg.mx1 = p.mx1 / 127; tg.mx2 = p.mx2 / 127; tg.mxn = p.mxn / 127;
+    const ftype = p.ft | 0, resv = clamp(p.res / 127, 0, 1);
+    tg.kres = 1.414 - resv * 1.394;
     const dist = p.dist > 0;
-    const cutB = p.cut / 127 * 10, f1k = p.f1 / 63 * 6, fvk = p.fv / 63 * 3, fkk = p.fk / 63;
-    const alv = Math.pow(p.al / 127, 1.5), akk = p.ak / 63 * 0.5;
+    tg.cutB = p.cut / 127 * 10; tg.f1k = p.f1 / 63 * 6; tg.fvk = p.fv / 63 * 3; tg.fkk = p.fk / 63;
+    tg.alv = Math.pow(p.al / 127, 1.5); tg.akk = p.ak / 63 * 0.5;
     const ar1 = 1 / (0.0008 * pow2(p.e1a / 127 * 13) * sr);
     const dc1 = 1 - Math.exp(-1 / (0.003 * pow2(p.e1d / 127 * 11) * sr));
     const su1 = p.e1s / 127;
@@ -666,9 +671,15 @@ function Core(sr) {
     const lfoRate = (f, sy) => (sy > 0 ? (tempo / 60) * pow2(Math.floor(f / 127 * 6) - 2) : 0.05 * pow2(f / 127 * 9.5));
     const l1f = lfoRate(p.l1f, p.l1t), l2fBase = lfoRate(p.l2f, 0);
     const l1w = p.l1w | 0, l2w = p.l2w | 0;
-    const bend = p.bend, modw = p.mod;
-    const trans = p.ptr, tune100 = p.ptn / 100, bendR = p.pbr, vibInt = p.pvi / 63 * 1.5;
-    const o2s = p.o2s, o2t126 = p.o2t / 63;
+    tg.bend = p.bend; tg.modw = p.mod; tg.tune100 = p.ptn / 100; tg.vibInt = p.pvi / 63 * 1.5; tg.o2t126 = p.o2t / 63;
+    tg.panB = (p.ap - 64) / 64;
+    const trans = p.ptr, bendR = p.pbr;
+    const o2s = p.o2s;
+    if (!smInit) { smInit = true; for (const k of SMK) sm[k] = tg[k]; }
+    let c1b = sm.c1b, c2b = sm.c2b, mx1 = sm.mx1, mx2 = sm.mx2, mxn = sm.mxn, kres = sm.kres, cutB = sm.cutB, f1k = sm.f1k,
+      fvk = sm.fvk, fkk = sm.fkk, alv = sm.alv, akk = sm.akk, bend = sm.bend, modw = sm.modw, tune100 = sm.tune100,
+      vibInt = sm.vibInt, o2t126 = sm.o2t126, panB = sm.panB;
+    const scS = 1 - Math.exp(-1 / (sr * 0.006)), scB = 1 - Math.exp(-1 / (sr * 0.003));
     const pc = p.ppo > 0 ? 1 - Math.exp(-4 / (sr * (0.005 + p.ppo / 127 * 0.6))) : 1;
     const VS = [p.vs1 | 0, p.vs2 | 0, p.vs3 | 0, p.vs4 | 0];
     const VD = [p.vd1 | 0, p.vd2 | 0, p.vd3 | 0, p.vd4 | 0];
@@ -727,13 +738,21 @@ function Core(sr) {
       const fc = clamp(20 * pow2(cutB + v.e1 * f1k + v.vel * fvk + ((v.note - 60) / 12) * fkk + mcut), 20, sr * 0.45);
       if (ftype === 0) { setCf(v.cf, 0, fc, 1.1); setCf(v.cf, 4, fc, kres); } else setCf(v.cf, 0, fc, kres);
       v.ga = alv * pow2(((v.note - 60) / 12) * akk) * (0.35 + 0.65 * Math.pow(v.vel, 0.7)) * Math.max(0, 1 + ma);
-      const pan = clamp((p.ap - 64) / 64 + mpan, -1, 1), th = (pan + 1) * Math.PI / 4;
+      const pan = clamp(panB + mpan, -1, 1), th = (pan + 1) * Math.PI / 4;
       v.pl = Math.cos(th); v.pr = Math.sin(th);
     }
 
     for (let i = 0; i < len; i++) {
       const x = inp ? inp[i] : 0;
       sqv += (sqt - sqv) * sqc;
+      c1b += (tg.c1b - c1b) * scS; c2b += (tg.c2b - c2b) * scS;
+      mx1 += (tg.mx1 - mx1) * scS; mx2 += (tg.mx2 - mx2) * scS; mxn += (tg.mxn - mxn) * scS;
+      kres += (tg.kres - kres) * scS; cutB += (tg.cutB - cutB) * scS;
+      f1k += (tg.f1k - f1k) * scS; fvk += (tg.fvk - fvk) * scS; fkk += (tg.fkk - fkk) * scS;
+      alv += (tg.alv - alv) * scS; akk += (tg.akk - akk) * scS;
+      bend += (tg.bend - bend) * scB; modw += (tg.modw - modw) * scB;
+      tune100 += (tg.tune100 - tune100) * scS; vibInt += (tg.vibInt - vibInt) * scS;
+      o2t126 += (tg.o2t126 - o2t126) * scS; panB += (tg.panB - panB) * scS;
       let oL = 0, oR = 0;
       for (let vi = 0; vi < NV; vi++) {
         const v = vs[vi];
@@ -806,6 +825,10 @@ function Core(sr) {
       }
       L[i] = oL * 0.4; R[i] = oR * 0.4;
     }
+    sm.c1b = c1b; sm.c2b = c2b; sm.mx1 = mx1; sm.mx2 = mx2; sm.mxn = mxn; sm.kres = kres; sm.cutB = cutB;
+    sm.f1k = f1k; sm.fvk = fvk; sm.fkk = fkk; sm.alv = alv; sm.akk = akk; sm.bend = bend; sm.modw = modw;
+    sm.tune100 = tune100; sm.vibInt = vibInt; sm.o2t126 = o2t126; sm.panB = panB;
+    for (const k of SMK) if (sm[k] !== sm[k]) sm[k] = tg[k];
     gph1 = (gph1 + len * l1f / sr) % 1;
     gph2 = (gph2 + len * l2fBase / sr) % 1;
     if (gph1 !== gph1) gph1 = 0;
