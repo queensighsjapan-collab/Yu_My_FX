@@ -170,6 +170,7 @@ h1{font:500 24px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
     <button type="button" class="mbtn" id="midibtn">MIDI接続</button>
     <label for="midiin">入力<select id="midiin"><option value="all">すべての入力</option></select></label>
     <label for="midich">チャンネル<select id="midich"></select></label>
+    <label for="midilo">最低ノート<select id="midilo"><option value="0">制限なし</option><option value="12">12 (C0)</option><option value="24" selected>24 (C1)</option><option value="36">36 (C2)</option></select></label>
     <span><i class="mled" id="midiled"></i> <span class="mstat" id="midistat">未接続</span></span>
   </div>
   <div class="midi" id="pbar">
@@ -1402,7 +1403,7 @@ pFile.addEventListener('change', async () => {
 });
 
 /* ================= MIDI input (Web MIDI) ================= */
-const midi = { access: null, ch: 0 };
+const midi = { access: null, ch: 0, lo: 24 };
 const mSel = $('#midiin'), mCh = $('#midich'), mBtn = $('#midibtn'), mStat = $('#midistat'), mLed = $('#midiled');
 mCh.innerHTML = '<option value="0">全チャンネル (OMNI)</option>' + Array.from({ length: 16 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
 const store = {
@@ -1423,6 +1424,7 @@ function onMidi(e) {
   if (midi.ch && ch !== midi.ch) return;
   blink();
   if (!ctx || ctx.state !== 'running') mStat.textContent = '音を出すには、画面を1回クリックしてください';
+  if ((type === 0x90 || type === 0x80) && a < midi.lo) return;
   if (type === 0x90 && b > 0) noteOn('m' + ch + ':' + a, a, b, false);
   else if (type === 0x80 || type === 0x90) noteOff('m' + ch + ':' + a);
   else if (type === 0xC0) {
@@ -1463,6 +1465,10 @@ async function midiConnect() {
 mBtn.addEventListener('click', midiConnect);
 mSel.addEventListener('change', () => { store.set('ms2000.midiin', mSel.value); bindInputs(); });
 mCh.addEventListener('change', () => { midi.ch = +mCh.value; store.set('ms2000.midich', mCh.value); });
+const mLo = $('#midilo');
+mLo.addEventListener('change', () => { midi.lo = +mLo.value; store.set('ms2000.midilo', mLo.value); allNotesOffM(); });
+{ const l = store.get('ms2000.midilo'); if (l !== null && [...mLo.options].some(o => o.value === l)) { mLo.value = l; midi.lo = +l; } }
+function allNotesOffM() { [...phys.keys()].filter(k => k[0] === 'm' && +k.split(':')[1] < midi.lo).forEach(noteOff); }
 {
   const c = store.get('ms2000.midich');
   if (c !== null && c !== '') { mCh.value = c; midi.ch = +mCh.value || 0; }
