@@ -1,0 +1,3 @@
+set dt 1
+set dtm 60
+set ddp 80

@@ -1,0 +1,5 @@
+build/
+tests/out/
+tests/engine_test
+tests/fx_test
+*.f32

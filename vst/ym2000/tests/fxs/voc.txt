@@ -1,0 +1,3 @@
+set vmode 1
+set vcl 40
+set ai1 100

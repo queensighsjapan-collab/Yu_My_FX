@@ -1,0 +1,36 @@
+name: Build YM2000 (VST3/AU)
+on:
+  push:
+    paths: ['vst/ym2000/**', '.github/workflows/ym2000-build.yml']
+  pull_request:
+    paths: ['vst/ym2000/**', '.github/workflows/ym2000-build.yml']
+  workflow_dispatch:
+defaults:
+  run:
+    working-directory: vst/ym2000
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build VST3 (and AU on macOS)
+        shell: bash
+        run: |
+          cmake --build build --config Release --target YM2000_VST3 --parallel
+          if [ "$RUNNER_OS" = "macOS" ]; then cmake --build build --config Release --target YM2000_AU --parallel; fi
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -R build/YM2000_artefacts/Release/VST3/YM2000.vst3 dist/
+          if [ "$RUNNER_OS" = "macOS" ]; then cp -R build/YM2000_artefacts/Release/AU/YM2000.component dist/; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM2000-${{ runner.os }}
+          path: vst/ym2000/dist
