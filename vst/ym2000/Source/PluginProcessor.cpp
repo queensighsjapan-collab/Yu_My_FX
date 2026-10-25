@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -77,6 +78,7 @@ YM2000Processor::YM2000Processor()
            R ("eqhf"), R ("eqhg"), R ("eqlf"), R ("eqlg"),
            R ("arpon"), R ("arplt"), R ("arpt"), R ("arpr"), R ("arpg"), R ("arptm"), R ("msq"), R ("msk") };
     for (int i = 0; i < 16; ++i) seqVals[i] = ym::kSeqDefaults[i];
+    keyboardState.addListener (&midiCollector);
 }
 
 bool YM2000Processor::isBusesLayoutSupported (const BusesLayout& l) const
@@ -92,6 +94,7 @@ void YM2000Processor::prepareToPlay (double sr, int samplesPerBlock)
     if (! engine || std::abs (sampleRate - sr) > 0.5)
         engine = std::make_unique<ym::Engine> (sr);
     sampleRate = sr;
+    midiCollector.reset (sr);
     blockCap = std::max (samplesPerBlock, 512);
     for (auto* v : { &engL, &engR, &engIn, &srcMono, &outL, &outR }) v->assign ((size_t) blockCap, 0.0f);
     arpHeld.reserve (256); arpCur.reserve (256); pool.reserve (512);
@@ -159,7 +162,8 @@ void YM2000Processor::arpStep (double stepSamples)
 
 void YM2000Processor::seqStep()
 {
-    if (! seqOn) return;
+    if (! seqOn) { uiSeqPos.store (-1); return; }
+    uiSeqPos.store (seqIdx);
     if (engine) engine->set (ym::seqv, seqVals[seqIdx]);
     seqIdx = (seqIdx + 1) % 16;
 }
@@ -169,7 +173,7 @@ void YM2000Processor::clockTick()
     const double step = sampleRate * 15.0 / std::max (1.0, arpTempo); // one 16th note
     arpStep (step);
     seqStep();
-    if (! clockWanted()) { clockRunning = false; arpStop(); return; }
+    if (! clockWanted()) { clockRunning = false; arpStop(); uiSeqPos.store (-1); return; }
     clockCountdown += step;
 }
 
@@ -224,11 +228,11 @@ void YM2000Processor::handleMidi (const MidiMessage& m)
 {
     if (m.isNoteOn()) noteOn (m.getNoteNumber(), m.getVelocity());
     else if (m.isNoteOff()) noteOff (m.getNoteNumber());
-    else if (m.isPitchWheel()) bendVal = jlimit (-1.0, 1.0, (m.getPitchWheelValue() - 8192) / 8192.0);
+    else if (m.isPitchWheel()) { bendVal = jlimit (-1.0, 1.0, (m.getPitchWheelValue() - 8192) / 8192.0); uiBend.store ((float) bendVal); }
     else if (m.isController())
     {
         const int c = m.getControllerNumber(), v = m.getControllerValue();
-        if (c == 1) modVal = v / 127.0;
+        if (c == 1) { modVal = v / 127.0; uiMod.store ((float) modVal); }
         else if (c == 64) pedal (v >= 64);
         else if (c == 120 || c == 123) allNotesOff();
     }
@@ -319,6 +323,7 @@ void YM2000Processor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi
         }
     }
     for (int c = 0; c < buffer.getNumChannels(); ++c) buffer.clear (c, 0, n);
+    midiCollector.removeNextBlockOfMessages (midi, n); // notes / wheels played on the GUI
 
     readParams();
     fx.setParams (fxp, n);
@@ -413,6 +418,8 @@ void YM2000Processor::setStateInformation (const void* data, int size)
         }
 }
 
-AudioProcessorEditor* YM2000Processor::createEditor() { return new GenericAudioProcessorEditor (*this); }
+
+
+AudioProcessorEditor* YM2000Processor::createEditor() { return new YM2000Editor (*this); }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new YM2000Processor(); }

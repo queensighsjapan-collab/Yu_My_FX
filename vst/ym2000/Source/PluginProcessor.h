@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 #include <atomic>
 #include <bitset>
 #include <memory>
@@ -12,7 +13,7 @@ class YM2000Processor : public juce::AudioProcessor, private juce::AsyncUpdater
 {
 public:
     YM2000Processor();
-    ~YM2000Processor() override = default;
+    ~YM2000Processor() override { keyboardState.removeListener (&midiCollector); }
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
@@ -39,6 +40,12 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+
+    // ---- GUI hooks (message thread -> audio thread through the collector; audio -> GUI through atomics)
+    juce::MidiKeyboardState keyboardState;
+    juce::MidiMessageCollector midiCollector;
+    std::atomic<float> uiBend { 0.0f }, uiMod { 0.0f };
+    std::atomic<int> uiSeqPos { -1 };
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
