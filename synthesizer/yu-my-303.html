@@ -151,11 +151,21 @@ button{font-family:inherit}
 .foot a.back{color:#d9d9d9;text-decoration:none;border:1px solid #44474d;border-radius:4px;background:#26282c;font:600 11.5px var(--label);letter-spacing:.16em;padding:3px 12px}
 .foot a.back:hover{border-color:var(--accent);color:#fff}
 .foot button{background:#26282c;color:#d9d9d9;border:1px solid #44474d;border-radius:4px;font:600 11.5px var(--label);letter-spacing:.16em;padding:3px 12px;cursor:pointer;text-transform:uppercase}
-@media (prefers-reduced-motion:reduce){.slot i,.btn,.knob .tip{transition:none}}
+.foot .fr{display:flex;align-items:center;gap:10px}
+#recInfo{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:#ff7a68;text-transform:none;min-width:0;white-space:nowrap}
+#bRec{color:#ff8a7a}
+#bRec.armed{border-color:#ff3b2e;color:#fff;animation:blink 1s steps(2,jump-none) infinite}
+#bRec.on{background:#b3261b;border-color:#ff3b2e;color:#fff}
+#bRec:disabled{opacity:.55;cursor:default}
+@keyframes blink{0%{background:#26282c}50%{background:#6b1a14}}
+.foot a.dl{color:#d9d9d9;text-decoration:none;border:1px solid #44474d;border-radius:4px;background:#26282c;font:600 11.5px var(--label);letter-spacing:.16em;padding:3px 12px;cursor:pointer;text-transform:uppercase}
+.foot a.dl:hover{border-color:var(--accent);color:#fff}
+@media (prefers-reduced-motion:reduce){.slot i,.btn,.knob .tip{transition:none}#bRec.armed{animation:none;background:#6b1a14}}
 </style>
 </head>
 <body>
 
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.all.js"></script>
 <div id="rotate">スマホを横向きにすると大きく使えます</div>
 <div id="fitbox"><div class="stage" id="stage">
 <main class="unit" id="unit">
@@ -216,7 +226,9 @@ button{font-family:inherit}
     </div>
   </section>
 
-  <div class="foot"><a class="back" href="index.html">&larr; Synthesizer</a><span>Yu_My 303 / Acid Bass Line</span><button type="button" id="bFull" hidden>Full Screen</button></div>
+  <div class="foot"><a class="back" href="index.html">&larr; Synthesizer</a><span>Yu_My 303 / Acid Bass Line</span>
+    <div class="fr"><span id="recInfo" aria-live="polite"></span><button type="button" id="bRec" aria-label="Record">● REC</button><a id="bSave" class="dl" hidden>&darr; Save</a><button type="button" id="bFull" hidden>Full Screen</button></div>
+  </div>
 </main>
 </div></div>
 
@@ -327,13 +339,29 @@ const Audio303={
           const src=AcidCore.toString()+`
 class AcidProc extends AudioWorkletProcessor{constructor(){super();this.c=new AcidCore(sampleRate);this.port.onmessage=e=>this.c.msg(e.data)}
 process(i,o){this.c.render(o[0][0],o[0][1],currentTime);return true}}
-registerProcessor('yumy303',AcidProc);`;
+registerProcessor('yumy303',AcidProc);
+class RecProc extends AudioWorkletProcessor{
+constructor(){super();this.on=false;this.t0=0;this.st=false;
+this.port.onmessage=e=>{const d=e.data;
+if(d.type==='start'){this.on=true;this.t0=d.time;this.st=false}
+else if(d.type==='stop'){this.on=false;this.port.postMessage({type:'stopped'})}}}
+process(inputs){
+const x=inputs[0]&&inputs[0][0];
+if(this.on&&x){
+let off=0;
+if(!this.st){const rel=this.t0-currentTime;if(rel>=x.length/sampleRate)return true;off=rel>0?Math.round(rel*sampleRate):0;this.st=true}
+const n=x.length-off;
+if(n>0){const o=new Int16Array(n);for(let i=0;i<n;i++){const v=Math.max(-1,Math.min(1,x[i+off]));o[i]=v<0?v*32768:v*32767}this.port.postMessage({type:'pcm',data:o.buffer},[o.buffer])}
+}
+return true}}
+registerProcessor('yumy303rec',RecProc);`;
           const url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
           try{await this.ctx.audioWorklet.addModule(url)}finally{URL.revokeObjectURL(url)}
           this.node=new AudioWorkletNode(this.ctx,'yumy303',{outputChannelCount:[2]});
           this.send=d=>this.node.port.postMessage(d);
           ok=true;
         }catch(err){ok=false}
+        this.workletOK=ok;
         if(!ok){
           const core=new AcidCore(this.ctx.sampleRate);this.core=core;
           const sp=this.ctx.createScriptProcessor(1024,0,2);
@@ -343,6 +371,7 @@ registerProcessor('yumy303',AcidProc);`;
         const lim=this.ctx.createDynamicsCompressor();
         lim.threshold.value=-9;lim.knee.value=8;lim.ratio.value=6;lim.attack.value=.003;lim.release.value=.12;
         this.node.connect(lim);lim.connect(this.ctx.destination);
+        this.setupTap(lim);
         await this.ctx.resume();
         this.ready=true;
         if(this.params)this.send({type:'params',p:this.params});
@@ -352,6 +381,29 @@ registerProcessor('yumy303',AcidProc);`;
     return this.pending;
   },
   setParams(p){this.params=p;if(this.ready)this.send({type:'params',p})},
+  /* recording tap after the limiter: sample-accurate worklet, or a ScriptProcessor fallback */
+  setupTap(lim){
+    try{
+      const z=this.ctx.createGain();z.gain.value=0;z.connect(this.ctx.destination);
+      if(this.workletOK){
+        const r=new AudioWorkletNode(this.ctx,'yumy303rec',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
+        r.port.onmessage=e=>{const d=e.data;if(d.type==='pcm')Rec.push(new Int16Array(d.data));else if(d.type==='stopped')Rec.finish()};
+        lim.connect(r);r.connect(z);this.recNode=r;
+      }else{
+        const sp=this.ctx.createScriptProcessor(4096,1,1);
+        sp.onaudioprocess=e=>{
+          if(!this.spOn)return;
+          const x=e.inputBuffer.getChannelData(0),o=new Int16Array(x.length);
+          for(let i=0;i<x.length;i++){const v=Math.max(-1,Math.min(1,x[i]));o[i]=v<0?v*32768:v*32767}
+          Rec.push(o);
+        };
+        lim.connect(sp);sp.connect(z);this.spTap=sp;
+      }
+      this.canRec=true;
+    }catch(e){this.canRec=false}
+  },
+  recStart(t){if(this.recNode)this.recNode.port.postMessage({type:'start',time:t});else this.spOn=true},
+  recStop(){if(this.recNode)this.recNode.port.postMessage({type:'stop'});else{this.spOn=false;Rec.finish()}},
   note(time,note,gate,accent,slide){if(this.ready)this.send({type:'note',time,note,gate,accent,slide})},
   silence(){if(this.ready)this.send({type:'silence'})},
   now(){return this.ctx?this.ctx.currentTime:0}
@@ -711,9 +763,14 @@ async function startRun(){
   seq=buildSeq();seqPos=0;holdGate=false;uiQ=[];
   if(!seq.length){$('#monText').textContent=isTrackMode()?'TRACK EMPTY':'PATTERN EMPTY';return}
   S.running=true;nextAt=Audio303.now()+.08;
+  if(Rec.state==='armed'){
+    if(Audio303.canRec)startRec(nextAt+.006);  /* +6ms: the limiter's look-ahead delay */
+    else{Rec.state='idle';Rec.msg='REC NOT AVAILABLE';recPaint()}
+  }
   timer=setInterval(schedule,25);schedule();render();raf();
 }
 function stopRun(){
+  if(Rec.state==='recording')stopRec();
   S.running=false;clearInterval(timer);timer=null;uiQ=[];playing={sec:null,i:-1};
   Audio303.silence();render();
 }
@@ -797,6 +854,91 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>{down.delete(e.key.toLowerCase())});
 
+/* ---------- recording: REC arms, RUN starts it, STOP ends it and saves an MP3 ---------- */
+const Rec={state:'idle',chunks:[],n:0,pct:0,msg:'',timer:null,url:null,
+  push(buf){
+    if(this.state!=='recording'&&this.state!=='stopping')return;
+    this.chunks.push(buf);this.n+=buf.length;
+    if(this.state==='recording'&&Audio303.ctx&&this.n>=Audio303.ctx.sampleRate*600)stopRec(); /* 10 min limit */
+  }
+};
+const recBtn=$('#bRec'),recInfo=$('#recInfo'),saveLink=$('#bSave');
+const fmtTime=s=>{s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function recPaint(){
+  const sr=Audio303.ctx?Audio303.ctx.sampleRate:48000;
+  recBtn.classList.toggle('armed',Rec.state==='armed');
+  recBtn.classList.toggle('on',Rec.state==='recording');
+  recBtn.disabled=Rec.state==='encoding'||Rec.state==='stopping';
+  recBtn.textContent=Rec.state==='recording'?'■ STOP REC':'● REC';
+  let t=Rec.msg;
+  if(Rec.state==='armed')t='ARMED: PRESS RUN';
+  else if(Rec.state==='recording')t='REC '+fmtTime(Rec.n/sr);
+  else if(Rec.state==='encoding')t='ENCODING '+Rec.pct+'%';
+  recInfo.textContent=t;
+}
+function startRec(t){
+  Rec.state='recording';Rec.chunks=[];Rec.n=0;Rec.msg='';
+  Audio303.recStart(t);
+  clearInterval(Rec.timer);Rec.timer=setInterval(recPaint,250);
+  recPaint();
+}
+function stopRec(){
+  if(Rec.state!=='recording')return;
+  Rec.state='stopping';clearInterval(Rec.timer);
+  Audio303.recStop();recPaint();
+}
+function wavBlob(pcm,sr){
+  const b=new ArrayBuffer(44+pcm.length*2),v=new DataView(b);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+pcm.length*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,pcm.length*2,true);
+  new Int16Array(b,44).set(pcm);
+  return new Blob([b],{type:'audio/wav'});
+}
+async function encodeMp3(pcm,sr,kbps){
+  if(!window.lamejs)throw new Error('lamejs missing');
+  if(![8000,11025,12000,16000,22050,24000,32000,44100,48000].includes(sr))throw new Error('unsupported rate');
+  const enc=new lamejs.Mp3Encoder(1,sr,kbps),parts=[],BS=1152;
+  let i=0;
+  while(i<pcm.length){
+    const end=Math.min(pcm.length,i+BS*40);
+    for(let k=i;k<end;k+=BS){const b=enc.encodeBuffer(pcm.subarray(k,Math.min(k+BS,end)));if(b.length)parts.push(b)}
+    i=end;Rec.pct=Math.floor(i/pcm.length*100);recPaint();
+    await new Promise(r=>setTimeout(r,0));
+  }
+  const f=enc.flush();if(f.length)parts.push(f);
+  return new Blob(parts,{type:'audio/mpeg'});
+}
+Rec.finish=async function(){
+  if(Rec.state!=='stopping')return;
+  const sr=Audio303.ctx.sampleRate;
+  if(Rec.n<sr*.3){Rec.state='idle';Rec.chunks=[];Rec.msg='NO AUDIO RECORDED';recPaint();return}
+  Rec.state='encoding';Rec.pct=0;recPaint();
+  const pcm=new Int16Array(Rec.n);let o=0;
+  for(const c of Rec.chunks){pcm.set(c,o);o+=c.length}
+  Rec.chunks=[];
+  let blob,ext='mp3';
+  try{blob=await encodeMp3(pcm,sr,192)}catch(e){blob=wavBlob(pcm,sr);ext='wav'}
+  const d=new Date(),p=x=>String(x).padStart(2,'0');
+  const name=`YuMy303_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+  if(Rec.url)URL.revokeObjectURL(Rec.url);
+  Rec.url=URL.createObjectURL(blob);
+  saveLink.href=Rec.url;saveLink.download=name;saveLink.hidden=false;
+  Rec.state='idle';
+  Rec.msg=(ext==='wav'?'SAVED AS WAV (MP3 UNAVAILABLE) ':'SAVED ')+(blob.size<1048576?Math.round(blob.size/1024)+'KB':(blob.size/1048576).toFixed(1)+'MB');
+  recPaint();
+  try{saveLink.click()}catch(e){}
+};
+recBtn.addEventListener('click',()=>{
+  if(Rec.state==='idle'){
+    Rec.msg='';
+    if(S.running&&Audio303.ready){
+      if(Audio303.canRec)startRec(Audio303.now()+.01);else Rec.msg='REC NOT AVAILABLE';
+    }else Rec.state='armed';
+  }else if(Rec.state==='armed'){Rec.state='idle'}
+  else if(Rec.state==='recording'){stopRec()}
+  recPaint();
+});
 /* ---------- fit the 1200px stage to the viewport ---------- */
 (function(){
   const box=$('#fitbox'),st=$('#stage'),hint=$('#rotate'),btn=$('#bFull'),W=1200;
