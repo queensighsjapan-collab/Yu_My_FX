@@ -1,5 +1,4 @@
 #include "PluginEditor.h"
-#include "BinaryData.h"
 
 using namespace ymgui;
 using juce::Component;
@@ -17,14 +16,14 @@ void YM2000Editor::Backdrop::paint (juce::Graphics& g)
 {
     using namespace juce;
     const float W = (float) designW, H = (float) designH;
-    const float cheek = 28.0f, panelH = 748.0f;
+    const float cheek = 28.0f, panelH = (float) deckY;
     g.fillAll (pal::body);
 
     // wooden side cheeks
     for (int side = 0; side < 2; ++side)
     {
         Rectangle<float> r (side == 0 ? 0.0f : W - cheek, 0.0f, cheek, H);
-        g.setGradientFill (ColourGradient (Colour (0xff8a3a18), r.getX(), 0.0f, Colour (0xff5a1f0a), r.getRight(), 0.0f, false));
+        g.setGradientFill (ColourGradient (Colour (0xff9a6234), r.getX(), 0.0f, Colour (0xff5e3519), r.getRight(), 0.0f, false));
         g.fillRect (r);
         Random rnd (11 + side);
         for (float x = r.getX(); x < r.getRight(); x += 1.0f)
@@ -33,46 +32,41 @@ void YM2000Editor::Backdrop::paint (juce::Graphics& g)
             const float ph = rnd.nextFloat() * 6.28f, amp = 0.6f + rnd.nextFloat() * 1.8f;
             grain.startNewSubPath (x, 0.0f);
             for (float y = 0.0f; y <= H; y += 20.0f) grain.lineTo (x + amp * std::sin (y * 0.011f + ph), y);
-            g.setColour ((rnd.nextInt (3) == 0 ? Colour (0xffd9803a) : Colours::black).withAlpha (0.05f + rnd.nextFloat() * 0.12f));
+            g.setColour ((rnd.nextInt (3) == 0 ? Colour (0xffd9a060) : Colours::black).withAlpha (0.05f + rnd.nextFloat() * 0.11f));
             g.strokePath (grain, PathStrokeType (0.8f));
         }
         g.setColour (Colours::black.withAlpha (0.55f));
         g.fillRect (side == 0 ? r.getRight() - 2.0f : r.getX(), 0.0f, 2.0f, H);
     }
 
-    // peach-cream panel
+    // dark navy panel
     Rectangle<float> panel (cheek, 0.0f, W - 2.0f * cheek, panelH);
     g.setGradientFill (ColourGradient (pal::panelTop, 0.0f, 0.0f, pal::panelBot, 0.0f, panel.getBottom(), false));
     g.fillRect (panel);
-    {
-        Random rnd (3);
-        for (int i = 0; i < 6000; ++i)
-        {
-            g.setColour ((rnd.nextBool() ? Colours::white : Colour (0xff8a5a20)).withAlpha (0.03f + rnd.nextFloat() * 0.04f));
-            g.fillRect (panel.getX() + rnd.nextFloat() * panel.getWidth(), rnd.nextFloat() * panel.getHeight(), 1.4f, 1.4f);
-        }
-    }
-    g.setGradientFill (ColourGradient (Colours::transparentBlack, panel.getCentreX(), panel.getCentreY(), Colour (0xff8a4a10).withAlpha (0.16f), panel.getX(), 0.0f, true));
-    g.fillRect (panel);
+    g.setColour (Colours::white.withAlpha (0.02f));
+    for (float x = panel.getX(); x < panel.getRight(); x += 3.0f) g.drawVerticalLine ((int) x, 0.0f, panel.getBottom());
+    g.setColour (Colours::white.withAlpha (0.16f)); g.drawHorizontalLine (0, panel.getX(), panel.getRight());
 
     // brand
     g.setColour (pal::ink);
-    g.setFont (Font (FontOptions (Font::getDefaultSansSerifFontName(), 46.0f, Font::bold)).withHorizontalScale (0.92f).withExtraKerningFactor (0.03f));
-    g.drawText ("YM2000", Rectangle<float> (46.0f, 4.0f, 250.0f, 54.0f), Justification::centredLeft, false);
-    drawPaw (g, { 288.0f, 40.0f }, 30.0f, Colour (0xffe8923a));
-    g.setColour (pal::ink);
-    g.setFont (uiFont (12.5f, true, 0.9f).withExtraKerningFactor (0.10f));
-    g.drawText ("ANALOG MODELING SYNTHESIZER", Rectangle<float> (48.0f, 58.0f, 290.0f, 16.0f), Justification::centredLeft, false);
+    g.setFont (Font (FontOptions (Font::getDefaultSansSerifFontName(), 36.0f, Font::bold)).withExtraKerningFactor (0.06f));
+    g.drawText ("YM2000", Rectangle<float> (46.0f, 8.0f, 260.0f, 42.0f), Justification::centredLeft, false);
+    g.setColour (pal::amber);
+    g.fillRect (48.0f, 52.0f, 56.0f, 2.0f);
+    g.setColour (pal::muted);
+    g.setFont (uiFont (11.5f, true, 0.95f).withExtraKerningFactor (0.14f));
+    g.drawText ("ANALOG MODELING SYNTHESIZER  /  Yu_My", Rectangle<float> (48.0f, 57.0f, 300.0f, 14.0f), Justification::centredLeft, false);
 
-    // black keyboard deck
+    // keyboard deck
     Rectangle<float> deck (cheek, panelH, W - 2.0f * cheek, H - panelH);
-    g.setGradientFill (ColourGradient (Colour (0xff222120), 0.0f, deck.getY(), Colour (0xff0b0b0b), 0.0f, deck.getBottom(), false));
+    g.setGradientFill (ColourGradient (Colour (0xff0b0d10), 0.0f, deck.getY(), Colour (0xff161a1d), 0.0f, deck.getBottom(), false));
     g.fillRect (deck);
-    g.setColour (Colour (0xff000000)); g.fillRect (deck.getX(), deck.getY(), deck.getWidth(), 3.0f);
-    g.setColour (pal::inkLight.withAlpha (0.9f)); g.setFont (uiFont (12.5f));
-    g.drawFittedText ("OCTAVE\nSHIFT", Rectangle<int> (52, 920, 80, 30), Justification::centred, 2);
-    g.drawFittedText ("PITCH\nBEND", Rectangle<int> (132, 920, 70, 30), Justification::centred, 2);
-    g.drawFittedText ("MOD", Rectangle<int> (186, 920, 70, 30), Justification::centred, 2);
+    g.setColour (Colour (0xff050607)); g.fillRect (deck.getX(), deck.getY(), deck.getWidth(), 3.0f);
+    g.setColour (pal::ink.withAlpha (0.8f)); g.setFont (uiFont (12.5f));
+    const int ly = deckY + 172;
+    g.drawFittedText ("OCTAVE\nSHIFT", Rectangle<int> (52, ly, 80, 30), Justification::centred, 2);
+    g.drawFittedText ("PITCH\nBEND", Rectangle<int> (132, ly, 70, 30), Justification::centred, 2);
+    g.drawFittedText ("MOD", Rectangle<int> (186, ly, 70, 30), Justification::centred, 2);
 }
 
 // ------------------------------------------------------------------ editor
@@ -101,14 +95,14 @@ String YM2000Editor::programLabel (int i) const { return String::charToString ((
 
 YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), proc (p)
 {
-    laf.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xfff7f2e2));
+    laf.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff0d0f13));
     laf.setColour (juce::ComboBox::textColourId, pal::ink);
-    laf.setColour (juce::ComboBox::outlineColourId, pal::ink.withAlpha (0.6f));
-    laf.setColour (juce::ComboBox::arrowColourId, pal::ink);
-    laf.setColour (juce::PopupMenu::backgroundColourId, juce::Colour (0xfff7f2e2));
+    laf.setColour (juce::ComboBox::outlineColourId, pal::muted.withAlpha (0.6f));
+    laf.setColour (juce::ComboBox::arrowColourId, pal::amber);
+    laf.setColour (juce::PopupMenu::backgroundColourId, juce::Colour (0xff12151a));
     laf.setColour (juce::PopupMenu::textColourId, pal::ink);
     laf.setColour (juce::PopupMenu::highlightedBackgroundColourId, pal::amberDim);
-    laf.setColour (juce::PopupMenu::highlightedTextColourId, pal::ink);
+    laf.setColour (juce::PopupMenu::highlightedTextColourId, pal::amber);
 
     addAndMakeVisible (backdrop);
     backdrop.setBounds (0, 0, designW, designH);
@@ -168,22 +162,6 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
         }
     };
 
-    // cats (cut out of the design mock-up); added first so that the section header bars cover their lower edge
-    auto catPic = [&] (const void* data, int size, int x, int y, int h)
-    {
-        auto* ic = new juce::ImageComponent();
-        auto img = juce::ImageCache::getFromMemory (data, size);
-        ic->setImage (img);
-        ic->setInterceptsMouseClicks (false, false);
-        ic->setBounds (x, y, (int) ((float) img.getWidth() * (float) h / (float) img.getHeight()), h);
-        owned.add (ic); content.addAndMakeVisible (ic);
-        return ic;
-    };
-    // (positions are set after the sections exist; see below)
-    auto* catA = catPic (BinaryData::cat1_png, BinaryData::cat1_pngSize, 0, 0, 66);
-    auto* catB = catPic (BinaryData::cat2_png, BinaryData::cat2_pngSize, 0, 0, 64);
-    auto* catC = catPic (BinaryData::cat3_png, BinaryData::cat3_pngSize, 0, 0, 66);
-
     // ---- LCD
     content.addAndMakeVisible (lcd);
     lcd.setBounds (46, 80, 292, 72);
@@ -206,20 +184,20 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
 
     // ---- VIRTUAL PATCH
     auto& vp = newSection ("VIRTUAL PATCH");
-    vp.setBounds (44, 292, 294, 306);
+    vp.setBounds (44, 292, 294, 264);
     {
         auto head = [&] (const String& t, int x, int w)
         {
             auto* l = new juce::Label ({}, t);
             l->setFont (uiFont (12.5f)); l->setColour (juce::Label::textColourId, pal::ink); l->setJustificationType (juce::Justification::centred);
-            l->setBounds (x, 32, w, 14); adopt (vp, l);
+            l->setBounds (x, 24, w, 14); adopt (vp, l);
         };
         head ("SOURCE", 28, 100); head ("DESTINATION", 134, 100); head ("INTENSITY", 236, 56);
         for (int i = 1; i <= 4; ++i)
         {
-            const int y = 52 + (i - 1) * 62;
+            const int y = 40 + (i - 1) * 54;
             auto* num = new juce::Label ({}, String (i));
-            num->setFont (uiFont (18.0f)); num->setColour (juce::Label::textColourId, pal::ink); num->setBounds (6, y + 12, 20, 24);
+            num->setFont (uiFont (18.0f)); num->setColour (juce::Label::textColourId, pal::ink); num->setBounds (6, y + 10, 20, 24);
             adopt (vp, num);
             for (int k = 0; k < 2; ++k)
             {
@@ -227,59 +205,55 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
                 auto* cb = new juce::ComboBox();
                 cb->addItemList (q->getAllValueStrings(), 1);
                 cb->setLookAndFeel (&laf);
-                cb->setBounds (k == 0 ? 28 : 134, y + 12, 100, 26);
+                cb->setBounds (k == 0 ? 28 : 134, y + 10, 100, 26);
                 adopt (vp, cb);
                 comboAtts.add (new juce::ComboBoxParameterAttachment (*q, *cb));
             }
             auto* kn = new Knob (prm ("vi" + String (i)), "", "VP" + String (i) + " INTENSITY", pal::cMod, &lcd, 40.0f);
-            kn->setBounds (240, y + 1, 52, 52);
+            kn->setBounds (240, y - 1, 52, 52);
             adopt (vp, kn);
         }
     }
 
     // ---- MID: oscillators / mixer, right: MOD FX / DELAY FX
     auto& osc1 = newSection ("OSC 1"); auto& osc2 = newSection ("OSC 2"); auto& mixer = newSection ("MIXER");
-    row (356, 30, 920, 160, 8, {
+    row (356, 30, 920, 156, 8, {
         { &osc1, { S (osc1, "o1w", "WAVE", pal::cOsc, 40.0f), K (osc1, "o1c1", "CTRL 1", pal::cOsc), K (osc1, "o1c2", "CTRL 2", pal::cOsc), K (osc1, "dwgs", "DWGS", pal::cOsc) } },
         { &osc2, { S (osc2, "o2w", "WAVE", pal::cOsc, 32.0f), S (osc2, "o2m", "MOD SELECT", pal::cOsc, 32.0f), K (osc2, "o2s", "SEMITONE", pal::cOsc), K (osc2, "o2t", "TUNE", pal::cOsc) } },
         { &mixer, { K (mixer, "mx1", "OSC 1", pal::cOsc), K (mixer, "mx2", "OSC 2", pal::cOsc), K (mixer, "mxn", "NOISE", pal::cOsc) } } });
     auto& modfx = newSection ("MOD FX"); auto& delay = newSection ("DELAY FX");
-    row (1288, 30, 392, 160, 8, {
+    row (1288, 30, 392, 156, 8, {
         { &modfx, { S (modfx, "mft", "TYPE", pal::cFx, 24.0f), K (modfx, "mfs", "SPEED", pal::cFx, 40.0f), K (modfx, "mfd", "DEPTH", pal::cFx, 40.0f) } },
         { &delay, { S (delay, "dt", "TYPE", pal::cFx, 24.0f), K (delay, "dtm", "TIME", pal::cFx, 40.0f), K (delay, "ddp", "DEPTH", pal::cFx, 40.0f) } } });
 
-    // ---- filter / amp / EG 1 (cat zone under the header bar), EG 2 / LFOs
-    const int catTop = Section::headerH + 2 + 58;
+    // ---- filter / amp / EG 1, EG 2 / LFOs
     auto& filter = newSection ("FILTER"); auto& amp = newSection ("AMP"); auto& eg1 = newSection ("EG 1");
-    row (356, 198, 920, 196, 8, {
+    row (356, 196, 920, 170, 8, {
         { &filter, { S (filter, "ft", "TYPE", pal::cFilter, 32.0f), K (filter, "cut", "CUTOFF", pal::cFilter), K (filter, "res", "RESO", pal::cFilter),
                      K (filter, "f1", "EG1 INT", pal::cFilter), K (filter, "fv", "VELO", pal::cFilter), K (filter, "fk", "KBD TRK", pal::cFilter) } },
         { &amp, { K (amp, "al", "LEVEL", pal::cFilter), K (amp, "ap", "PAN", pal::cFilter), Btn (amp, "dist", "DIST"), K (amp, "ak", "KBD TRK", pal::cFilter) } },
-        { &eg1, { K (eg1, "e1a", "ATTACK", pal::cMod), K (eg1, "e1d", "DECAY", pal::cMod), K (eg1, "e1s", "SUSTAIN", pal::cMod), K (eg1, "e1r", "RELEASE", pal::cMod) } } }, catTop);
+        { &eg1, { K (eg1, "e1a", "ATTACK", pal::cMod), K (eg1, "e1d", "DECAY", pal::cMod), K (eg1, "e1s", "SUSTAIN", pal::cMod), K (eg1, "e1r", "RELEASE", pal::cMod) } } });
 
     auto& eg2 = newSection ("EG 2"); auto& lfo1 = newSection ("LFO 1"); auto& lfo2 = newSection ("LFO 2");
-    row (356, 402, 920, 196, 8, {
+    row (356, 374, 920, 182, 8, {
         { &eg2, { K (eg2, "e2a", "ATTACK", pal::cMod), K (eg2, "e2d", "DECAY", pal::cMod), K (eg2, "e2s", "SUSTAIN", pal::cMod), K (eg2, "e2r", "RELEASE", pal::cMod) } },
         { &lfo1, { S (lfo1, "l1w", "WAVE", pal::cMod, 32.0f), K (lfo1, "l1f", "FREQ", pal::cMod), Stack (lfo1, { Btn (lfo1, "l1k", "KEY SYNC"), Btn (lfo1, "l1t", "TEMPO SYNC") }) } },
-        { &lfo2, { S (lfo2, "l2w", "WAVE", pal::cMod, 32.0f), K (lfo2, "l2f", "FREQ", pal::cMod), Stack (lfo2, { Btn (lfo2, "l2k", "KEY SYNC") }) } } }, catTop);
-
-    // cats sit in the free area of FILTER, AMP and LFO 2, right under the header
-    auto place = [&] (Component* c, Section& sec, int fromRight) { c->setTopLeftPosition (sec.getRight() - fromRight - c->getWidth(), sec.getY() + Section::headerH + 60 - c->getHeight()); };
-    place (catA, filter, 14); place (catB, amp, 14); place (catC, lfo2, 14);
+        { &lfo2, { S (lfo2, "l2w", "WAVE", pal::cMod, 32.0f), K (lfo2, "l2f", "FREQ", pal::cMod), Stack (lfo2, { Btn (lfo2, "l2k", "KEY SYNC") }) } } });
 
     // ---- RIGHT: pitch / EQ / arpeggiator
     auto& pitch = newSection ("PITCH");
-    row (1288, 198, 392, 112, 8, { { &pitch, { K (pitch, "ptn", "TUNE", pal::cPerf), K (pitch, "pbr", "BEND RANGE", pal::cPerf), K (pitch, "ptr", "TRANSP", pal::cPerf),
+    row (1288, 196, 392, 104, 8, { { &pitch, { K (pitch, "ptn", "TUNE", pal::cPerf), K (pitch, "pbr", "BEND RANGE", pal::cPerf), K (pitch, "ptr", "TRANSP", pal::cPerf),
                                                  K (pitch, "pvi", "VIB INT", pal::cPerf), K (pitch, "ppo", "PORTA", pal::cPerf) } } });
     auto& eq = newSection ("EQ");
-    row (1288, 318, 392, 112, 8, { { &eq, { K (eq, "eqhf", "HI FREQ", pal::cFx), K (eq, "eqhg", "HI GAIN", pal::cFx), K (eq, "eqlf", "LOW FREQ", pal::cFx), K (eq, "eqlg", "LOW GAIN", pal::cFx) } } });
+    row (1288, 308, 392, 104, 8, { { &eq, { K (eq, "eqhf", "HI FREQ", pal::cFx), K (eq, "eqhg", "HI GAIN", pal::cFx), K (eq, "eqlf", "LOW FREQ", pal::cFx), K (eq, "eqlg", "LOW GAIN", pal::cFx) } } });
     auto& arp = newSection ("ARPEGGIATOR");
-    row (1288, 438, 392, 160, 8, { { &arp, { Stack (arp, { Btn (arp, "arpon", "ON/OFF"), Btn (arp, "arplt", "LATCH") }), S (arp, "arpt", "TYPE", pal::cPerf, 34.0f),
+    row (1288, 420, 392, 136, 8, { { &arp, { Stack (arp, { Btn (arp, "arpon", "ON/OFF"), Btn (arp, "arplt", "LATCH") }), S (arp, "arpt", "TYPE", pal::cPerf, 28.0f),
                                                K (arp, "arpr", "RANGE", pal::cPerf), K (arp, "arpg", "GATE TIME", pal::cPerf), K (arp, "arptm", "TEMPO", pal::cPerf) } } });
 
     {
         auto* hs = new HeaderToggle (prm ("hsync"), "HOST SYNC", "ARPEGGIATOR", &lcd);
-        hs->setTopLeftPosition (arp.getRight() - 36 - hs->getWidth(), arp.getY() + 4);
+        arp.ruleEndPad = hs->getWidth() + 14;
+        hs->setTopLeftPosition (arp.getRight() - hs->getWidth(), arp.getY() - 1);
         owned.add (hs); content.addAndMakeVisible (hs);
     }
 
@@ -293,7 +267,7 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
     auto* chlSpacer = new Component(); chlSpacer->setSize (420, 10); adopt (chl, chlSpacer);
     auto* chpSpacer = new Component(); chpSpacer->setSize (420, 10); adopt (chp, chpSpacer);
     auto* seqStack = Stack (seq, { Btn (seq, "msq", "ON/OFF"), Btn (seq, "msk", "KEY SYNC") });
-    row (44, 608, 1636, 132, 8, {
+    row (44, 566, 1636, 132, 8, {
         { &voc, { S (voc, "vmode", "VOICE MODE", pal::cPerf, 22.0f), K (voc, "vfs", "FORMANT SHIFT", pal::cPerf), K (voc, "vcl", "CLARITY", pal::cPerf) } },
         { &chl, { chlSpacer } }, { &chp, { chpSpacer } },
         { &seq, { seqStack, sbars } } });
@@ -306,12 +280,12 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
     // ---- deck: octave buttons, wheels, keyboard
     auto* octDown = new PlainCap ("-", [this] { octave = juce::jmax (-2, octave - 1); keyboard->setKeyPressBaseOctave (4 + octave); }, [this] { return octave < 0; });
     auto* octUp = new PlainCap ("+", [this] { octave = juce::jmin (2, octave + 1); keyboard->setKeyPressBaseOctave (4 + octave); }, [this] { return octave > 0; });
-    octDown->setBounds (62, 784, 44, 50); octUp->setBounds (62, 842, 44, 50);
+    octDown->setBounds (62, deckY + 36, 44, 50); octUp->setBounds (62, deckY + 94, 44, 50);
     adopt (content, octDown); adopt (content, octUp);
     auto sendWheel = [this] (const juce::MidiMessage& m) { proc.midiCollector.addMessageToQueue (m.withTimeStamp (juce::Time::getMillisecondCounterHiRes() * 0.001)); };
     auto* bend = new Wheel (true, [sendWheel] (float v) { sendWheel (juce::MidiMessage::pitchWheel (1, juce::jlimit (0, 16383, (int) (v * 16383.0f)))); }, &proc.uiBend, 0.5f);
     auto* mod = new Wheel (false, [sendWheel] (float v) { sendWheel (juce::MidiMessage::controllerEvent (1, 1, juce::jlimit (0, 127, (int) (v * 127.0f)))); }, &proc.uiMod, 0.0f);
-    bend->setBounds (140, 768, 38, 146); mod->setBounds (194, 768, 38, 146);
+    bend->setBounds (140, deckY + 20, 38, 146); mod->setBounds (194, deckY + 20, 38, 146);
     adopt (content, bend); adopt (content, mod);
 
     keyboard = std::make_unique<juce::MidiKeyboardComponent> (proc.keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard);
@@ -322,14 +296,14 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
     keyboard->setBlackNoteLengthProportion (0.62f);
     keyboard->setMidiChannel (1);
     keyboard->setVelocity (0.8f, true);
-    keyboard->setColour (juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour (0xfffbfaf4));
+    keyboard->setColour (juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour (0xffeee8d8));
     keyboard->setColour (juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour (0xff0e0e0e));
     keyboard->setColour (juce::MidiKeyboardComponent::keySeparatorLineColourId, juce::Colour (0xff9b9582));
     keyboard->setColour (juce::MidiKeyboardComponent::keyDownOverlayColourId, pal::amber.withAlpha (0.65f));
     keyboard->setColour (juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colours::white.withAlpha (0.10f));
     keyboard->setColour (juce::MidiKeyboardComponent::shadowColourId, juce::Colours::black.withAlpha (0.35f));
     keyboard->setColour (juce::MidiKeyboardComponent::textLabelColourId, juce::Colour (0xff6e6a5c));
-    keyboard->setBounds (262, 768, 1378, 186);
+    keyboard->setBounds (262, deckY + 20, 1378, 186);
     content.addAndMakeVisible (*keyboard);
 
     setResizable (true, true);

@@ -11,22 +11,20 @@ using namespace juce;
 // ------------------------------------------------------------------ palette
 namespace pal
 {
-const Colour body        { 0xff3a1508 };
-const Colour panelTop    { 0xfff8dcb2 };   // peach-cream panel
-const Colour panelBot    { 0xfff0cd9b };
-const Colour ink         { 0xff2a1d12 };   // silk-screen print on the panel
-const Colour inkLight    { 0xfff4e9d4 };   // print on black parts
-const Colour muted       { 0xff7a6244 };
-const Colour amber       { 0xffe8641c };   // active / accent orange
-const Colour amberDim    { 0xfff1c9a8 };
-const Colour lcdBg       { 0xffb4c96f };
-const Colour lcdCell     { 0xffa3b85e };
-const Colour lcdInk      { 0xff2b3913 };
-const Colour ledOn       { 0xffff1a10 };
-const Colour ledOff      { 0xff7a2a20 };
-const Colour header      { 0xff211e1b };
-const Colour field       { 0xff262421 };   // dark field behind step bars
-const Colour tick        { 0xffe8801f };   // orange scale marks
+const Colour body        { 0xff2a1a10 };
+const Colour panelTop    { 0xff222839 };   // dark navy panel
+const Colour panelBot    { 0xff151a25 };
+const Colour ink         { 0xffece6d6 };   // silk-screen print
+const Colour inkLight    { 0xffece6d6 };
+const Colour muted       { 0xff8f97a6 };
+const Colour amber       { 0xffffb02e };   // active / accent
+const Colour amberDim    { 0xff5c3b0c };
+const Colour lcdBg       { 0xff1c1206 };
+const Colour ledOn       { 0xffff6a2b };
+const Colour ledOff      { 0xff40261a };
+const Colour header      { 0xff121212 };
+const Colour field       { 0xff0b0e14 };   // dark field behind step bars
+const Colour tick        { 0xffc9ccd4 };   // scale marks
 // section accent colours (thin ring around the knobs)
 const Colour cOsc        { 0xffffb02e };
 const Colour cFilter     { 0xff38c7d9 };
@@ -58,9 +56,9 @@ public:
     void paint (Graphics& g) override
     {
         auto r = getLocalBounds().toFloat();
-        g.setColour (Colour (0xff1a1a14)); g.fillRoundedRectangle (r, 5.0f);
+        g.setColour (Colour (0xff050608)); g.fillRoundedRectangle (r, 5.0f);
         auto inner = r.reduced (4.0f);
-        g.setGradientFill (ColourGradient (pal::lcdBg.brighter (0.08f), inner.getX(), inner.getY(), pal::lcdBg.darker (0.06f), inner.getX(), inner.getBottom(), false));
+        g.setGradientFill (ColourGradient (pal::lcdBg.brighter (0.10f), inner.getX(), inner.getY(), pal::lcdBg, inner.getX(), inner.getBottom(), false));
         g.fillRoundedRectangle (inner, 3.0f);
         String a, b;
         if (showing) { a = l0; b = l1; }
@@ -74,17 +72,17 @@ public:
             for (int i = 0; i < 16; ++i)
             {
                 const Rectangle<float> cell (inner.getX() + 8.0f + cw * (float) i, inner.getY() + 5.0f + ch * (float) line, cw, ch);
-                g.setColour (pal::lcdCell);                          // unlit cell
+                g.setColour (pal::amber.withAlpha (0.10f));          // unlit cell
                 g.fillRect (cell.reduced (1.0f, 1.5f));
-                g.setColour (pal::lcdInk);
+                g.setColour (pal::amber);
                 g.drawText (t.substring (i, i + 1), cell, Justification::centred, false);
             }
         }
         // dot-matrix grid
-        g.setColour (pal::lcdBg.withAlpha (0.45f));
+        g.setColour (Colours::black.withAlpha (0.35f));
         for (float y = inner.getY(); y < inner.getBottom(); y += 3.0f) g.drawHorizontalLine ((int) y, inner.getX(), inner.getRight());
         for (float x = inner.getX(); x < inner.getRight(); x += 3.0f) g.drawVerticalLine ((int) x, inner.getY(), inner.getBottom());
-        g.setColour (Colours::white.withAlpha (0.18f));
+        g.setColour (Colours::white.withAlpha (0.10f));
         g.drawRoundedRectangle (r.reduced (0.5f), 5.0f, 1.0f);
     }
 
@@ -155,14 +153,13 @@ public:
         const bool sel = R > 0.0f;
         float cx = getWidth() * 0.5f;
         if (sel) { float l, r; selExtents (R, labels, l, r); cx = l + ((float) getWidth() - l - r) * 0.5f; }
-        const float knobR = sel ? jlimit (14.0f, 19.0f, R * 0.55f) : dia * 0.42f;
+        const float knobR = sel ? jlimit (13.0f, 17.0f, R * 0.5f) : dia * 0.36f;
         const float cy = sel ? (R + 17.0f) : (dia * 0.5f + 5.0f);
         const float a0 = -135.0f, a1 = 135.0f;
         auto pt = [&] (float rad, float deg) { const float t = degreesToRadians (deg); return Point<float> (cx + rad * std::sin (t), cy - rad * std::cos (t)); };
         const float norm = mx > mn ? jlimit (0.0f, 1.0f, (v - mn) / (mx - mn)) : 0.0f;
 
         // ticks / printed labels
-        g.setColour (pal::tick);
         if (sel)
         {
             const int n = labels.size();
@@ -170,8 +167,8 @@ public:
             for (int i = 0; i < n; ++i)
             {
                 const float deg = a0 + (a1 - a0) * (float) i / (float) jmax (1, n - 1);
-                g.setColour (pal::tick);
-                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + 7.5f, deg)), 1.4f);
+                g.setColour (pal::ink.withAlpha (0.8f));
+                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + 7.0f, deg)), 1.0f);
                 const auto tp = pt (R, deg);
                 const float s = std::sin (degreesToRadians (deg)), co = std::cos (degreesToRadians (deg));
                 Font f = uiFont (10.5f);
@@ -179,34 +176,41 @@ public:
                 float x = tp.x, y = tp.y + (co > 0.45f ? -2.0f : co < -0.45f ? 11.0f : 4.0f);
                 if (s > 0.45f) x += 3.0f; else if (s < -0.45f) x -= 3.0f + tw; else x -= tw * 0.5f;
                 g.setFont (f);
-                g.setColour (i == active ? pal::amber : pal::ink.withAlpha (0.9f));
+                g.setColour (i == active ? pal::amber : pal::ink.withAlpha (0.85f));
                 g.drawText (labels[i], Rectangle<float> (x - 1.0f, y - 10.0f, tw + 2.0f, 12.0f), Justification::centredLeft, false);
             }
         }
         else
         {
+            g.setColour (pal::ink.withAlpha (0.8f));
             for (int i = 0; i <= 10; ++i)
             {
                 const float deg = a0 + (a1 - a0) * (float) i / 10.0f;
                 const bool lng = i % 5 == 0;
-                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + (lng ? 8.5f : 6.5f), deg)), 1.4f);
+                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + (lng ? 8.0f : 6.2f), deg)), 1.0f);
             }
+            // value arc in the section colour
+            Path arc;
+            arc.addCentredArc (cx, cy, knobR + 10.0f, knobR + 10.0f, 0.0f, degreesToRadians (a0), degreesToRadians (a0 + (a1 - a0) * norm), true);
+            g.setColour (accent.withAlpha (0.85f));
+            g.strokePath (arc, PathStrokeType (2.0f, PathStrokeType::curved, PathStrokeType::rounded));
         }
-        (void) accent;
 
-        // body: black knob with an orange pointer
-        g.setColour (Colours::black.withAlpha (0.28f));
-        g.fillEllipse (cx - knobR - 1.0f, cy - knobR + 1.6f, 2 * knobR + 2.0f, 2 * knobR + 2.0f);
-        g.setColour (Colour (0xff050505));
+        // body
+        g.setColour (Colours::black.withAlpha (0.45f));
+        g.fillEllipse (cx - knobR - 1.8f, cy - knobR - 0.6f, 2 * knobR + 3.6f, 2 * knobR + 3.6f);
+        g.setColour (Colour (0xff08090b));
         g.fillEllipse (cx - knobR - 1.0f, cy - knobR - 1.0f, 2 * knobR + 2.0f, 2 * knobR + 2.0f);
-        g.setGradientFill (ColourGradient (Colour (0xff5a5a5a), cx - knobR * 0.45f, cy - knobR * 0.55f, Colour (0xff0c0c0c), cx + knobR * 0.9f, cy + knobR * 0.9f, true));
+        g.setGradientFill (ColourGradient (Colour (0xff6a7078), cx - knobR * 0.4f, cy - knobR * 0.5f, Colour (0xff0b0c0e), cx + knobR, cy + knobR, true));
         g.fillEllipse (cx - knobR, cy - knobR, 2 * knobR, 2 * knobR);
-        g.setColour (Colours::white.withAlpha (0.10f));
-        g.drawEllipse (cx - knobR + 2.5f, cy - knobR + 2.5f, 2 * knobR - 5.0f, 2 * knobR - 5.0f, 0.8f);
+        g.setColour (accent.withAlpha (0.9f));
+        g.drawEllipse (cx - knobR, cy - knobR, 2 * knobR, 2 * knobR, 1.4f);
+        g.setColour (Colours::white.withAlpha (0.08f));
+        g.drawEllipse (cx - knobR + 2.0f, cy - knobR + 2.0f, 2 * knobR - 4.0f, 2 * knobR - 4.0f, 0.8f);
         // indicator
         const float deg = a0 + (a1 - a0) * norm;
-        g.setColour (Colour (0xffff7a1a));
-        g.drawLine (Line<float> (pt (knobR * 0.35f, deg), pt (knobR * 0.94f, deg)), 2.6f);
+        g.setColour (Colour (0xfff4f4ef));
+        g.drawLine (Line<float> (pt (knobR * 0.3f, deg), pt (knobR * 0.92f, deg)), 2.0f);
 
         // label
         g.setColour (pal::ink);
@@ -285,13 +289,11 @@ public:
     void paint (Graphics& g) override
     {
         const float cx = getWidth() * 0.5f;
-        if (on) { g.setColour (pal::ledOn.withAlpha (0.30f)); g.fillEllipse (cx - 7.0f, 2.5f, 14.0f, 14.0f); }
-        g.setColour (pal::ledOff.darker (0.5f)); g.fillEllipse (cx - 4.2f, 5.3f, 8.4f, 8.4f);
         g.setColour (on ? pal::ledOn : pal::ledOff);
         g.fillEllipse (cx - 3.5f, 6.0f, 7.0f, 7.0f);
-        if (on) { g.setColour (Colours::white.withAlpha (0.55f)); g.fillEllipse (cx - 1.8f, 7.0f, 2.4f, 2.4f); }
+        if (on) { g.setColour (pal::ledOn.withAlpha (0.35f)); g.fillEllipse (cx - 7.0f, 2.5f, 14.0f, 14.0f); }
         Rectangle<float> cap (cx - 15.0f, 19.0f + (down ? 1.0f : 0.0f), 30.0f, 15.0f);
-        g.setGradientFill (ColourGradient (down || on ? Colour (0xff1c1c1c) : Colour (0xff4a4a4a), 0.0f, cap.getY(), Colour (0xff111111), 0.0f, cap.getBottom(), false));
+        g.setGradientFill (ColourGradient (down || on ? Colour (0xff2e3438) : Colour (0xff6c7378), 0.0f, cap.getY(), Colour (0xff23282b), 0.0f, cap.getBottom(), false));
         g.fillRoundedRectangle (cap, 2.5f);
         g.setColour (Colours::white.withAlpha (0.16f)); g.drawHorizontalLine ((int) cap.getY(), cap.getX() + 2, cap.getRight() - 2);
         g.setColour (pal::ink);
@@ -324,7 +326,7 @@ public:
         const bool on = led && led();
         g.setColour (on ? pal::ledOn : pal::ledOff); g.fillEllipse (cx - 3.5f, 6.0f, 7.0f, 7.0f);
         Rectangle<float> cap (cx - 15.0f, 19.0f + (down ? 1.0f : 0.0f), 30.0f, 15.0f);
-        g.setGradientFill (ColourGradient (down ? Colour (0xff1c1c1c) : Colour (0xff4a4a4a), 0.0f, cap.getY(), Colour (0xff111111), 0.0f, cap.getBottom(), false));
+        g.setGradientFill (ColourGradient (down ? Colour (0xff2e3438) : Colour (0xff6c7378), 0.0f, cap.getY(), Colour (0xff23282b), 0.0f, cap.getBottom(), false));
         g.fillRoundedRectangle (cap, 2.5f);
         g.setColour (pal::inkLight); g.setFont (uiFont (12.0f));
         g.drawText (name, Rectangle<float> (0.0f, 35.0f, (float) getWidth(), 14.0f), Justification::centred, false);
@@ -365,7 +367,7 @@ public:
             const float top = center ? jmin (y, mid) : y, bot = center ? jmax (y, mid) : barH;
             const float hh = jmax (2.0f, bot - top);
             const Rectangle<float> bar (x + 2.0f, center ? top : barH - hh, w - 4.0f, hh);
-            g.setGradientFill (ColourGradient (Colour (cur ? 0xffffffff : 0xfffef1d9), 0.0f, bar.getY(), Colour (cur ? 0xffffd27a : 0xfff0a040), 0.0f, bar.getBottom(), false));
+            g.setGradientFill (ColourGradient (Colour (cur ? 0xffffe2a0 : 0xfff2ead6), 0.0f, bar.getY(), Colour (cur ? 0xffffb02e : 0xffd4c9ac), 0.0f, bar.getBottom(), false));
             g.fillRoundedRectangle (bar, 1.5f);
             g.setColour (pal::ink.withAlpha (0.85f));
             g.setFont (uiFont (10.5f));
@@ -479,35 +481,20 @@ private:
     String name, sec; Lcd* lcd; bool on = false;
 };
 
-// paw print (pad + four toes), drawn in code
-inline void drawPaw (Graphics& g, Point<float> c, float s, Colour col)
-{
-    g.setColour (col);
-    g.fillEllipse (c.x - 0.30f * s, c.y - 0.02f * s, 0.60f * s, 0.46f * s);                 // pad
-    g.fillEllipse (c.x - 0.46f * s, c.y - 0.30f * s, 0.20f * s, 0.27f * s);                 // toes
-    g.fillEllipse (c.x - 0.24f * s, c.y - 0.50f * s, 0.20f * s, 0.29f * s);
-    g.fillEllipse (c.x + 0.04f * s, c.y - 0.50f * s, 0.20f * s, 0.29f * s);
-    g.fillEllipse (c.x + 0.26f * s, c.y - 0.30f * s, 0.20f * s, 0.27f * s);
-}
-
 class Section : public Component
 {
 public:
-    static constexpr int headerH = 26;
+    static constexpr int headerH = 22;
+    int ruleEndPad = 0;                 // space kept free at the right end of the title rule (for a header toggle)
     explicit Section (String t) : title (std::move (t)) {}
     void paint (Graphics& g) override
     {
-        auto r = getLocalBounds().toFloat();
-        g.setColour (Colours::white.withAlpha (0.10f)); g.fillRoundedRectangle (r.reduced (1.0f), 4.0f);
-        g.setColour (pal::ink.withAlpha (0.38f));
-        g.drawRoundedRectangle (r.reduced (0.5f), 4.0f, 1.0f);
-        Path bar; bar.addRoundedRectangle (r.getX(), r.getY(), r.getWidth(), (float) headerH, 4.0f, 4.0f, true, true, false, false);
-        g.setGradientFill (ColourGradient (Colour (0xff2e2a26), 0.0f, 0.0f, pal::header, 0.0f, (float) headerH, false));
-        g.fillPath (bar);
-        g.setColour (pal::inkLight);
-        g.setFont (uiFont (17.0f, true, 0.9f).withExtraKerningFactor (0.10f));
-        g.drawText (title, Rectangle<float> (10.0f, 0.0f, r.getWidth() - 36.0f, (float) headerH), Justification::centredLeft, false);
-        drawPaw (g, { r.getRight() - 17.0f, 16.0f }, 14.0f, Colour (0xfff0a24a));
+        g.setColour (pal::ink);
+        g.setFont (uiFont (14.0f, true, 0.95f));
+        const float tw = g.getCurrentFont().getStringWidthFloat (title) + 2.0f;
+        g.drawText (title, Rectangle<float> (0.0f, 0.0f, tw, 16.0f), Justification::centredLeft, false);
+        g.setColour (pal::amber.withAlpha (0.55f));
+        g.fillRect (tw + 8.0f, 8.0f, (float) getWidth() - tw - 8.0f - (float) ruleEndPad, 1.0f);
     }
     // children are placed "space-around" like the HTML panel
     void layoutRow (const Array<Component*>& kids, int top = headerH + 2)

@@ -41,9 +41,6 @@ juce_add_plugin(YM2000
   AU_MAIN_TYPE               kAudioUnitType_MusicDevice
   FORMATS                    ${YM_FORMATS})
 
-juce_add_binary_data(YM2000Assets SOURCES Source/assets/cat1.png Source/assets/cat2.png Source/assets/cat3.png)
-set_target_properties(YM2000Assets PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
 target_sources(YM2000 PRIVATE ${YM_SOURCES})
 
 target_compile_definitions(YM2000 PUBLIC
@@ -55,7 +52,7 @@ target_compile_definitions(YM2000 PUBLIC
 target_compile_options(YM2000 PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-float-equal>)
 
 target_link_libraries(YM2000
-  PRIVATE YM2000Assets juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+  PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
   PUBLIC  juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 
 # ---- optional headless tests (smoke test of the whole plug-in, GUI screenshot)
@@ -70,7 +67,7 @@ if(YM_BUILD_TESTS)
     juce_add_console_app(YM2000_${T} PRODUCT_NAME "YM2000 ${T}")
     target_sources(YM2000_${T} PRIVATE ${SRC} ${YM_SOURCES})
     target_compile_definitions(YM2000_${T} PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_STANDALONE_APPLICATION=1)
-    target_link_libraries(YM2000_${T} PRIVATE YM2000Assets juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+    target_link_libraries(YM2000_${T} PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
                           juce::juce_recommended_config_flags)
   endforeach()
 endif()
