@@ -1,0 +1,3 @@
+set dt 0
+set dtm 70
+set ddp 70

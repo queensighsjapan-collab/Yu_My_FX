@@ -1,0 +1,63 @@
+set o1w 0
+set o1c1 0
+set o1c2 0
+set dwgs 1
+set o2w 0
+set o2m 0
+set o2s 0
+set o2t 0
+set mx1 127
+set mx2 0
+set mxn 0
+set ft 0
+set cut 90
+set res 20
+set f1 0
+set fv 0
+set fk 0
+set al 110
+set ap 64
+set dist 0
+set ak 0
+set e1a 5
+set e1d 60
+set e1s 90
+set e1r 40
+set e2a 0
+set e2d 50
+set e2s 127
+set e2r 30
+set l1w 2
+set l1f 70
+set l2w 2
+set l2f 40
+set ptn 0
+set pbr 2
+set ptr 0
+set pvi 0
+set ppo 0
+set arptm 120
+set vs1 0
+set vs2 1
+set vs3 2
+set vs4 3
+set vd1 4
+set vd2 0
+set vd3 5
+set vd4 6
+set vi1 0
+set vi2 0
+set vi3 0
+set vi4 0
+set msq 1
+set msd 0
+set seqv 120
+set cut 50
+on 48 100
+render 4000
+set seqv 20
+render 4000
+set seqv 100
+render 4000
+off 48
+render 8000

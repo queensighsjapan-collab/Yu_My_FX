@@ -1,0 +1,4 @@
+set eqhg 8
+set eqhf 60
+set eqlg -9
+set eqlf 70

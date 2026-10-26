@@ -1,0 +1,3 @@
+set mft 1
+set mfd 90
+set mfs 40

@@ -1,0 +1,7 @@
+set vmode 1
+set vfs 1
+set vcl 0
+set ai1 100
+set vlev3 20
+set vpan0 0
+set vpan15 127

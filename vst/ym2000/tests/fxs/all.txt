@@ -1,0 +1,8 @@
+set vmode 1
+set mft 1
+set mfd 60
+set ddp 40
+set dtm 50
+set eqhg 5
+set eqlg 4
+set ai1 100
