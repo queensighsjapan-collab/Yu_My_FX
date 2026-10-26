@@ -10,7 +10,7 @@ public:
     void resized() override;
     void paint (juce::Graphics& g) override { g.fillAll (ymgui::pal::body); }
 
-    static constexpr int designW = 1700, designH = 980;
+    static constexpr int designW = 1716, designH = 972;
 
 private:
     struct Backdrop : juce::Component

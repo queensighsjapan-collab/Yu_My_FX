@@ -11,21 +11,22 @@ using namespace juce;
 // ------------------------------------------------------------------ palette
 namespace pal
 {
-const Colour body        { 0xff2a1a10 };
-const Colour panelTop    { 0xffefe7d0 };   // cream panel
-const Colour panelBot    { 0xffe2d8bb };
-const Colour ink         { 0xff26211b };   // silk-screen print on the cream panel
-const Colour inkLight    { 0xfff1ead8 };   // print on black parts
-const Colour muted       { 0xff6e6656 };
-const Colour amber       { 0xffe2561a };   // active / accent orange
+const Colour body        { 0xff3a1508 };
+const Colour panelTop    { 0xfff8dcb2 };   // peach-cream panel
+const Colour panelBot    { 0xfff0cd9b };
+const Colour ink         { 0xff2a1d12 };   // silk-screen print on the panel
+const Colour inkLight    { 0xfff4e9d4 };   // print on black parts
+const Colour muted       { 0xff7a6244 };
+const Colour amber       { 0xffe8641c };   // active / accent orange
 const Colour amberDim    { 0xfff1c9a8 };
-const Colour lcdBg       { 0xffb5d394 };
-const Colour lcdCell     { 0xffa6c685 };
-const Colour lcdInk      { 0xff1d3414 };
-const Colour ledOn       { 0xffff2a1c };
-const Colour ledOff      { 0xff6b2a22 };
-const Colour header      { 0xff121212 };
-const Colour field       { 0xffd9cfb0 };   // recessed fields (step bars, boxes)
+const Colour lcdBg       { 0xffb4c96f };
+const Colour lcdCell     { 0xffa3b85e };
+const Colour lcdInk      { 0xff2b3913 };
+const Colour ledOn       { 0xffff1a10 };
+const Colour ledOff      { 0xff7a2a20 };
+const Colour header      { 0xff211e1b };
+const Colour field       { 0xff262421 };   // dark field behind step bars
+const Colour tick        { 0xffe8801f };   // orange scale marks
 // section accent colours (thin ring around the knobs)
 const Colour cOsc        { 0xffffb02e };
 const Colour cFilter     { 0xff38c7d9 };
@@ -57,7 +58,7 @@ public:
     void paint (Graphics& g) override
     {
         auto r = getLocalBounds().toFloat();
-        g.setColour (Colour (0xff0a0a0a)); g.fillRoundedRectangle (r, 5.0f);
+        g.setColour (Colour (0xff1a1a14)); g.fillRoundedRectangle (r, 5.0f);
         auto inner = r.reduced (4.0f);
         g.setGradientFill (ColourGradient (pal::lcdBg.brighter (0.08f), inner.getX(), inner.getY(), pal::lcdBg.darker (0.06f), inner.getX(), inner.getBottom(), false));
         g.fillRoundedRectangle (inner, 3.0f);
@@ -123,22 +124,28 @@ public:
 
     void setExternal (float nv) { if (std::abs (nv - v) > 1e-4f) { v = nv; repaint(); } }
 
+    // horizontal extents (left, right) of the printed selector labels around the knob centre
+    static void selExtents (float labelRadius, const StringArray& labels, float& left, float& right)
+    {
+        left = right = 20.0f;
+        const int n = labels.size();
+        for (int i = 0; i < n; ++i)
+        {
+            const float deg = -135.0f + 270.0f * (float) i / (float) jmax (1, n - 1);
+            const float s = std::sin (degreesToRadians (deg));
+            const float tw = uiFont (10.5f).getStringWidthFloat (labels[i]);
+            const float x = labelRadius * s + (s > 0.45f ? 3.0f : s < -0.45f ? -3.0f - tw : -tw * 0.5f);
+            left = jmax (left, -x + 7.0f); right = jmax (right, x + tw + 2.0f);
+        }
+    }
+
     static Rectangle<int> sizeFor (float diameter, float labelRadius, const String& label, const StringArray& labels = {})
     {
         const float labelW = uiFont (12.5f).getStringWidthFloat (label.toUpperCase()) + 8.0f;
         if (labelRadius > 0.0f)
         {
-            const int n = labels.size();
-            float ext = 20.0f;
-            for (int i = 0; i < n; ++i)
-            {
-                const float deg = -135.0f + 270.0f * (float) i / (float) jmax (1, n - 1);
-                const float s = std::sin (degreesToRadians (deg));
-                const float tw = uiFont (10.5f).getStringWidthFloat (labels[i]);
-                const float x = labelRadius * s + (s > 0.45f ? 3.0f : s < -0.45f ? -3.0f - tw : -tw * 0.5f);
-                ext = jmax (ext, std::abs (x) + 2.0f, std::abs (x + tw) + 2.0f);
-            }
-            return { 0, 0, (int) jmax (2.0f * ext, labelW) + 4, (int) (2.0f * labelRadius + 34.0f + 16.0f) };
+            float l, r; selExtents (labelRadius, labels, l, r);
+            return { 0, 0, (int) jmax (l + r, labelW) + 4, (int) (2.0f * labelRadius + 34.0f + 16.0f) };
         }
         return { 0, 0, (int) jmax (diameter + 10.0f, labelW), (int) diameter + 12 + 16 };
     }
@@ -146,15 +153,16 @@ public:
     void paint (Graphics& g) override
     {
         const bool sel = R > 0.0f;
-        const float cx = getWidth() * 0.5f;
-        const float knobR = sel ? 13.0f : dia * 0.3f;
+        float cx = getWidth() * 0.5f;
+        if (sel) { float l, r; selExtents (R, labels, l, r); cx = l + ((float) getWidth() - l - r) * 0.5f; }
+        const float knobR = sel ? jlimit (14.0f, 19.0f, R * 0.55f) : dia * 0.42f;
         const float cy = sel ? (R + 17.0f) : (dia * 0.5f + 5.0f);
         const float a0 = -135.0f, a1 = 135.0f;
         auto pt = [&] (float rad, float deg) { const float t = degreesToRadians (deg); return Point<float> (cx + rad * std::sin (t), cy - rad * std::cos (t)); };
         const float norm = mx > mn ? jlimit (0.0f, 1.0f, (v - mn) / (mx - mn)) : 0.0f;
 
         // ticks / printed labels
-        g.setColour (pal::ink.withAlpha (0.8f));
+        g.setColour (pal::tick);
         if (sel)
         {
             const int n = labels.size();
@@ -162,8 +170,8 @@ public:
             for (int i = 0; i < n; ++i)
             {
                 const float deg = a0 + (a1 - a0) * (float) i / (float) jmax (1, n - 1);
-                g.setColour (pal::ink.withAlpha (0.8f));
-                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + 7.0f, deg)), 1.0f);
+                g.setColour (pal::tick);
+                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + 7.5f, deg)), 1.4f);
                 const auto tp = pt (R, deg);
                 const float s = std::sin (degreesToRadians (deg)), co = std::cos (degreesToRadians (deg));
                 Font f = uiFont (10.5f);
@@ -171,7 +179,7 @@ public:
                 float x = tp.x, y = tp.y + (co > 0.45f ? -2.0f : co < -0.45f ? 11.0f : 4.0f);
                 if (s > 0.45f) x += 3.0f; else if (s < -0.45f) x -= 3.0f + tw; else x -= tw * 0.5f;
                 g.setFont (f);
-                g.setColour (i == active ? pal::amber : pal::ink.withAlpha (0.85f));
+                g.setColour (i == active ? pal::amber : pal::ink.withAlpha (0.9f));
                 g.drawText (labels[i], Rectangle<float> (x - 1.0f, y - 10.0f, tw + 2.0f, 12.0f), Justification::centredLeft, false);
             }
         }
@@ -181,7 +189,7 @@ public:
             {
                 const float deg = a0 + (a1 - a0) * (float) i / 10.0f;
                 const bool lng = i % 5 == 0;
-                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + (lng ? 8.0f : 6.2f), deg)), 1.0f);
+                g.drawLine (Line<float> (pt (knobR + 3.5f, deg), pt (knobR + (lng ? 8.5f : 6.5f), deg)), 1.4f);
             }
         }
         (void) accent;
@@ -203,7 +211,7 @@ public:
         // label
         g.setColour (pal::ink);
         g.setFont (uiFont (12.5f));
-        g.drawText (name.toUpperCase(), Rectangle<float> (0.0f, (float) getHeight() - 15.0f, (float) getWidth(), 14.0f), Justification::centred, false);
+        g.drawText (name.toUpperCase(), Rectangle<float> (cx - 60.0f, (float) getHeight() - 15.0f, 120.0f, 14.0f), Justification::centred, false);
     }
 
     void mouseDown (const MouseEvent& e) override
@@ -348,22 +356,23 @@ public:
         auto r = getLocalBounds().toFloat();
         const float barH = r.getHeight() - 12.0f;
         const float w = r.getWidth() / 16.0f;
-        g.setColour (pal::field); g.fillRoundedRectangle (r.withHeight (barH), 2.0f);
-        g.setColour (pal::ink.withAlpha (0.35f)); g.drawRoundedRectangle (r.withHeight (barH).reduced (0.5f), 2.0f, 1.0f);
+        g.setColour (pal::field); g.fillRoundedRectangle (r.withHeight (barH), 3.0f);
         for (int i = 0; i < 16; ++i)
         {
             const float x = w * (float) i;
-            const float h = barH * val[i] / 127.0f;
             const bool cur = pos != nullptr && lastPos == i;
-            g.setColour (cur ? pal::amber : Colour (0xff1c1a17));
-            if (center) { const float mid = barH * 0.5f, y = barH * (1.0f - val[i] / 127.0f); g.fillRect (x + 1.5f, jmin (y, mid), w - 3.0f, jmax (2.0f, std::abs (y - mid))); }
-            else g.fillRect (x + 1.5f, barH - h, w - 3.0f, h);
-            g.setColour (pal::ink.withAlpha (0.75f));
-            g.setFont (uiFont (10.0f));
+            const float mid = barH * 0.5f, y = barH * (1.0f - val[i] / 127.0f);
+            const float top = center ? jmin (y, mid) : y, bot = center ? jmax (y, mid) : barH;
+            const float hh = jmax (2.0f, bot - top);
+            const Rectangle<float> bar (x + 2.0f, center ? top : barH - hh, w - 4.0f, hh);
+            g.setGradientFill (ColourGradient (Colour (cur ? 0xffffffff : 0xfffef1d9), 0.0f, bar.getY(), Colour (cur ? 0xffffd27a : 0xfff0a040), 0.0f, bar.getBottom(), false));
+            g.fillRoundedRectangle (bar, 1.5f);
+            g.setColour (pal::ink.withAlpha (0.85f));
+            g.setFont (uiFont (10.5f));
             g.drawText (String (i + 1), Rectangle<float> (x, barH + 1.0f, w, 11.0f), Justification::centred, false);
         }
         if (center) { g.setColour (pal::amber.withAlpha (0.8f)); g.drawHorizontalLine ((int) (barH * 0.5f), 0.0f, r.getWidth()); }
-        if (pos != nullptr && lastPos >= 0) { g.setColour (pal::ledOn); g.drawRect (Rectangle<float> (w * (float) lastPos, 0.0f, w, barH), 1.0f); }
+        if (pos != nullptr && lastPos >= 0) { g.setColour (pal::ledOn); g.drawRoundedRectangle (Rectangle<float> (w * (float) lastPos, 0.0f, w, barH), 2.0f, 1.2f); }
     }
     void mouseDown (const MouseEvent& e) override { set (e); }
     void mouseDrag (const MouseEvent& e) override { set (e); }
@@ -453,112 +462,27 @@ inline void drawPaw (Graphics& g, Point<float> c, float s, Colour col)
     g.fillEllipse (c.x + 0.26f * s, c.y - 0.30f * s, 0.20f * s, 0.27f * s);
 }
 
-// a small sitting cat (head and shoulders). variant 0 tabby, 1 black & white, 2 grey.
-class Cat : public Component
-{
-public:
-    explicit Cat (int v) : variant (v) { setInterceptsMouseClicks (false, false); setSize (64, 36); }
-    void paint (Graphics& g) override
-    {
-        const Colour fur   = variant == 0 ? Colour (0xffe8a050) : variant == 1 ? Colour (0xff1f1f21) : Colour (0xffa4aab0);
-        const Colour dark  = variant == 0 ? Colour (0xffb86a22) : variant == 1 ? Colour (0xff000000) : Colour (0xff6f757c);
-        const Colour light = variant == 0 ? Colour (0xfff7e3c4) : Colour (0xfff6f1e6);
-        const Colour pink  = Colour (0xffee9aa4);
-
-        Path tail;
-        tail.startNewSubPath (54.0f, 34.0f);
-        tail.cubicTo (64.0f, 32.0f, 66.0f, 14.0f, 58.0f, 12.0f);
-        g.setColour (dark.withAlpha (0.9f));
-        g.strokePath (tail, PathStrokeType (5.0f, PathStrokeType::curved, PathStrokeType::rounded));
-        g.setColour (fur);
-        g.strokePath (tail, PathStrokeType (3.6f, PathStrokeType::curved, PathStrokeType::rounded));
-
-        g.setColour (fur);                                           // body
-        g.fillEllipse (10.0f, 15.0f, 44.0f, 40.0f);
-        if (variant != 0) { g.setColour (light); g.fillEllipse (22.0f, 22.0f, 20.0f, 30.0f); }
-        g.setColour (dark.withAlpha (0.35f)); g.drawEllipse (10.0f, 15.0f, 44.0f, 40.0f, 1.0f);
-
-        auto ear = [&] (float x0, float x1, float xt)
-        {
-            Path e; e.addTriangle (x0, 11.0f, xt, 0.5f, x1, 8.0f);
-            g.setColour (fur); g.fillPath (e);
-            Path in; in.addTriangle (x0 + 2.2f, 9.5f, xt + (xt < 32.0f ? 0.6f : -0.6f), 4.0f, x1 - 1.6f, 8.0f);
-            g.setColour (pink); g.fillPath (in);
-            g.setColour (dark.withAlpha (0.5f)); g.strokePath (e, PathStrokeType (0.8f));
-        };
-        ear (19.0f, 30.0f, 21.0f);
-        ear (34.0f, 45.0f, 43.0f);
-
-        g.setColour (fur);                                           // head
-        g.fillEllipse (17.0f, 4.0f, 30.0f, 25.0f);
-        g.setColour (dark.withAlpha (0.5f)); g.drawEllipse (17.0f, 4.0f, 30.0f, 25.0f, 0.9f);
-        if (variant == 1) { g.setColour (light); g.fillEllipse (25.0f, 14.0f, 14.0f, 13.0f); }
-        if (variant == 2) { g.setColour (light); g.fillEllipse (26.0f, 15.0f, 12.0f, 12.0f); }
-        if (variant == 0)
-        {
-            g.setColour (dark);
-            for (float dx : { -3.0f, 0.0f, 3.0f }) g.drawLine (32.0f + dx, 5.5f, 32.0f + dx * 1.4f, 10.0f, 1.2f);
-            g.setColour (light); g.fillEllipse (26.0f, 16.0f, 12.0f, 11.0f);
-        }
-
-        // face
-        g.setColour (Colour (0xff15130f));
-        if (variant == 2)   // happy closed eyes
-        {
-            Path a; a.addCentredArc (26.5f, 15.5f, 2.6f, 2.0f, 0.0f, -1.2f, 1.2f, true);
-            Path b; b.addCentredArc (37.5f, 15.5f, 2.6f, 2.0f, 0.0f, -1.2f, 1.2f, true);
-            g.strokePath (a, PathStrokeType (1.2f)); g.strokePath (b, PathStrokeType (1.2f));
-        }
-        else
-        {
-            const Colour iris = variant == 1 ? Colour (0xffd8e03a) : Colour (0xff5ea85a);
-            for (float ex : { 26.5f, 37.5f })
-            {
-                g.setColour (iris); g.fillEllipse (ex - 2.6f, 12.4f, 5.2f, 6.0f);
-                g.setColour (Colour (0xff15130f)); g.fillEllipse (ex - 1.0f, 13.0f, 2.0f, 4.8f);
-                g.setColour (Colours::white.withAlpha (0.85f)); g.fillEllipse (ex - 1.6f, 13.2f, 1.3f, 1.3f);
-            }
-        }
-        g.setColour (pink);
-        Path nose; nose.addTriangle (30.0f, 19.2f, 34.0f, 19.2f, 32.0f, 21.4f); g.fillPath (nose);
-        g.setColour (Colour (0xff15130f).withAlpha (0.8f));
-        g.drawLine (32.0f, 21.4f, 32.0f, 23.0f, 0.8f);
-        Path m; m.startNewSubPath (29.0f, 23.4f); m.quadraticTo (30.5f, 25.0f, 32.0f, 23.0f); m.quadraticTo (33.5f, 25.0f, 35.0f, 23.4f);
-        g.strokePath (m, PathStrokeType (0.8f));
-        g.setColour (Colours::white.withAlpha (variant == 1 ? 0.85f : 0.55f));
-        for (int s = -1; s <= 1; s += 2)
-            for (int k = 0; k < 3; ++k)
-                g.drawLine (32.0f + (float) s * 5.0f, 21.5f + (float) k * 1.6f, 32.0f + (float) s * 13.0f, 19.5f + (float) k * 3.2f, 0.7f);
-
-        // front paws on the edge of the bar
-        g.setColour (light);
-        g.fillEllipse (22.0f, 30.0f, 8.0f, 7.0f); g.fillEllipse (34.0f, 30.0f, 8.0f, 7.0f);
-        g.setColour (dark.withAlpha (0.4f));
-        g.drawEllipse (22.0f, 30.0f, 8.0f, 7.0f, 0.7f); g.drawEllipse (34.0f, 30.0f, 8.0f, 7.0f, 0.7f);
-    }
-private:
-    int variant;
-};
-
 class Section : public Component
 {
 public:
-    static constexpr int headerH = 18;
+    static constexpr int headerH = 26;
     explicit Section (String t) : title (std::move (t)) {}
     void paint (Graphics& g) override
     {
         auto r = getLocalBounds().toFloat();
-        g.setColour (pal::ink.withAlpha (0.30f));
-        g.drawRoundedRectangle (r.reduced (0.5f), 3.0f, 1.0f);
-        Path bar; bar.addRoundedRectangle (r.getX(), r.getY(), r.getWidth(), (float) headerH, 3.0f, 3.0f, true, true, false, false);
-        g.setColour (pal::header); g.fillPath (bar);
+        g.setColour (Colours::white.withAlpha (0.10f)); g.fillRoundedRectangle (r.reduced (1.0f), 4.0f);
+        g.setColour (pal::ink.withAlpha (0.38f));
+        g.drawRoundedRectangle (r.reduced (0.5f), 4.0f, 1.0f);
+        Path bar; bar.addRoundedRectangle (r.getX(), r.getY(), r.getWidth(), (float) headerH, 4.0f, 4.0f, true, true, false, false);
+        g.setGradientFill (ColourGradient (Colour (0xff2e2a26), 0.0f, 0.0f, pal::header, 0.0f, (float) headerH, false));
+        g.fillPath (bar);
         g.setColour (pal::inkLight);
-        g.setFont (uiFont (13.0f, true, 0.95f).withExtraKerningFactor (0.08f));
-        g.drawText (title, Rectangle<float> (8.0f, 0.0f, r.getWidth() - 30.0f, (float) headerH), Justification::centredLeft, false);
-        drawPaw (g, { r.getRight() - 12.0f, 11.0f }, 9.0f, pal::inkLight.withAlpha (0.9f));
+        g.setFont (uiFont (17.0f, true, 0.9f).withExtraKerningFactor (0.10f));
+        g.drawText (title, Rectangle<float> (10.0f, 0.0f, r.getWidth() - 36.0f, (float) headerH), Justification::centredLeft, false);
+        drawPaw (g, { r.getRight() - 17.0f, 16.0f }, 14.0f, Colour (0xfff0a24a));
     }
     // children are placed "space-around" like the HTML panel
-    void layoutRow (const Array<Component*>& kids, int top = 22)
+    void layoutRow (const Array<Component*>& kids, int top = headerH + 2)
     {
         int total = 0;
         for (auto* c : kids) total += c->getWidth();
