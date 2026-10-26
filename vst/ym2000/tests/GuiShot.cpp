@@ -9,7 +9,7 @@ int main (int argc, char** argv)
     p.prepareToPlay (48000, 256);
     if (argc > 2) p.setCurrentProgram (std::atoi (argv[2]));
     std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
-    ed->setSize (1716, 972);
+    ed->setSize (1716, 930);
     juce::Time::waitForMillisecondCounter (juce::Time::getMillisecondCounter() + 50);
     auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f);
     juce::File out (argc > 1 ? argv[1] : "shot.png");

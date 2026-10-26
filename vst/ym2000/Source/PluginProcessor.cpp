@@ -76,7 +76,7 @@ YM2000Processor::YM2000Processor()
     auto R = [this] (const char* id) { return apvts.getRawParameterValue (id); };
     fr = { R ("vol"), R ("ai1"), R ("ai2"), R ("vmode"), R ("vfs"), R ("vcl"), R ("mft"), R ("mfs"), R ("mfd"), R ("dt"), R ("dtm"), R ("ddp"),
            R ("eqhf"), R ("eqhg"), R ("eqlf"), R ("eqlg"),
-           R ("arpon"), R ("arplt"), R ("arpt"), R ("arpr"), R ("arpg"), R ("arptm"), R ("msq"), R ("msk") };
+           R ("arpon"), R ("arplt"), R ("arpt"), R ("arpr"), R ("arpg"), R ("arptm"), R ("msq"), R ("msk"), R ("hsync") };
     for (int i = 0; i < 16; ++i) seqVals[i] = ym::kSeqDefaults[i];
     keyboardState.addListener (&midiCollector);
 }
@@ -117,7 +117,7 @@ bool YM2000Processor::clockWanted() const { return (arpOn && ! arpHeld.empty()) 
 void YM2000Processor::clockStart()
 {
     if (clockRunning) return;
-    clockRunning = true; clockCountdown = 0;
+    clockRunning = true; clockCountdown = 0; resyncPending = true;
 }
 
 void YM2000Processor::arpStop()
@@ -254,7 +254,11 @@ void YM2000Processor::readParams()
 
     arpOn = fr.arpon->load() > 0.5f; arpLatch = fr.arplt->load() > 0.5f;
     arpType = (int) fr.arpt->load(); arpRange = (int) fr.arpr->load();
-    arpGate = fr.arpg->load(); arpTempo = fr.arptm->load();
+    arpGate = fr.arpg->load();
+    hostSync = fr.hsync->load() > 0.5f;
+    arpTempo = (hostSync && hostBpm >= 1.0) ? jlimit (1.0, 999.0, hostBpm) : (double) fr.arptm->load();
+    engine->set (ym::arptm, arpTempo);                 // LFO tempo sync follows the same tempo
+    uiTempo.store ((float) arpTempo);
     seqOn = fr.msq->load() > 0.5f; seqKeySync = fr.msk->load() > 0.5f;
     for (int i = 0; i < 16; ++i) seqVals[i] = (int) seqRaw[i]->load();
 
@@ -325,7 +329,16 @@ void YM2000Processor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi
     for (int c = 0; c < buffer.getNumChannels(); ++c) buffer.clear (c, 0, n);
     midiCollector.removeNextBlockOfMessages (midi, n); // notes / wheels played on the GUI
 
+    hostBpm = 0; hostPlaying = false; hostPpqValid = false;
+    if (auto* ph = getPlayHead())
+        if (auto pi = ph->getPosition())
+        {
+            if (auto b = pi->getBpm()) hostBpm = *b;
+            hostPlaying = pi->getIsPlaying();
+            if (auto q = pi->getPpqPosition()) { hostPpq = *q; hostPpqValid = true; }
+        }
     readParams();
+    const bool gridAlign = hostSync && hostBpm >= 1.0 && hostPlaying && hostPpqValid;
     fx.setParams (fxp, n);
     fx.engineInput (haveIn ? srcMono.data() : nullptr, engIn.data(), n);
 
@@ -339,6 +352,15 @@ void YM2000Processor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi
         {
             for (int nt : arpCur) engOff (nt);
             arpCur.clear(); arpOffCountdown = -1;
+        }
+        if (! gridAlign) resyncPending = false;
+        else if (clockRunning && (resyncPending || pos == 0))
+        {
+            // lock the 16th-note clock to the host's beat grid
+            const double step = sampleRate * 15.0 / arpTempo;
+            const double sixteenth = (hostPpq + (double) pos * arpTempo / 60.0 / sampleRate) * 4.0;
+            clockCountdown = std::max (0.0, (std::ceil (sixteenth - 1e-6) - sixteenth) * step);
+            resyncPending = false;
         }
         while (clockRunning && clockCountdown <= 1e-9) clockTick();
 
@@ -375,6 +397,7 @@ void YM2000Processor::loadFactory (int index)
     };
     for (const auto& p : ym::kParams)
     {
+        if (std::strcmp (p.id, "hsync") == 0) continue;   // host sync is a global setting, not part of a program
         float v = p.def;
         for (int k = 0; k < f.n; ++k) if (std::strcmp (f.v[k].id, p.id) == 0) v = f.v[k].v;
         setNorm (p.id, v);

@@ -105,6 +105,7 @@ inline const PDef kParams[] = {
     { "arpr", "Arp Range", "ARPEGGIATOR", Kind::Int, 1, 4, 1, nullptr },
     { "arpg", "Arp Gate Time", "ARPEGGIATOR", Kind::Float, 0, 127, 64, nullptr },
     { "arptm", "Arp / Seq Tempo (BPM)", "ARPEGGIATOR", Kind::Int, 20, 300, 120, nullptr },
+    { "hsync", "Host Tempo Sync", "ARPEGGIATOR", Kind::Bool, 0, 1, 0, nullptr },
     // VOCODER
     { "vmode", "Voice Mode", "VOCODER", Kind::Choice, 0, 1, 0, "SINGLE|VOCODER" },
     { "vfs", "Vocoder Formant Shift", "VOCODER", Kind::Int, -2, 2, 0, nullptr },

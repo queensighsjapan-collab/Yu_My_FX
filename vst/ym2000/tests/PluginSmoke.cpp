@@ -63,6 +63,61 @@ int main()
     juce::MidiBuffer alloff; alloff.addEvent (juce::MidiMessage::allNotesOff (1), 0);
     render (1, alloff); render (400, {});
 
+    // host tempo sync: arpeggio step rate follows the DAW tempo
+    {
+        struct MockHead : juce::AudioPlayHead
+        {
+            double bpm = 120, ppq = 0; bool playing = true, hasBpm = true;
+            juce::Optional<PositionInfo> getPosition() const override
+            {
+                PositionInfo pi;
+                if (hasBpm) pi.setBpm (bpm);
+                pi.setIsPlaying (playing); pi.setPpqPosition (ppq);
+                return pi;
+            }
+        } head;
+        p.setPlayHead (&head);
+        auto setP = [&] (const char* id, float real)
+        {
+            auto* q = p.apvts.getParameter (id); q->setValueNotifyingHost (q->convertTo0to1 (real));
+        };
+        // count mod-sequence steps (same 16th-note clock as the arpeggiator) in 4 seconds with one held note
+        auto arpOnsets = [&] (bool hostSync, double bpm, bool hasBpm = true)
+        {
+            p.setCurrentProgram (4);
+            render (2, {});
+            setP ("hsync", hostSync ? 1.0f : 0.0f);
+            setP ("arpon", 0.0f); setP ("msq", 1.0f); setP ("msk", 0.0f);
+            render (2, {});
+            head.bpm = bpm; head.hasBpm = hasBpm; head.ppq = 0; head.playing = true;
+            juce::AudioBuffer<float> b (2, bs);
+            const int blocks = (int) (4.0 * sr / bs);
+            int k = 0, last = -2;
+            for (int i = 0; i < blocks; ++i)
+            {
+                b.clear(); juce::MidiBuffer m; if (i == 0) m.addEvent (juce::MidiMessage::noteOn (1, 48, (juce::uint8) 100), 0);
+                p.processBlock (b, m);
+                const int sp = p.uiSeqPos.load(); if (sp != last && sp >= 0) ++k; last = sp;
+                head.ppq += (double) bs / sr * head.bpm / 60.0;
+            }
+            juce::MidiBuffer ao; ao.addEvent (juce::MidiMessage::allNotesOff (1), 0);
+            render (1, ao); render (100, {});
+            setP ("msq", 0.0f);
+            return k;
+        };
+        const int base = arpOnsets (false, 60);   // sync off: the TEMPO knob (125) is used whatever the host says
+        const int offHost = arpOnsets (false, 200);
+        const int b90 = arpOnsets (true, 90), b120 = arpOnsets (true, 120), b180 = arpOnsets (true, 180);
+        const int noBpm = arpOnsets (true, 90, false);
+        std::printf("     mod-seq steps in 4 s: off(60)=%d off(200)=%d sync90=%d sync120=%d sync180=%d syncNoBpm=%d\n", base, offHost, b90, b120, b180, noBpm);
+        check (base == offHost, "host sync off ignores the host tempo");
+        check (std::abs (b90 - 24) <= 2 && std::abs (b120 - 32) <= 2 && std::abs (b180 - 48) <= 2, "host sync: 90/120/180 BPM give 24/32/48 steps in 4 s");
+        check (std::abs ((double) b180 / (double) b90 - 2.0) < 0.2, "host sync: 180 BPM is about twice as fast as 90 BPM");
+        check (std::abs (noBpm - base) <= 1 && std::abs (base - 33) <= 2, "host sync without host tempo falls back to the TEMPO knob");
+        p.setPlayHead (nullptr);
+        setP ("hsync", 0.0f);
+    }
+
     // state round trip
     juce::MemoryBlock mb; p.setCurrentProgram (2); p.getStateInformation (mb);
     p.setCurrentProgram (0); p.setStateInformation (mb.getData(), (int) mb.getSize());
