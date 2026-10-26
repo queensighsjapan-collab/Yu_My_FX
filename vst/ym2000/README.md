@@ -40,3 +40,7 @@ GitHub に push すれば Actions（`.github/workflows/build.yml`）が Windows 
 
 ## ライセンス注意
 JUCE は AGPLv3 または商用ライセンスです。自分用で使う分には問題ありませんが、バイナリを配布する場合は JUCE のライセンス条件（ソース公開 or JUCE ライセンス購入）に従ってください。
+
+## macOS へのインストール（補足）
+
+CI の成果物は `YM2000-macOS.tar.gz` です（zip だと実行権限が失われ、DAW から見えなくなるため）。ダウンロード後に解凍し、`YM2000.vst3` を `~/Library/Audio/Plug-Ins/VST3/`、`YM2000.component` を `~/Library/Audio/Plug-Ins/Components/` に置いてください。アドホック署名済みですが公証はしていないので、ブラウザ経由でダウンロードした場合は `xattr -cr` で隔離属性を外してください。

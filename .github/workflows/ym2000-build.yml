@@ -30,6 +30,25 @@ jobs:
           mkdir -p dist
           cp -R build/YM2000_artefacts/Release/VST3/YM2000.vst3 dist/
           if [ "$RUNNER_OS" = "macOS" ]; then cp -R build/YM2000_artefacts/Release/AU/YM2000.component dist/; fi
+      # macOS: sign ad hoc (Apple Silicon refuses unsigned code), make sure the binary is executable,
+      # and ship a tar.gz because a zip artifact drops the Unix permission bits.
+      - name: Sign and archive (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd dist
+          for b in YM2000.vst3 YM2000.component; do
+            chmod -R u+rwX,go+rX "$b"
+            chmod +x "$b"/Contents/MacOS/*
+            codesign --force --deep --sign - "$b"
+            codesign --verify --deep --strict --verbose=2 "$b"
+            ls -l "$b"/Contents/MacOS/
+            lipo -archs "$b"/Contents/MacOS/YM2000
+          done
+          tar -czf ../YM2000-macOS.tar.gz YM2000.vst3 YM2000.component
+          tar -tvzf ../YM2000-macOS.tar.gz | grep "Contents/MacOS"
+          cd ..
+          rm -rf dist && mkdir dist && mv YM2000-macOS.tar.gz dist/
       - uses: actions/upload-artifact@v4
         with:
           name: YM2000-${{ runner.os }}
