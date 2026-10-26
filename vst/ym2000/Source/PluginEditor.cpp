@@ -18,48 +18,60 @@ void YM2000Editor::Backdrop::paint (juce::Graphics& g)
     const float W = (float) designW, H = (float) designH;
     g.fillAll (pal::body);
 
-    // titanium side cheeks with brushed lines
+    // wooden side cheeks
     for (int side = 0; side < 2; ++side)
     {
-        Rectangle<float> r (side == 0 ? 0.0f : W - 36.0f, 0.0f, 36.0f, 730.0f + 250.0f);
-        g.setGradientFill (ColourGradient (Colour (0xff8a909e), r.getX(), 0.0f, Colour (0xff3a3f4b), r.getRight(), 0.0f, false));
+        Rectangle<float> r (side == 0 ? 0.0f : W - 36.0f, 0.0f, 36.0f, H);
+        g.setGradientFill (ColourGradient (Colour (0xff9a6234), r.getX(), 0.0f, Colour (0xff6b3f1e), r.getRight(), 0.0f, false));
         g.fillRect (r);
-        Random rnd (7 + side);
-        for (float y = 0; y < H; y += 1.0f)
+        Random rnd (11 + side);
+        for (float x = r.getX(); x < r.getRight(); x += 1.0f)
         {
-            g.setColour ((rnd.nextBool() ? Colours::white : Colours::black).withAlpha (rnd.nextFloat() * 0.09f));
-            g.drawHorizontalLine ((int) y, r.getX(), r.getRight());
+            Path grain;
+            const float ph = rnd.nextFloat() * 6.28f, amp = 0.6f + rnd.nextFloat() * 1.8f;
+            grain.startNewSubPath (x, 0.0f);
+            for (float y = 0.0f; y <= H; y += 20.0f) grain.lineTo (x + amp * std::sin (y * 0.011f + ph), y);
+            g.setColour ((rnd.nextInt (3) == 0 ? Colours::white : Colours::black).withAlpha (0.04f + rnd.nextFloat() * 0.10f));
+            g.strokePath (grain, PathStrokeType (0.8f));
         }
-        g.setColour (Colours::black.withAlpha (0.5f));
+        g.setGradientFill (ColourGradient (Colours::white.withAlpha (0.10f), 0.0f, 0.0f, Colours::transparentBlack, 0.0f, 120.0f, false));
+        g.fillRect (r);
+        g.setColour (Colours::black.withAlpha (0.55f));
         g.fillRect (side == 0 ? r.getRight() - 2.0f : r.getX(), 0.0f, 2.0f, H);
     }
 
-    // graphite panel
+    // cream panel
     Rectangle<float> panel (36.0f, 0.0f, W - 72.0f, 730.0f);
     g.setGradientFill (ColourGradient (pal::panelTop, 0.0f, 0.0f, pal::panelBot, 0.0f, panel.getBottom(), false));
     g.fillRect (panel);
-    g.setColour (Colours::white.withAlpha (0.025f));
-    for (float x = panel.getX(); x < panel.getRight(); x += 3.0f) g.drawVerticalLine ((int) x, 0.0f, panel.getBottom());
-    g.setColour (Colours::white.withAlpha (0.18f)); g.drawHorizontalLine (0, panel.getX(), panel.getRight());
-    g.setColour (pal::amber.withAlpha (0.22f));
+    {
+        Random rnd (3);
+        for (int i = 0; i < 6000; ++i)
+        {
+            g.setColour ((rnd.nextBool() ? Colours::white : Colours::black).withAlpha (0.025f + rnd.nextFloat() * 0.03f));
+            g.fillRect (panel.getX() + rnd.nextFloat() * panel.getWidth(), rnd.nextFloat() * panel.getHeight(), 1.4f, 1.4f);
+        }
+    }
+    g.setColour (pal::ink.withAlpha (0.35f));
     g.fillRect (54.0f, 536.0f, W - 108.0f, 1.0f);       // divider above the vocoder / mod-seq row
 
     // brand
     g.setColour (pal::ink);
     g.setFont (Font (FontOptions (Font::getDefaultSansSerifFontName(), 34.0f, Font::bold)).withExtraKerningFactor (0.12f));
     g.drawText ("YM2000", Rectangle<float> (54.0f, 12.0f, 240.0f, 40.0f), Justification::centredLeft, false);
+    drawPaw (g, { 262.0f, 38.0f }, 20.0f, pal::amber);
     g.setColour (pal::amber);
     g.fillRect (54.0f, 54.0f, 56.0f, 2.0f);
     g.setColour (pal::muted);
     g.setFont (uiFont (12.0f, true, 0.95f).withExtraKerningFactor (0.16f));
     g.drawText ("ANALOG MODELING SYNTHESIZER  /  Yu_My", Rectangle<float> (54.0f, 57.0f, 304.0f, 14.0f), Justification::centredLeft, false);
 
-    // keyboard deck
+    // black keyboard deck
     Rectangle<float> deck (36.0f, 730.0f, W - 72.0f, 250.0f);
-    g.setGradientFill (ColourGradient (Colour (0xff0b0d10), 0.0f, deck.getY(), Colour (0xff161a1d), 0.0f, deck.getBottom(), false));
+    g.setGradientFill (ColourGradient (Colour (0xff1b1b1b), 0.0f, deck.getY(), Colour (0xff0a0a0a), 0.0f, deck.getBottom(), false));
     g.fillRect (deck);
-    g.setColour (Colour (0xff050607)); g.fillRect (deck.getX(), deck.getY(), deck.getWidth(), 3.0f);
-    g.setColour (pal::ink.withAlpha (0.8f)); g.setFont (uiFont (12.5f));
+    g.setColour (Colour (0xff000000)); g.fillRect (deck.getX(), deck.getY(), deck.getWidth(), 3.0f);
+    g.setColour (pal::inkLight.withAlpha (0.8f)); g.setFont (uiFont (12.5f));
     g.drawFittedText ("OCTAVE\nSHIFT", Rectangle<int> (60, 904, 80, 30), Justification::centred, 2);
     g.drawFittedText ("PITCH\nBEND", Rectangle<int> (140, 924, 70, 30), Justification::centred, 2);
     g.drawFittedText ("MOD", Rectangle<int> (196, 924, 70, 30), Justification::centred, 2);
@@ -91,14 +103,14 @@ String YM2000Editor::programLabel (int i) const { return String::charToString ((
 
 YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), proc (p)
 {
-    laf.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xff0d0f13));
+    laf.setColour (juce::ComboBox::backgroundColourId, juce::Colour (0xfff7f2e2));
     laf.setColour (juce::ComboBox::textColourId, pal::ink);
-    laf.setColour (juce::ComboBox::outlineColourId, pal::muted.withAlpha (0.6f));
-    laf.setColour (juce::ComboBox::arrowColourId, pal::amber);
-    laf.setColour (juce::PopupMenu::backgroundColourId, juce::Colour (0xff12151a));
+    laf.setColour (juce::ComboBox::outlineColourId, pal::ink.withAlpha (0.6f));
+    laf.setColour (juce::ComboBox::arrowColourId, pal::ink);
+    laf.setColour (juce::PopupMenu::backgroundColourId, juce::Colour (0xfff7f2e2));
     laf.setColour (juce::PopupMenu::textColourId, pal::ink);
     laf.setColour (juce::PopupMenu::highlightedBackgroundColourId, pal::amberDim);
-    laf.setColour (juce::PopupMenu::highlightedTextColourId, pal::amber);
+    laf.setColour (juce::PopupMenu::highlightedTextColourId, pal::ink);
 
     addAndMakeVisible (backdrop);
     backdrop.setBounds (0, 0, designW, designH);
@@ -215,17 +227,26 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
         { &mixer, { K (mixer, "mx1", "OSC 1", pal::cOsc), K (mixer, "mx2", "OSC 2", pal::cOsc), K (mixer, "mxn", "NOISE", pal::cOsc) } } });
 
     auto& filter = newSection ("FILTER"); auto& amp = newSection ("AMP"); auto& eg1 = newSection ("EG 1");
-    row (372, 190, 840, 144, 12, {
+    row (372, 204, 840, 144, 12, {
         { &filter, { S (filter, "ft", "TYPE", pal::cFilter, 32.0f), K (filter, "cut", "CUTOFF", pal::cFilter), K (filter, "res", "RESO", pal::cFilter),
                      K (filter, "f1", "EG1 INT", pal::cFilter), K (filter, "fv", "VELO", pal::cFilter), K (filter, "fk", "KBD TRK", pal::cFilter) } },
         { &amp, { K (amp, "al", "LEVEL", pal::cFilter), K (amp, "ap", "PAN", pal::cFilter), Btn (amp, "dist", "DIST"), K (amp, "ak", "KBD TRK", pal::cFilter) } },
         { &eg1, { K (eg1, "e1a", "ATTACK", pal::cMod), K (eg1, "e1d", "DECAY", pal::cMod), K (eg1, "e1s", "SUSTAIN", pal::cMod), K (eg1, "e1r", "RELEASE", pal::cMod) } } });
 
     auto& eg2 = newSection ("EG 2"); auto& lfo1 = newSection ("LFO 1"); auto& lfo2 = newSection ("LFO 2");
-    row (372, 348, 840, 144, 12, {
+    row (372, 374, 840, 144, 12, {
         { &eg2, { K (eg2, "e2a", "ATTACK", pal::cMod), K (eg2, "e2d", "DECAY", pal::cMod), K (eg2, "e2s", "SUSTAIN", pal::cMod), K (eg2, "e2r", "RELEASE", pal::cMod) } },
         { &lfo1, { S (lfo1, "l1w", "WAVE", pal::cMod, 32.0f), K (lfo1, "l1f", "FREQ", pal::cMod), Stack (lfo1, { Btn (lfo1, "l1k", "KEY SYNC"), Btn (lfo1, "l1t", "TEMPO SYNC") }) } },
         { &lfo2, { S (lfo2, "l2w", "WAVE", pal::cMod, 32.0f), K (lfo2, "l2f", "FREQ", pal::cMod), Stack (lfo2, { Btn (lfo2, "l2k", "KEY SYNC") }) } } });
+
+    // cats sitting on the header bars of FILTER, AMP and LFO 2
+    auto cat = [&] (Section& sec, int variant, int fromRight)
+    {
+        auto* c = new Cat (variant);
+        owned.add (c); content.addAndMakeVisible (c);
+        c->setTopLeftPosition (sec.getRight() - fromRight - c->getWidth(), sec.getY() - c->getHeight() + 3);
+    };
+    cat (filter, 0, 34); cat (amp, 1, 34); cat (lfo2, 2, 34);
 
     // ---- RIGHT: effects / pitch / EQ / arpeggiator
     auto& modfx = newSection ("MOD FX"); auto& delay = newSection ("DELAY FX");
@@ -271,8 +292,8 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
     keyboard->setBlackNoteLengthProportion (0.62f);
     keyboard->setMidiChannel (1);
     keyboard->setVelocity (0.8f, true);
-    keyboard->setColour (juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour (0xffeee8d8));
-    keyboard->setColour (juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour (0xff12151a));
+    keyboard->setColour (juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour (0xfffbfaf4));
+    keyboard->setColour (juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour (0xff0e0e0e));
     keyboard->setColour (juce::MidiKeyboardComponent::keySeparatorLineColourId, juce::Colour (0xff9b9582));
     keyboard->setColour (juce::MidiKeyboardComponent::keyDownOverlayColourId, pal::amber.withAlpha (0.65f));
     keyboard->setColour (juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, juce::Colours::white.withAlpha (0.10f));
