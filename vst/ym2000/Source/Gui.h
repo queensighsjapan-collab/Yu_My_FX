@@ -451,6 +451,34 @@ private:
 };
 
 // ------------------------------------------------------------------ section frame
+// small LED toggle that sits in a section's black header bar
+class HeaderToggle : public Component
+{
+public:
+    HeaderToggle (RangedAudioParameter* param, String label, String section, Lcd* lcdPtr)
+        : p (param), name (std::move (label)), sec (std::move (section)), lcd (lcdPtr)
+    {
+        att = std::make_unique<ParameterAttachment> (*p, [this] (float nv) { on = nv > 0.5f; repaint(); });
+        att->sendInitialUpdate();
+        setSize ((int) (uiFont (11.5f).getStringWidthFloat (name) + 28.0f), 18);
+    }
+    void paint (Graphics& g) override
+    {
+        g.setColour (on ? pal::ledOn.withAlpha (0.35f) : Colours::transparentBlack); g.fillEllipse (1.0f, 1.0f, 16.0f, 16.0f);
+        g.setColour (on ? pal::ledOn : pal::ledOff); g.fillEllipse (5.0f, 5.0f, 8.0f, 8.0f);
+        g.setColour (pal::inkLight); g.setFont (uiFont (11.5f));
+        g.drawText (name, Rectangle<float> (20.0f, 0.0f, (float) getWidth() - 20.0f, 18.0f), Justification::centredLeft, false);
+    }
+    void mouseDown (const MouseEvent&) override
+    {
+        att->setValueAsCompleteGesture (on ? 0.0f : 1.0f);
+        if (lcd) lcd->flash (sec + " " + name, on ? "OFF" : "ON");
+    }
+private:
+    RangedAudioParameter* p; std::unique_ptr<ParameterAttachment> att;
+    String name, sec; Lcd* lcd; bool on = false;
+};
+
 // paw print (pad + four toes), drawn in code
 inline void drawPaw (Graphics& g, Point<float> c, float s, Colour col)
 {

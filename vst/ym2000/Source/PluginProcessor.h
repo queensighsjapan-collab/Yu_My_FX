@@ -46,6 +46,7 @@ public:
     juce::MidiMessageCollector midiCollector;
     std::atomic<float> uiBend { 0.0f }, uiMod { 0.0f };
     std::atomic<int> uiSeqPos { -1 };
+    std::atomic<float> uiTempo { 120.0f };   // tempo currently driving arp / mod seq / LFO tempo sync
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
@@ -77,7 +78,7 @@ private:
     struct FxRaw
     {
         std::atomic<float> *vol, *ai1, *ai2, *vmode, *vfs, *vcl, *mft, *mfs, *mfd, *dt, *dtm, *ddp, *eqhf, *eqhg, *eqlf, *eqlg;
-        std::atomic<float> *arpon, *arplt, *arpt, *arpr, *arpg, *arptm, *msq, *msk;
+        std::atomic<float> *arpon, *arplt, *arpt, *arpr, *arpg, *arptm, *msq, *msk, *hsync;
     } fr {};
 
     std::unique_ptr<ym::Engine> engine;
@@ -99,6 +100,9 @@ private:
     bool arpOn = false, arpLatch = false, seqOn = false, seqKeySync = false;
     int arpType = 0, arpRange = 1;
     double arpGate = 64, arpTempo = 120;
+    // host transport (read once per block)
+    double hostBpm = 0, hostPpq = 0;
+    bool hostPlaying = false, hostPpqValid = false, hostSync = false, resyncPending = false;
     int seqVals[16] = {};
     juce::Random rng;
 

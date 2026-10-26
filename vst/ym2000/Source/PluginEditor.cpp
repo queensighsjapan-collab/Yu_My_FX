@@ -277,6 +277,12 @@ YM2000Editor::YM2000Editor (YM2000Processor& p) : AudioProcessorEditor (&p), pro
     row (1288, 438, 392, 160, 8, { { &arp, { Stack (arp, { Btn (arp, "arpon", "ON/OFF"), Btn (arp, "arplt", "LATCH") }), S (arp, "arpt", "TYPE", pal::cPerf, 34.0f),
                                                K (arp, "arpr", "RANGE", pal::cPerf), K (arp, "arpg", "GATE TIME", pal::cPerf), K (arp, "arptm", "TEMPO", pal::cPerf) } } });
 
+    {
+        auto* hs = new HeaderToggle (prm ("hsync"), "HOST SYNC", "ARPEGGIATOR", &lcd);
+        hs->setTopLeftPosition (arp.getRight() - 36 - hs->getWidth(), arp.getY() + 4);
+        owned.add (hs); content.addAndMakeVisible (hs);
+    }
+
     // ---- VOCODER / CH LEVEL / CH PAN / MOD SEQUENCE row
     auto& voc = newSection ("VOCODER"); auto& chl = newSection ("CH LEVEL"); auto& chp = newSection ("CH PAN"); auto& seq = newSection ("MOD SEQUENCE");
     auto* lev = new StepBars (proc.apvts, "vlev", "VOC CH LEVEL", false, &lcd);
