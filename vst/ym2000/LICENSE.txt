@@ -1,0 +1,19 @@
+YM2000 — Freeware License / フリーウェア使用許諾
+
+Copyright (c) 2026 Yu_My. All rights reserved.
+
+【日本語】
+1. YM2000（以下「本ソフトウェア」）は無料で使用できます。個人・商用を問わず、音楽制作に使用して作った楽曲・音源は自由に公開・販売できます（使用料・クレジット表記は不要です）。
+2. 本ソフトウェアのバイナリ（インストーラー等）は、改変せず、無償で、かつ配布元（公式の配布ページ）へのリンクを添えるかぎり、再配布できます。有償での販売・配布、改変した版の再配布はできません。
+3. ソースコードの著作権は作者にあります。ソースコードの複製・改変・再配布には、作者の許可が必要です。
+4. 本ソフトウェアは現状のまま提供され、動作・特定目的への適合性・DAW との互換性を含め、いかなる保証もありません。使用によって生じた損害について、作者は責任を負いません。
+5. 本ソフトウェアには JUCE（https://juce.com）を使用しています。JUCE は JUCE Limited の著作物であり、同社のライセンス条件に従って使用しています。
+6. VST は Steinberg Media Technologies GmbH の登録商標です。Audio Units は Apple Inc. の商標です。KORG および MS2000 は KORG Inc. の商標です。本ソフトウェアはこれらの会社とは無関係で、承認・提携を受けていません。
+
+[English]
+1. YM2000 ("the Software") is free to use. You may use it for personal or commercial music production, and you may freely release or sell the music you make with it. No fee or credit is required.
+2. You may redistribute the unmodified binaries (installers) free of charge, provided you link to the official distribution page. Selling the Software, or redistributing modified versions, is not permitted.
+3. The copyright of the source code belongs to the author. Copying, modifying or redistributing the source code requires the author's permission.
+4. The Software is provided "as is", without warranty of any kind, including fitness for a particular purpose or compatibility with any host. The author is not liable for any damages arising from its use.
+5. The Software is built with JUCE (https://juce.com), the property of JUCE Limited, used under JUCE's licence terms.
+6. VST is a registered trademark of Steinberg Media Technologies GmbH. Audio Units is a trademark of Apple Inc. KORG and MS2000 are trademarks of KORG Inc. This Software is not affiliated with or endorsed by any of these companies.

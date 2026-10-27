@@ -5,6 +5,11 @@ on:
   pull_request:
     paths: ['vst/ym2000/**', '.github/workflows/ym2000-build.yml']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'If set (e.g. ym2000-v1.0.0), also create a DRAFT GitHub release with this tag from the build'
+        required: false
+        default: ''
 defaults:
   run:
     working-directory: vst/ym2000
@@ -17,6 +22,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Version
+        id: ver
+        shell: bash
+        run: echo "v=$(grep -oE 'project\(YM2000 VERSION [0-9.]+' CMakeLists.txt | grep -oE '[0-9.]+$')" >> "$GITHUB_OUTPUT"
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build VST3 (and AU on macOS)
@@ -30,9 +39,22 @@ jobs:
           mkdir -p dist
           cp -R build/YM2000_artefacts/Release/VST3/YM2000.vst3 dist/
           if [ "$RUNNER_OS" = "macOS" ]; then cp -R build/YM2000_artefacts/Release/AU/YM2000.component dist/; fi
-      # macOS: sign ad hoc (Apple Silicon refuses unsigned code), make sure the binary is executable,
-      # and ship a tar.gz because a zip artifact drops the Unix permission bits.
-      - name: Sign and archive (macOS)
+
+      # ---------------- Windows: installer
+      - name: Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.v }}" installer\ym2000.iss
+          Get-ChildItem dist
+          Remove-Item -Recurse -Force dist\YM2000.vst3
+
+      # ---------------- macOS: ad-hoc sign, check architectures, dmg (+ tar.gz)
+      # Apple Silicon refuses unsigned code, and a zip artifact drops the Unix permission bits,
+      # so the plug-ins are shipped inside a dmg / tar.gz.
+      - name: Sign and package (macOS)
         if: runner.os == 'macOS'
         shell: bash
         run: |
@@ -42,14 +64,50 @@ jobs:
             chmod +x "$b"/Contents/MacOS/*
             codesign --force --deep --sign - "$b"
             codesign --verify --deep --strict --verbose=2 "$b"
-            ls -l "$b"/Contents/MacOS/
-            lipo -archs "$b"/Contents/MacOS/YM2000
+            echo "$b architectures: $(lipo -archs "$b"/Contents/MacOS/YM2000)"
           done
+          cp ../LICENSE.txt .
+          cat > "はじめにお読みください.txt" <<'TXT'
+          YM2000 インストール方法（Mac）
+
+          1. YM2000.vst3 を ~/Library/Audio/Plug-Ins/VST3/ にコピー
+          2. YM2000.component を ~/Library/Audio/Plug-Ins/Components/ にコピー（AU を使う場合）
+          3. ターミナルで次を実行（公証をしていないため必要です）
+               xattr -cr ~/Library/Audio/Plug-Ins/VST3/YM2000.vst3
+               xattr -cr ~/Library/Audio/Plug-Ins/Components/YM2000.component
+          4. DAW を再起動（または再スキャン）
+
+          詳しい使い方は https://github.com/queensighsjapan-collab/Yu_My_FX/blob/main/vst/ym2000/docs/MANUAL.md
+          TXT
+          sed -i '' 's/^          //' "はじめにお読みください.txt"
           tar -czf ../YM2000-macOS.tar.gz YM2000.vst3 YM2000.component
-          tar -tvzf ../YM2000-macOS.tar.gz | grep "Contents/MacOS"
+          hdiutil create -volname "YM2000" -srcfolder . -ov -format UDZO ../YM2000-macOS.dmg
           cd ..
-          rm -rf dist && mkdir dist && mv YM2000-macOS.tar.gz dist/
+          rm -rf dist && mkdir dist && mv YM2000-macOS.dmg YM2000-macOS.tar.gz dist/
+          ls -l dist
       - uses: actions/upload-artifact@v4
         with:
           name: YM2000-${{ runner.os }}
           path: vst/ym2000/dist
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          ls -lR artifacts
+          VER="${TAG#ym2000-v}"
+          sed "s/v1\.0\.0/v${VER}/; s/YM2000-Setup-1\.0\.0\.exe/YM2000-Setup-${VER}.exe/" vst/ym2000/RELEASE_NOTES.md > notes.md
+          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "YM2000 v${VER}" --notes-file notes.md \
+            artifacts/YM2000-Windows/YM2000-Setup-*.exe artifacts/YM2000-macOS/YM2000-macOS.dmg vst/ym2000/LICENSE.txt

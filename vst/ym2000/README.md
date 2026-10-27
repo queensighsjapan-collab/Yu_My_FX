@@ -1,5 +1,7 @@
 # YM2000 (VST3 / AU)
 
+無料のアナログモデリング・シンセサイザー。ダウンロードは [Releases](../../releases)、使い方は [取扱説明書](docs/MANUAL.md)。
+
 `synthesizer/ms2000-synth.html`（Yu_My_FX）の音源を VST3 / AU プラグイン化したものです。JUCE + C++。**ソースは1つ**で、Windows 用と Mac 用はビルドするだけで作り分けます（GitHub Actions が両方を自動ビルド）。
 
 ## できること（HTML版と同じ）
@@ -38,8 +40,8 @@ GitHub に push すれば Actions（`.github/workflows/build.yml`）が Windows 
 - `pluginval` strictness 5 合格（Linux）、エディターを開くテストも合格。`tests/PluginSmoke.cpp`（`-DYM_BUILD_TESTS=ON`）で発音・アルペジエーター・プログラム・状態保存を確認。`tests/GuiShot.cpp` で画面を PNG に書き出して確認
 - Windows / Mac での実機ビルド・DAW 動作確認は未実施（CI でビルドを確認してください）
 
-## ライセンス注意
-JUCE は AGPLv3 または商用ライセンスです。自分用で使う分には問題ありませんが、バイナリを配布する場合は JUCE のライセンス条件（ソース公開 or JUCE ライセンス購入）に従ってください。
+## ライセンス
+フリーウェアです（[LICENSE.txt](LICENSE.txt)）。JUCE を使用しており、JUCE の Starter ライセンス（年間収益 $20,000 まで）の条件に従って配布します。ソースコードの複製・改変・再配布には作者の許可が必要です。使い方は [docs/MANUAL.md](docs/MANUAL.md) を参照してください。
 
 ## macOS へのインストール（補足）
 
