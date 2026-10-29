@@ -88,14 +88,18 @@
     width: 100%;
     max-width: 1240px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 22px;
   }
+  .nav-grid .card{ grid-column: span 2; }
+  .nav-grid .card:nth-child(5){ grid-column: 4 / 6; } /* 5枚目は中央寄せ */
   @media (max-width: 1100px) and (min-width: 761px){
     .nav-grid{ grid-template-columns: repeat(2, 1fr); max-width: 640px; }
+    .nav-grid .card, .nav-grid .card:nth-child(5){ grid-column: auto; }
   }
   @media (max-width: 760px){
     .nav-grid{ grid-template-columns: 1fr; max-width: 420px; }
+    .nav-grid .card, .nav-grid .card:nth-child(5){ grid-column: auto; }
   }
 
   .card{
@@ -165,6 +169,7 @@
   #card-ms2000{ --card-color: var(--c2); --card-glow: rgba(46,230,255,0.35); }
   #card-303{ --card-color: var(--c1); --card-glow: rgba(255,46,166,0.35); }
   #card-oddity{ --card-color: #ff6a13; --card-glow: rgba(255,106,19,0.35); }
+  #card-mogu{ --card-color: #d9dbe3; --card-glow: rgba(217,219,227,0.35); }
   #card-soon{ --card-color: var(--ink-dim); --card-glow: rgba(111,122,144,0.25); }
 
   footer{
@@ -248,6 +253,23 @@
       <div class="label">SYNPHONIC ODDITY</div>
       <div class="desc">DUO / 4ボイス切替・ラダーフィルター<br>S&amp;H・リバーブ・プリセット搭載</div>
       <span class="tag">DUO / POLY</span>
+    </a>
+
+    <a class="card" id="card-mogu" href="mini-mogumogu.html">
+      <div class="icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="5" width="40" height="20" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <circle cx="13" cy="15" r="3.2" stroke="currentColor" stroke-width="2"></circle>
+          <circle cx="24" cy="15" r="3.2" stroke="currentColor" stroke-width="2"></circle>
+          <circle cx="35" cy="15" r="3.2" stroke="currentColor" stroke-width="2"></circle>
+          <path d="M4 29 H44 V43 H4 Z M12 29 V43 M20 29 V43 M28 29 V43 M36 29 V43" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"></path>
+          <rect x="10" y="29" width="4" height="8" fill="currentColor"></rect>
+          <rect x="26" y="29" width="4" height="8" fill="currentColor"></rect>
+        </svg>
+      </div>
+      <div class="label">MINI MOGUMOGU</div>
+      <div class="desc">Minimoog系モノフォニック<br>シーケンサー・MP3録音搭載</div>
+      <span class="tag">MONO</span>
     </a>
   </div>
 
