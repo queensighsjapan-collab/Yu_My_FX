@@ -222,6 +222,32 @@ html,body{height:100%;overflow:hidden;background:#0b0b0c}
 /* RED STEP LEDS */
 .led.on{background:radial-gradient(circle at 35% 30%,#ffb3a8,#ff2b1a 55%,#8a0a00);box-shadow:0 0 12px #ff3a28,0 0 3px #ff6a5a}
 .st.play{border-color:#ff3a28;box-shadow:0 0 12px rgba(255,58,40,.55),inset 0 1px 3px rgba(0,0,0,.6)}
+
+/* ===== STAGE WRAPPER + PHONE LAYOUT ===== */
+#stageWrap{position:fixed;left:0;top:0;right:0;bottom:0;overflow:hidden}
+@media(max-width:900px){
+  html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
+  #stageWrap{position:static;overflow:visible}
+  #synth{position:relative;left:auto;top:auto;width:auto;height:auto;transform:none;display:flex;flex-direction:column;gap:8px;padding:8px;overflow:visible}
+  #synth>header{flex-wrap:wrap}
+  #synth .presets{flex-wrap:wrap;min-width:0}
+  #left,#right{min-height:auto}
+  #row1,#row2{flex-wrap:wrap}
+  #row1 .card,#row2 .card,#row2 .card:first-child,#row1 .card:nth-child(3){flex:1 1 100%}
+  #oscCard .oscs{flex-wrap:wrap}
+  #oscCard .osc{min-width:196px;max-width:none;flex:1 1 196px}
+  #row1 .card:nth-child(3) .knob,#row2 .knob,#row2 .card:first-child .knob{width:72px}
+  #row1 .card:nth-child(3) .krow{flex-wrap:wrap}
+  #right #row4 .steps{grid-template-columns:repeat(4,minmax(0,1fr));flex:0 0 auto}
+  #right #row4 .card{display:block}
+  #row3 .sub{flex-wrap:wrap;gap:12px}
+  #row3 .sub>div.vsep{display:none}
+  .recrow{gap:10px 12px}
+  .meter{width:130px}
+  .kbwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #keys{flex:0 0 1100px;touch-action:pan-x}
+  .wheels{position:sticky;left:0;z-index:3}
+}
 </style>
 </head>
 <body>
@@ -230,6 +256,7 @@ html,body{height:100%;overflow:hidden;background:#0b0b0c}
   <button class="btn hot" id="startBtn">START</button>
 </div>
 <svg width="0" height="0" style="position:absolute"><defs><radialGradient id="kcap" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#9a9ba2"/><stop offset=".45" stop-color="#4a4b51"/><stop offset="1" stop-color="#17171a"/></radialGradient></defs></svg>
+<div id="stageWrap">
 <div id="synth">
 <header>
   <div class="logo">
@@ -268,6 +295,7 @@ html,body{height:100%;overflow:hidden;background:#0b0b0c}
     <div id="keys"></div>
   </div>
 </section>
+</div>
 </div>
 
 <script id="wl" type="text/plain">
@@ -688,7 +716,14 @@ function setParam(key,v){
   S[key]=v;if(m.ui)m.ui(v);apply(key,v);
 }
 let SC=1;
-function fitStage(){SC=Math.min(innerWidth/1920,innerHeight/1080);const e=document.getElementById('synth');e.style.transform='scale('+SC+')';e.style.left=Math.max(0,(innerWidth-1920*SC)/2)+'px';e.style.top=Math.max(0,(innerHeight-1080*SC)/2)+'px'}
+function fitStage(){
+  const e=document.getElementById('synth'),w=document.getElementById('stageWrap');
+  if(window.matchMedia('(max-width:900px)').matches){SC=1;e.style.transform='';e.style.left='';e.style.top='';return}
+  const W=w.clientWidth||innerWidth,H=w.clientHeight||innerHeight;
+  SC=Math.min(W/1920,H/1080);
+  e.style.transform='scale('+SC+')';e.style.left=Math.max(0,(W-1920*SC)/2)+'px';e.style.top=Math.max(0,(H-1080*SC)/2)+'px';
+}
+window.addEventListener('orientationchange',()=>setTimeout(fitStage,150));
 window.addEventListener('resize',fitStage);
 const R=19,CX=25,CY=25;
 function arc(a0,a1){
@@ -1253,6 +1288,7 @@ function buildKeys(){
     k.addEventListener('pointerenter',e=>{if(down&&e.buttons===1&&!k._p){k._p=true;noteDown(n)}});
     k.addEventListener('pointerleave',()=>{if(k._p){k._p=false;noteUp(n)}});
     k.addEventListener('pointerup',()=>{if(k._p){k._p=false;noteUp(n)}});
+    k.addEventListener('pointercancel',()=>{if(k._p){k._p=false;noteUp(n)}});
   };
   for(let n=lo;n<=hi;n++){
     if(!isB(n)){
