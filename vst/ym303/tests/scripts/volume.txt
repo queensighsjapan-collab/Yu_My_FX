@@ -1,0 +1,66 @@
+set cutoff .3
+set reso .72
+set envmod .62
+set decay .3
+set accent .62
+set tuning .5
+set volume .75
+set wave 0
+set volume 1
+on 36 1 0
+render 3072
+off
+render 2368
+on 36 0 0
+render 3072
+off
+render 2368
+on 48 0 1
+render 3072
+render 2368
+on 39 0 0
+render 3072
+off
+render 2368
+on 36 1 0
+render 3072
+off
+render 2368
+off
+render 5376
+on 43 0 1
+render 3072
+render 2368
+on 41 0 0
+render 3072
+off
+render 2368
+on 36 1 0
+render 3072
+off
+render 2368
+on 36 0 0
+render 3072
+off
+render 2368
+on 34 0 0
+render 3072
+off
+render 2368
+on 36 0 0
+render 3072
+off
+render 2368
+on 39 1 0
+render 3072
+off
+render 2368
+on 41 0 1
+render 3072
+render 2368
+on 43 0 0
+render 3072
+off
+render 2368
+off
+render 5376

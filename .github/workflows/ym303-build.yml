@@ -1,0 +1,67 @@
+name: Build YM303 (VST3/AU)
+on:
+  push:
+    paths: ['vst/ym303/**', '.github/workflows/ym303-build.yml']
+  pull_request:
+    paths: ['vst/ym303/**', '.github/workflows/ym303-build.yml']
+  workflow_dispatch:
+defaults:
+  run:
+    working-directory: vst/ym303
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build VST3 (and AU on macOS)
+        shell: bash
+        run: |
+          cmake --build build --config Release --target YM303_VST3 --parallel
+          if [ "$RUNNER_OS" = "macOS" ]; then cmake --build build --config Release --target YM303_AU --parallel; fi
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -R build/YM303_artefacts/Release/VST3/YM303.vst3 dist/
+          if [ "$RUNNER_OS" = "macOS" ]; then cp -R build/YM303_artefacts/Release/AU/YM303.component dist/; fi
+
+      # Apple Silicon refuses unsigned code, and a zip artifact drops the Unix permission bits,
+      # so the plug-ins are shipped inside a dmg / tar.gz (ad-hoc signed; not notarized).
+      - name: Sign and package (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd dist
+          for b in YM303.vst3 YM303.component; do
+            chmod -R u+rwX,go+rX "$b"
+            chmod +x "$b"/Contents/MacOS/*
+            codesign --force --deep --sign - "$b"
+            codesign --verify --deep --strict --verbose=2 "$b"
+            echo "$b architectures: $(lipo -archs "$b"/Contents/MacOS/YM303)"
+          done
+          cat > "はじめにお読みください.txt" <<'TXT'
+          YM303 インストール方法（Mac）
+
+          1. YM303.vst3 を ~/Library/Audio/Plug-Ins/VST3/ にコピー
+          2. YM303.component を ~/Library/Audio/Plug-Ins/Components/ にコピー（AU を使う場合）
+          3. ターミナルで次を実行（公証をしていないため必要です）
+               xattr -cr ~/Library/Audio/Plug-Ins/VST3/YM303.vst3
+               xattr -cr ~/Library/Audio/Plug-Ins/Components/YM303.component
+          4. DAW を再起動（または再スキャン）
+          TXT
+          sed -i '' 's/^          //' "はじめにお読みください.txt"
+          tar -czf ../YM303-macOS.tar.gz YM303.vst3 YM303.component
+          hdiutil create -volname "YM303" -srcfolder . -ov -format UDZO ../YM303-macOS.dmg
+          cd ..
+          rm -rf dist && mkdir dist && mv YM303-macOS.dmg YM303-macOS.tar.gz dist/
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM303-${{ runner.os }}
+          path: vst/ym303/dist

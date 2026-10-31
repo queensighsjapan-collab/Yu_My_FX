@@ -1,0 +1,39 @@
+set cutoff .3
+set reso .72
+set envmod .62
+set decay .3
+set accent .62
+set tuning .5
+set volume .75
+set wave 0
+on 36 0 0
+render 1536
+set cutoff 0.0
+render 1280
+set cutoff 0.1
+render 1280
+set cutoff 0.2
+render 1280
+set cutoff 0.3
+render 1280
+set cutoff 0.4
+render 1280
+set cutoff 0.5
+render 1280
+set cutoff 0.6
+render 1280
+set cutoff 0.7
+render 1280
+set cutoff 0.8
+render 1280
+set cutoff 0.9
+render 1280
+set cutoff 1.0
+render 1280
+off
+render 6400
+silence
+on 40 1 0
+render 2560
+off
+render 2560
