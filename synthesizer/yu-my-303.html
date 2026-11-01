@@ -787,7 +787,7 @@ function raf(){
 function stepText(s){
   if(s.t==='r')return '–';
   if(s.t==='t')return '＿';
-  return NAMES[s.n]+(s.up?'▲':s.dn?'▼':'');
+  return NAMES[s.n%12]+(s.n===12?'+':'')+(s.up?'▲':s.dn?'▼':'');
 }
 function paintCells(){
   const sec=S.running&&playing.sec?playing.sec:editSec();
