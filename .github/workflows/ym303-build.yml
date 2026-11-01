@@ -5,6 +5,11 @@ on:
   pull_request:
     paths: ['vst/ym303/**', '.github/workflows/ym303-build.yml']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'If set (e.g. ym303-v0.2.0), also create a DRAFT GitHub release with this tag from the build'
+        required: false
+        default: ''
 defaults:
   run:
     working-directory: vst/ym303
@@ -65,3 +70,26 @@ jobs:
         with:
           name: YM303-${{ runner.os }}
           path: vst/ym303/dist
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          ls -lR artifacts
+          VER="${TAG#ym303-v}"
+          cd artifacts/YM303-Windows && zip -r ../YM303-Windows-VST3.zip YM303.vst3 && cd ../..
+          printf 'YM303 v%s (Yu_My 303 acid bass + 16-step sequencer)\n\nMac: YM303-macOS.dmg (VST3 + AU, ad-hoc signed, not notarized: see the text file inside)\nWindows: YM303-Windows-VST3.zip (copy YM303.vst3 to C:\\Program Files\\Common Files\\VST3)\n' "$VER" > notes.md
+          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "YM303 v${VER}" --notes-file notes.md \
+            artifacts/YM303-macOS/YM303-macOS.dmg artifacts/YM303-macOS/YM303-macOS.tar.gz artifacts/YM303-Windows-VST3.zip
