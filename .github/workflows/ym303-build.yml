@@ -75,6 +75,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
     needs: build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
     permissions:
       contents: write
     steps:
