@@ -2,6 +2,7 @@
 // It turns "time" (internal tempo clock or a DAW's ppq position) into note events with sample offsets.
 // The note / tie / slide / rest logic is the same as schedule() in synthesizer/yu-my-303.html.
 #pragma once
+#include <atomic>
 #include <cstdint>
 #include "Bank.h"
 
@@ -57,6 +58,8 @@ public:
     void idle (int numSamples, EventList& out);
 
     int currentStep() const { return lastStep; }     // position inside the flat sequence, -1 when stopped
+    // packed entry of the step that fired last: pattern*32 + section*16 + step, or -1 when stopped (safe to read from the GUI thread)
+    int currentEntry() const { return lastEntry.load (std::memory_order_relaxed); }
 
 private:
     enum Clock { None, Internal, Host };
@@ -81,5 +84,6 @@ private:
     double expectedPpq = 0;
     bool havePpq = false;
     int lastStep = -1;
+    std::atomic<int> lastEntry { -1 };
 };
 }

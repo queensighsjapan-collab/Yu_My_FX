@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 #include <cstdio>
 
 using namespace juce;
@@ -115,24 +116,41 @@ void YM303Processor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
     sel.sec = jlimit (0, 2, (int) pSection->load());
 
     // clock: the DAW transport when HOST SYNC is on and the host reports a position, otherwise RUN + TEMPO
-    bool hostOk = false, playing = false; double ppq = 0, bpm = 0;
+    bool hostOk = false, isHostPlaying = false; double ppq = 0, bpm = 0;
     if (pHostSync->load() > 0.5f)
         if (auto* ph = getPlayHead())
             if (auto pi = ph->getPosition())
                 if (auto q = pi->getPpqPosition())
                     if (auto b = pi->getBpm())
-                        if (*b >= 1.0) { hostOk = true; ppq = *q; bpm = *b; playing = pi->getIsPlaying(); }
+                        if (*b >= 1.0) { hostOk = true; ppq = *q; bpm = *b; isHostPlaying = pi->getIsPlaying(); }
 
     events.clear();
+    bool active;
     if (hostOk)
     {
-        if (playing) seq.runHost (n, ppq, bpm, sel, events); else seq.idle (n, events);
+        active = isHostPlaying;
+        if (active) seq.runHost (n, ppq, bpm, sel, events); else seq.idle (n, events);
     }
-    else if (pRun->load() > 0.5f) seq.runInternal (n, (double) pTempo->load(), sel, events);
+    else if ((active = pRun->load() > 0.5f)) seq.runInternal (n, (double) pTempo->load(), sel, events);
     else seq.idle (n, events);
+    playing.store (active);
+    hostDriven.store (hostOk);
+
+    // audition note from the editor (only while the sequencer is silent)
+    if (active) { previewReq.store (-1); previewOffLeft = 0; }
+    else
+    {
+        const int r = previewReq.exchange (-1);
+        if (r >= 0) { engine->noteOn (r & 0xff, (r & 0x100) != 0, false); previewOffLeft = (int) (sampleRate * 0.22); }
+    }
 
     float* out = buffer.getWritePointer (0);
     int cursor = 0;
+    if (previewOffLeft > 0 && ! active)               // release the audition note at its sample position
+    {
+        if (previewOffLeft <= n) { engine->process (out, previewOffLeft); cursor = previewOffLeft; engine->noteOff(); previewOffLeft = 0; }
+        else previewOffLeft -= n;
+    }
     for (int i = 0; i < events.size(); ++i)
     {
         const auto& e = events[i];
@@ -231,6 +249,8 @@ void YM303Processor::setStateInformation (const void* data, int size)
     refreshEditView();
 }
 
-AudioProcessorEditor* YM303Processor::createEditor() { return new GenericAudioProcessorEditor (*this); }
+void YM303Processor::previewNote (int midiNote, bool accent) { previewReq.store ((midiNote & 0xff) | (accent ? 0x100 : 0)); }
+
+AudioProcessorEditor* YM303Processor::createEditor() { return new YM303Editor (*this); }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new YM303Processor(); }

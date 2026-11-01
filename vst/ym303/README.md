@@ -48,3 +48,17 @@ cmake --build build --config Release --target YM303_VST3      # Mac は YM303_AU
 - シーケンサーを、ブラウザ版の**実際のスケジューラー**（Chromium で動かして Audio303.note の呼び出しを記録）と比較：パターン5種＋トラックで、音・タイ・スライド・アクセント・ゲートの長さが一致（タイミング誤差 1サンプル以内）。内部クロックと DAW クロック、ブロックサイズ違いでも同じ結果
 - `tests/PluginSmoke.cpp`（`-DYM_BUILD_TESTS=ON`）：プラグイン全体（パラメーター、DAW 同期、編集ビュー、状態保存、極端な設定）
 - `pluginval` strictness 5（エディターを開くテストを含む）合格（Linux）
+
+
+## GUI(v0.2)
+
+ブラウザ版と同じ横長パネルを専用GUIとして実装しました(固定比率でリサイズ可能、ウィンドウ幅 624〜1872px)。
+
+- ノブ: 縦ドラッグ(Shiftで微調整)、ホイール、ダブルクリックで初期値。操作中は上部のステップモニターに値を表示
+- 鍵盤・PITCH/TIME MODE・DOWN/UP/ACCENT/SLIDE・A/B/A→B・BACK/WRITE-NEXT・DEL/INS・LEN・PATTERN CLEAR はブラウザ版と同じ操作
+- MODE(TRACK WRITE/PLAY, PATTERN PLAY/WRITE)で TRACK リストの作成・編集も可能
+- PCキーボード: A W S E D F T G Y H U J K で音階、スペースで RUN/STOP(エディタにフォーカスがある時)
+- RUN/STOP: HOST SYNC ON のときはDAWの再生に追従(RUNは無効)。単体で使う場合は HOST SYNC を OFF
+- 埋め込みフォント: Barlow Condensed / Share Tech Mono(SIL OFL 1.1、`Fonts/OFL-*.txt`)
+
+`tests/GuiShot.cpp`: ヘッドレスでエディタをPNG出力(`YM303_GuiShot out.png [幅] [0|1]`)。状態 2 でキーボード操作テストを実行します。

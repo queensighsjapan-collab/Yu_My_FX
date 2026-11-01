@@ -24,7 +24,14 @@ set(YM_SOURCES
   Source/Engine.cpp
   Source/Bank.cpp
   Source/Sequencer.cpp
-  Source/PluginProcessor.cpp)
+  Source/PluginProcessor.cpp
+  Source/PluginEditor.cpp)
+
+juce_add_binary_data(YM303_Fonts SOURCES
+  Fonts/BarlowCondensed-Medium.ttf
+  Fonts/BarlowCondensed-SemiBold.ttf
+  Fonts/BarlowCondensed-Bold.ttf
+  Fonts/ShareTechMono-Regular.ttf)
 
 juce_add_plugin(YM303
   COMPANY_NAME               "Yu_My"
@@ -34,6 +41,7 @@ juce_add_plugin(YM303
   IS_SYNTH                   TRUE
   NEEDS_MIDI_INPUT           TRUE
   NEEDS_MIDI_OUTPUT          FALSE
+  EDITOR_WANTS_KEYBOARD_FOCUS TRUE
   IS_MIDI_EFFECT             FALSE
   COPY_PLUGIN_AFTER_BUILD    FALSE
   VST3_CATEGORIES            Instrument Synth
@@ -49,7 +57,7 @@ target_compile_definitions(YM303 PUBLIC
   JUCE_DISPLAY_SPLASH_SCREEN=1)
 
 target_link_libraries(YM303
-  PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+  PRIVATE YM303_Fonts juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
   PUBLIC  juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 
 # ---- optional headless test of the whole plug-in
@@ -58,6 +66,11 @@ if(YM_BUILD_TESTS)
   juce_add_console_app(YM303_SmokeTest PRODUCT_NAME "YM303 SmokeTest")
   target_sources(YM303_SmokeTest PRIVATE tests/PluginSmoke.cpp ${YM_SOURCES})
   target_compile_definitions(YM303_SmokeTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_STANDALONE_APPLICATION=1 JUCE_MODAL_LOOPS_PERMITTED=1)
-  target_link_libraries(YM303_SmokeTest PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+  target_link_libraries(YM303_SmokeTest PRIVATE YM303_Fonts juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+                        juce::juce_recommended_config_flags)
+  juce_add_console_app(YM303_GuiShot PRODUCT_NAME "YM303 GuiShot")
+  target_sources(YM303_GuiShot PRIVATE tests/GuiShot.cpp ${YM_SOURCES})
+  target_compile_definitions(YM303_GuiShot PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_STANDALONE_APPLICATION=1 JUCE_MODAL_LOOPS_PERMITTED=1)
+  target_link_libraries(YM303_GuiShot PRIVATE YM303_Fonts juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
                         juce::juce_recommended_config_flags)
 endif()

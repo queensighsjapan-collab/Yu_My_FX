@@ -41,17 +41,23 @@ public:
     juce::AudioProcessorValueTreeState apvts;
     ym303::Bank bank;
 
-    // read by a future GUI: position inside the flat sequence of the step that played last (-1 = stopped)
-    int currentStep() const { return seq.currentStep(); }
+    // ---- hooks for the editor
+    int  currentStep() const  { return seq.currentStep(); }
+    int  playingEntry() const { return playing.load() ? seq.currentEntry() : -1; }   // pattern*32+section*16+step, -1 = not playing
+    bool isPlayingNow() const { return playing.load(); }
+    bool hostIsDriving() const { return hostDriven.load(); }          // true while the DAW transport is the clock
+    void previewNote (int midiNote, bool accent);                     // audition (ignored while the sequencer plays)
+    void refreshEditView();                                           // copies the selected pattern section into the step parameters
+    int  selectedPattern() const;
+    int  editSection() const;
+
+    // edit-panel state that survives closing the editor (message thread only, not saved in the project)
+    struct UiState { bool write = true; bool pitch = true; bool time = false; int cursor = 0; } ui;
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void parameterChanged (const juce::String& id, float newValue) override;
     void handleAsyncUpdate() override;
-    void refreshEditView();                 // copies the selected pattern section into the step parameters
-    int  selectedPattern() const;
-    int  editSection() const;
-
     std::unique_ptr<ym303::Engine> engine;
     ym303::Sequencer seq { bank };
     ym303::EventList events;
@@ -60,6 +66,9 @@ private:
     std::atomic<float> *pTuning, *pCutoff, *pReso, *pEnvmod, *pDecay, *pAccent, *pVolume, *pWave, *pTempo, *pRun, *pHostSync,
                        *pPlayMode, *pGroup, *pPattern, *pSection;
     std::atomic<bool> refreshing { false };
+    std::atomic<bool> playing { false }, hostDriven { false };
+    std::atomic<int> previewReq { -1 };       // midi note | 0x100 if accent, -1 = none
+    int previewOffLeft = 0;                    // samples until the audition note is released
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (YM303Processor)
 };

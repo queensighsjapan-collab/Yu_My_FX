@@ -8,6 +8,7 @@ void Sequencer::reset()
 {
     clock = None; pendingOff = -1; hold = false; seqLen = 0; posInternal = 0; countdown = 0;
     lastFired = 0; havePpq = false; lastStep = -1;
+    lastEntry.store (-1, std::memory_order_relaxed);
 }
 
 void Sequencer::begin (Clock c, EventList& out)
@@ -62,6 +63,7 @@ void Sequencer::fire (int pos, double triggerAbs, double stepSamples, int offset
 {
     lastStep = pos;
     const uint16_t e = seq[pos], e2 = seq[(pos + 1) % seqLen];
+    lastEntry.store (e, std::memory_order_relaxed);
     const Step st = bank.getStep (e / 32, (e / 16) & 1, e & 15);
     const Step ns = bank.getStep (e2 / 32, (e2 / 16) & 1, e2 & 15);
     const double offAt = triggerAbs + stepSamples * .56;
