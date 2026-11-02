@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
-project(MiniMogumogu VERSION 1.0.0 LANGUAGES C CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# must be set BEFORE project() or CMake ignores it (the build would be arm64 only)
 if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
   set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")   # universal binary (Apple Silicon + Intel)
 endif()
+
+project(MiniMogumogu VERSION 1.0.0 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 FetchContent_Declare(JUCE
