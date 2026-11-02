@@ -1,0 +1,8 @@
+dur 2.4
+set drive 0.4
+set chMix 0.5
+set dlMix 0.4
+set dlTime 0.3
+set dlFb 0.4
+on 0.05 48 0.8 1
+off 1.2

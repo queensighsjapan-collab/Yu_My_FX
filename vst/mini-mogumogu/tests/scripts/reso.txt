@@ -1,0 +1,7 @@
+dur 1.4
+set cutoff 400
+set emph 0.9
+set contour 0.8
+set fD 0.3
+on 0.05 40 0.8 1
+off 1.0

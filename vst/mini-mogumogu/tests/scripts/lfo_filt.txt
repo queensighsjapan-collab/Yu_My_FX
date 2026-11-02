@@ -1,0 +1,8 @@
+dur 2.0
+set modSrc 2
+set modRate 3
+set modFilt 0.5
+set cutoff 500
+set emph 0.4
+on 0.05 48 0.8 1
+off 1.8

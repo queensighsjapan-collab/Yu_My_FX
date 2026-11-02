@@ -1,0 +1,5 @@
+dur 1.6
+set bendRange 1
+on 0.05 55 0.8 1
+bend 0.4 0.6
+off 1.4

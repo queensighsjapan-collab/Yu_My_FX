@@ -1,0 +1,9 @@
+dur 1.2
+set m1 0.6
+set m2 0.6
+set m3 0.6
+set o2tune 9
+set o3tune -7
+set o3range 2
+on 0.05 45 0.9 1
+off 1.0

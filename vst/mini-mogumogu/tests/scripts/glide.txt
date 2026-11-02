@@ -1,0 +1,6 @@
+dur 2.0
+set glide 0.5
+set o2tune 7
+on 0.05 40 0.8 1
+on 0.8 52 0.8 0
+off 1.8

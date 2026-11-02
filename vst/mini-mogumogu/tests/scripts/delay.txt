@@ -1,0 +1,10 @@
+dur 2.4
+set dlMix 0.7
+set dlTime 0.25
+set dlFb 0.5
+set dlTone 2500
+set aD 0.1
+set aS 0
+set fS 0
+on 0.05 55 0.9 1
+off 0.3
