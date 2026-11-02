@@ -1,0 +1,4 @@
+dur 1.2
+set drive 0.6
+on 0.05 48 0.8 1
+off 1.0

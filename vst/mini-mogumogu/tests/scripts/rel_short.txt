@@ -1,0 +1,5 @@
+dur 1.2
+set rel 0
+set aD 1.0
+on 0.05 48 0.8 1
+off 0.5

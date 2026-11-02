@@ -1,0 +1,10 @@
+dur 3.0
+set fA 0.6
+set fD 1.0
+set fS 0.4
+set aA 0.4
+set aD 0.8
+set aS 0.6
+set rel 1
+on 0.05 55 0.8 1
+off 1.8

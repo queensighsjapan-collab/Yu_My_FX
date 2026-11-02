@@ -1,0 +1,7 @@
+dur 1.0
+set o1wave 1
+set cutoff 16000
+set contour 0
+set aS 1
+on 0.05 52 0.8 1
+off 0.8

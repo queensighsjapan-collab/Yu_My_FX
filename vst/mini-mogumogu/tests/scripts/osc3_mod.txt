@@ -1,0 +1,8 @@
+dur 1.6
+set modSrc 0
+set o3range 0
+set o3kbd 0
+set modPitch 0.2
+set modFilt 0.3
+on 0.05 48 0.8 1
+off 1.4

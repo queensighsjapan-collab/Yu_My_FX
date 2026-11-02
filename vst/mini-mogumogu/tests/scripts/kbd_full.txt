@@ -1,0 +1,8 @@
+dur 1.6
+set kbd 3
+set cutoff 500
+set emph 0.5
+on 0.05 36 0.8 1
+off 0.5
+on 0.7 72 0.8 1
+off 1.4

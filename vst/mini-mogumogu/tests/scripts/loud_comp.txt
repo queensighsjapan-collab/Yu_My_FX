@@ -1,0 +1,11 @@
+dur 1.4
+set vol 1
+set m1 1
+set m2 1
+set m3 1
+set o3wave 2
+set cutoff 16000
+set contour 0
+set aS 1
+on 0.05 48 1.0 1
+off 1.2

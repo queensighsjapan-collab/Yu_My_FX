@@ -1,0 +1,6 @@
+dur 2.0
+set modSrc 1
+set modRate 6
+set modPitch 0.3
+on 0.05 55 0.8 1
+off 1.8
