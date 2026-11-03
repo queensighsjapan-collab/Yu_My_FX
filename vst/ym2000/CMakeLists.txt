@@ -9,6 +9,10 @@ project(YM2000 VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(MSVC)
+  # static C/C++ runtime: no Visual C++ Redistributable needed on the user's PC
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 include(FetchContent)
 FetchContent_Declare(JUCE
