@@ -101,7 +101,6 @@ int YM303Processor::editSection() const { return (int) pSection->load() == 1 ? 1
 void YM303Processor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
 {
     ScopedNoDenormals noDenormals;
-    midi.clear();                                   // MIDI is not used in this version (the built-in sequencer plays)
     const int n = buffer.getNumSamples(), nch = buffer.getNumChannels();
     if (nch == 0 || n == 0 || engine == nullptr) return;
 
@@ -125,16 +124,52 @@ void YM303Processor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
                         if (*b >= 1.0) { hostOk = true; ppq = *q; bpm = *b; isHostPlaying = pi->getIsPlaying(); }
 
     events.clear();
+    // RUN is the on/off switch of the built-in sequencer in both clock modes. HOST SYNC only decides which clock drives it:
+    // the DAW transport (plays while the host plays) or the internal TEMPO clock.
+    const bool runOn = pRun->load() > 0.5f;
     bool active;
     if (hostOk)
     {
-        active = isHostPlaying;
+        active = isHostPlaying && runOn;
         if (active) seq.runHost (n, ppq, bpm, sel, events); else seq.idle (n, events);
     }
-    else if ((active = pRun->load() > 0.5f)) seq.runInternal (n, (double) pTempo->load(), sel, events);
+    else if ((active = runOn)) seq.runInternal (n, (double) pTempo->load(), sel, events);
     else seq.idle (n, events);
     playing.store (active);
     hostDriven.store (hostOk);
+
+    // host MIDI notes play the synth (mono, last-note priority) while the built-in sequencer is silent
+    if (active) midiHeldN = 0;
+    else
+        for (const auto meta : midi)
+        {
+            const auto m = meta.getMessage();
+            const int at = jlimit (0, n - 1, meta.samplePosition);
+            if (m.isNoteOn())
+            {
+                const bool legato = midiHeldN > 0;
+                if (midiHeldN < kMidiHeld) { midiHeldNote[midiHeldN] = m.getNoteNumber(); midiHeldAcc[midiHeldN] = m.getVelocity() >= 100; ++midiHeldN; }
+                else { midiHeldNote[kMidiHeld - 1] = m.getNoteNumber(); midiHeldAcc[kMidiHeld - 1] = m.getVelocity() >= 100; }
+                events.push ({ at, true, m.getNoteNumber(), m.getVelocity() >= 100, legato });
+            }
+            else if (m.isNoteOff() || m.isAllNotesOff() || m.isAllSoundOff())
+            {
+                if (m.isNoteOff())
+                {
+                    int k = -1;
+                    for (int i = midiHeldN - 1; i >= 0; --i) if (midiHeldNote[i] == m.getNoteNumber()) { k = i; break; }
+                    if (k < 0) continue;
+                    const bool wasTop = (k == midiHeldN - 1);
+                    for (int i = k; i < midiHeldN - 1; ++i) { midiHeldNote[i] = midiHeldNote[i + 1]; midiHeldAcc[i] = midiHeldAcc[i + 1]; }
+                    --midiHeldN;
+                    if (! wasTop) continue;                                  // a lower held note was released: keep sounding
+                    if (midiHeldN > 0) events.push ({ at, true, midiHeldNote[midiHeldN - 1], midiHeldAcc[midiHeldN - 1], true });   // fall back to the held note, legato
+                    else events.push ({ at, false, 0, false, false });
+                }
+                else { midiHeldN = 0; events.push ({ at, false, 0, false, false }); }
+            }
+        }
+    midi.clear();
 
     // audition note from the editor (only while the sequencer is silent)
     if (active) { previewReq.store (-1); previewOffLeft = 0; }

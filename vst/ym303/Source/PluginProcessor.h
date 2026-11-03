@@ -68,6 +68,8 @@ private:
     std::atomic<bool> refreshing { false };
     std::atomic<bool> playing { false }, hostDriven { false };
     std::atomic<int> previewReq { -1 };       // midi note | 0x100 if accent, -1 = none
+    static constexpr int kMidiHeld = 16;
+    int midiHeldNote[kMidiHeld] = {}; bool midiHeldAcc[kMidiHeld] = {}; int midiHeldN = 0;   // held host MIDI notes (audio thread)
     int previewOffLeft = 0;                    // samples until the audition note is released
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (YM303Processor)

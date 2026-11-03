@@ -355,7 +355,7 @@ public:
         text (g, armClear() ? "SURE?" : "PATTERN", F (2, 15.0f, 0.08f), pal::ink, 79, 384, Justification::centred, 120.0f, 16.0f);
         text (g, armClear() ? "PRESS AGAIN" : "CLEAR", F (2, 15.0f, 0.08f), pal::ink, 79, 398, Justification::centred, 120.0f, 16.0f);
         drawCap (g, rectOf (Clear, 0), isPressed (Clear, 0));
-        drawLed (g, 59, 477, running);
+        drawLed (g, 59, 477, getReal ("run") > 0.5f);
         drawCap (g, rectOf (Run, 0), isPressed (Run, 0));
         drawLed (g, 194, 430, ui.pitch);  drawCap (g, rectOf (BtnPitch, 0), isPressed (BtnPitch, 0));
         drawLed (g, 194, 518, ui.time);   drawCap (g, rectOf (BtnTime, 0), isPressed (BtnTime, 0));
@@ -406,11 +406,10 @@ public:
         {
             const bool hs = proc.apvts.getRawParameterValue ("hostsync")->load() > 0.5f;
             const auto r = rectOf (Host, 0);
-            g.setColour (Colours::white.withAlpha (hs ? 0.7f : 0.3f));
-            g.drawRoundedRectangle (r.reduced (0.5f), 3.0f, 1.0f);
-            drawLed (g, r.getX() + 13.0f, r.getCentreY(), hs);
-            text (g, hs ? "HOST SYNC  ON" : "HOST SYNC  OFF",
-                  F (2, 13.0f, 0.12f), Colours::white.withAlpha (0.9f), r.getX() + 24.0f, r.getCentreY(), Justification::centredLeft, 200.0f, 16.0f);
+            drawCap (g, r, isPressed (Host, 0), Colour (0xff3b3e44), Colour (0xff1d1f23), 4.0f);
+            drawLed (g, r.getX() + 14.0f, r.getCentreY(), hs);
+            text (g, hs ? "HOST SYNC  ON" : "HOST SYNC  OFF", F (2, 13.0f, 0.12f), Colours::white.withAlpha (0.92f),
+                  r.getX() + 28.0f, r.getCentreY(), Justification::centredLeft, 200.0f, 16.0f);
         }
         juce::ignoreUnused (pw);
     }
@@ -711,15 +710,21 @@ private:
                 if (! trackMode()) { setNorm ("section", (float) arg); ui.cursor = jmin (ui.cursor, jmax (0, bank.getLen (pat(), arg == 1 ? 1 : 0) - 1)); }
                 break;
             case Wave: setNorm ("wave", getReal ("wave") > 0.5f ? 0.0f : 1.0f); break;
-            case Host: setNorm ("hostsync", getReal ("hostsync") > 0.5f ? 0.0f : 1.0f); break;
+            case Host:
+                setNorm ("hostsync", getReal ("hostsync") > 0.5f ? 0.0f : 1.0f);
+                flash (getReal ("hostsync") > 0.5f ? "HOST SYNC ON - FOLLOWS THE DAW TRANSPORT" : "HOST SYNC OFF - INTERNAL TEMPO CLOCK"); break;
             case GroupRot: setNorm ("group", (float) jlimit (0, 3, (int) getReal ("group") + arg)); break;
             case ModeRot: setMode (jlimit (0, 3, modeIndex() + arg)); break;
             case ModeItem: setMode (arg); break;
             case Run:
-                if (proc.hostIsDriving()) { flash ("DAW TRANSPORT IS THE CLOCK - PLAY IN THE DAW (OR HOST SYNC OFF)"); break; }
-                if (getReal ("run") < 0.5f && trackMode() && bank.trackLength() == 0) { flash ("TRACK EMPTY"); break; }
-                setNorm ("run", getReal ("run") > 0.5f ? 0.0f : 1.0f);
+            {
+                const bool turnOn = getReal ("run") < 0.5f;
+                if (turnOn && trackMode() && bank.trackLength() == 0) { flash ("TRACK EMPTY"); break; }
+                setNorm ("run", turnOn ? 1.0f : 0.0f);
+                if (! turnOn) flash ("STOP - BUILT-IN SEQUENCER OFF (HOST MIDI NOTES STILL PLAY)");
+                else if (getReal ("hostsync") > 0.5f && proc.hostIsDriving()) flash ("RUN - PLAYS WITH THE DAW TRANSPORT");
                 break;
+            }
             case Del:
                 if (trackMode() && ui.write) { const int n = bank.trackLength(); if (n > 0) { int t[ym303::kMaxTrack]; for (int i = 0; i < n - 1; ++i) t[i] = bank.trackAt (i); bank.setTrack (t, n - 1); } break; }
                 if (! patWrite()) break;

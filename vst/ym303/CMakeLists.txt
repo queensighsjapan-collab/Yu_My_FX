@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
-# must be set BEFORE project() or CMake ignores it (the build would be arm64 only)
 if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
   set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")   # universal binary (Apple Silicon + Intel)
 endif()
 
-project(YM303 VERSION 0.1.0 LANGUAGES C CXX)
+project(YM303 VERSION 0.2.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

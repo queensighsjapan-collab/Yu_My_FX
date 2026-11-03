@@ -69,11 +69,17 @@ int main()
     MockHead head;
     head.playing = false; head.ppq = 0;
     check (render (40, &head) < 1e-6f, "DAW stopped: silent (HOST SYNC on)");
+    setParam (p, "run", 0);
+    head.playing = true; head.ppq = 0;
+    check (render (200, &head) < 1e-6f, "DAW playing + RUN off: built-in sequencer stays silent (HOST SYNC on)");
     setParam (p, "run", 1);
-    check (render (40, &head) < 1e-6f, "DAW stopped: RUN is ignored while HOST SYNC is on");
+    head.playing = false; check (render (40, &head) < 1e-6f, "RUN on but DAW stopped: silent");
     head.playing = true; head.ppq = 0;
     l = render (200, &head, &pk);
-    check (l > 0.02f && pk < 1.0f, "DAW playing: sequence plays");
+    check (l > 0.02f && pk < 1.0f, "DAW playing + RUN on: sequence plays");
+    setParam (p, "run", 0); render (20, &head);
+    check (render (60, &head) < 1e-4f, "RUN off while the DAW keeps playing: falls silent");
+    setParam (p, "run", 1);
     head.playing = false; render (20, &head);
     check (render (40, &head) < 1e-4f, "DAW stop: falls silent");
     setParam (p, "hostsync", 0);
@@ -84,12 +90,35 @@ int main()
 
     // ---- sample-accurate start: the first note starts on the first sample when the DAW starts at ppq 0
     {
-        auto q = make();
+        auto q = make(); setParam (*q, "run", 1);
         MockHead h; h.ppq = 0; q->setPlayHead (&h);
         juce::AudioBuffer<float> b (2, bs); b.clear(); juce::MidiBuffer m; q->processBlock (b, m);
         int first = -1; for (int i = 0; i < bs; ++i) if (std::fabs (b.getSample (0, i)) > 1e-4f) { first = i; break; }
         std::printf ("     first audible sample %d\n", first);
         check (first >= 0 && first < 20, "note starts at the first sample of the DAW start");
+    }
+
+    // ---- host MIDI notes play the synth while the built-in sequencer is off
+    {
+        auto q = make(); setParam (*q, "run", 0);
+        MockHead h; h.ppq = 0; h.playing = true; q->setPlayHead (&h);
+        juce::AudioBuffer<float> b (2, bs);
+        auto block = [&] (juce::MidiBuffer& m) { b.clear(); q->processBlock (b, m); return b.getRMSLevel (0, 0, bs); };
+        juce::MidiBuffer none, on, off, on2, offAll;
+        on.addEvent (juce::MidiMessage::noteOn (1, 40, (juce::uint8) 90), 10);
+        off.addEvent (juce::MidiMessage::noteOff (1, 40), 5);
+        on2.addEvent (juce::MidiMessage::noteOn (1, 43, (juce::uint8) 120), 0);
+        float r = 0; for (int i = 0; i < 4; ++i) { r = block (i == 0 ? on : none); h.ppq += bs * h.bpm / 60.0 / sr; }
+        check (r > 0.01f, "host MIDI note-on sounds (sequencer off, DAW playing)");
+        block (off); float tail = 0; for (int i = 0; i < 60; ++i) tail = block (none);
+        check (tail < 1e-3f, "host MIDI note-off releases");
+        block (on); block (on2); block (none);
+        juce::MidiBuffer offTop; offTop.addEvent (juce::MidiMessage::noteOff (1, 43), 0);
+        float held = block (offTop); held = block (none);
+        check (held > 0.01f, "releasing the top note falls back to the still-held note");
+        offAll.addEvent (juce::MidiMessage::allNotesOff (1), 0);
+        block (offAll); for (int i = 0; i < 60; ++i) tail = block (none);
+        check (tail < 1e-3f, "all-notes-off silences");
     }
 
     // ---- edit view: parameters <-> pattern data

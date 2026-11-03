@@ -7,7 +7,7 @@
 ## できること
 - 音源：ブラウザ版と同じ（のこぎり波／矩形波、18dB/oct ラダーフィルター、アクセントの積み上がり、スライド）
 - シーケンサー：32パターン（グループ I〜IV × 1〜8）、各パターンは A / B の2セクション（各 1〜16 ステップ）、トラック（曲）再生、A / B / A→B
-- **HOST SYNC ON（既定）**：DAW の再生／停止とテンポに合わせて鳴ります。再生位置の16分音符のグリッドに合うので、DAW の途中から再生しても小節頭にそろいます
+- **HOST SYNC ON（既定）**：`RUN` が ON のとき、DAW の再生／停止とテンポに合わせて内蔵シーケンサーが鳴ります（`RUN` が OFF なら鳴りません）。再生位置の16分音符のグリッドに合うので、DAW の途中から再生しても小節頭にそろいます
 - **HOST SYNC OFF**：`Run` と `Tempo`（60〜200）で単体でも鳴ります。Standalone 版もこちらです
 - パターン・トラック・つまみの位置は DAW のプロジェクトに保存されます
 
@@ -28,7 +28,6 @@
 ## 今の版でできないこと
 - 専用画面（次の版で、ブラウザ版と同じ横長パネルを予定）
 - トラックの編集（初期は I-1, I-2, I-3 の順）。ブラウザ版のトラック書き込みに当たる操作は画面と一緒に追加します
-- MIDI ノートでの演奏（MIDI は使いません。内蔵シーケンサーが鳴らします）
 - 録音（DAW の録音を使ってください）
 
 ## HTML版との違い
@@ -58,7 +57,13 @@ cmake --build build --config Release --target YM303_VST3      # Mac は YM303_AU
 - 鍵盤・PITCH/TIME MODE・DOWN/UP/ACCENT/SLIDE・A/B/A→B・BACK/WRITE-NEXT・DEL/INS・LEN・PATTERN CLEAR はブラウザ版と同じ操作
 - MODE(TRACK WRITE/PLAY, PATTERN PLAY/WRITE)で TRACK リストの作成・編集も可能
 - PCキーボード: A W S E D F T G Y H U J K で音階、スペースで RUN/STOP(エディタにフォーカスがある時)
-- RUN/STOP: HOST SYNC ON のときはDAWの再生に追従(RUNは無効)。単体で使う場合は HOST SYNC を OFF
+- RUN/STOP: 内蔵シーケンサーの入/切。HOST SYNC ON ではDAWの再生に追従(RUN が ON の間だけ鳴る)、OFF では TEMPO で単体動作。右下の HOST SYNC ボタンで切替
 - 埋め込みフォント: Barlow Condensed / Share Tech Mono(SIL OFL 1.1、`Fonts/OFL-*.txt`)
 
 `tests/GuiShot.cpp`: ヘッドレスでエディタをPNG出力(`YM303_GuiShot out.png [幅] [0|1]`)。状態 2 でキーボード操作テストを実行します。
+
+## v0.2.1 の変更
+
+- RUN/STOP が HOST SYNC 中も有効(DAW再生中でも STOP で内蔵シーケンサーが止まる)。RUN の初期値は OFF
+- ホストの MIDI ノートでモノフォニック発音(ベロシティ100以上でアクセント、重なるノートはスライド)。内蔵シーケンサーが鳴っている間はシーケンサーを優先
+- HOST SYNC をボタン表示に変更し、切替時にステップモニターに説明を表示
