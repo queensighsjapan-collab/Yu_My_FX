@@ -92,14 +92,15 @@
     gap: 22px;
   }
   .nav-grid .card{ grid-column: span 2; }
-  .nav-grid .card:nth-child(5){ grid-column: 4 / 6; } /* 5枚目は中央寄せ */
+  .nav-grid .card:nth-child(5){ grid-column: 3 / 5; } /* 5・6枚目は2段目の中央寄せ */
+  .nav-grid .card:nth-child(6){ grid-column: 5 / 7; }
   @media (max-width: 1100px) and (min-width: 761px){
     .nav-grid{ grid-template-columns: repeat(2, 1fr); max-width: 640px; }
-    .nav-grid .card, .nav-grid .card:nth-child(5){ grid-column: auto; }
+    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6){ grid-column: auto; }
   }
   @media (max-width: 760px){
     .nav-grid{ grid-template-columns: 1fr; max-width: 420px; }
-    .nav-grid .card, .nav-grid .card:nth-child(5){ grid-column: auto; }
+    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6){ grid-column: auto; }
   }
 
   .card{
@@ -170,6 +171,7 @@
   #card-303{ --card-color: var(--c1); --card-glow: rgba(255,46,166,0.35); }
   #card-oddity{ --card-color: #ff6a13; --card-glow: rgba(255,106,19,0.35); }
   #card-mogu{ --card-color: #d9dbe3; --card-glow: rgba(217,219,227,0.35); }
+  #card-yumy8{ --card-color: #f0c93c; --card-glow: rgba(240,201,60,0.35); }
   #card-soon{ --card-color: var(--ink-dim); --card-glow: rgba(111,122,144,0.25); }
 
   footer{
@@ -270,6 +272,27 @@
       <div class="label">MINI MOGUMOGU</div>
       <div class="desc">Minimoog系モノフォニック<br>シーケンサー・MP3録音搭載</div>
       <span class="tag">MONO</span>
+    </a>
+
+    <a class="card" id="card-yumy8" href="yu-my-8.html">
+      <div class="icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="4" width="40" height="22" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <path d="M9 9 V21 M15 9 V21 M21 9 V21 M27 9 V21 M33 9 V21 M39 9 V21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          <rect x="7.5" y="14" width="3" height="3" fill="currentColor"></rect>
+          <rect x="13.5" y="11" width="3" height="3" fill="currentColor"></rect>
+          <rect x="19.5" y="16" width="3" height="3" fill="currentColor"></rect>
+          <rect x="25.5" y="12" width="3" height="3" fill="currentColor"></rect>
+          <rect x="31.5" y="15" width="3" height="3" fill="currentColor"></rect>
+          <path d="M4 30 H44 V44 H4 Z M12 30 V44 M20 30 V44 M28 30 V44 M36 30 V44" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"></path>
+          <rect x="10" y="30" width="4" height="8" fill="currentColor"></rect>
+          <rect x="18" y="30" width="4" height="8" fill="currentColor"></rect>
+          <rect x="34" y="30" width="4" height="8" fill="currentColor"></rect>
+        </svg>
+      </div>
+      <div class="label">Yu_My-8</div>
+      <div class="desc">8ボイス・ポリフォニック<br>ラダーフィルター・アルペジエーター・FX4種搭載</div>
+      <span class="tag">POLY 8</span>
     </a>
   </div>
 

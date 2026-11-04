@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yu_My-8</title>
+<style>
+:root{--bg:#0b0d10;--panel:#171b20;--line:#3a444e;--ink:#e2e6ea;--dim:#97a2ac;--yel:#f0c93c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Helvetica Neue",Arial,sans-serif;padding:12px}
+.synth{width:1800px;background:linear-gradient(#1d2227,#14181c);border:2px solid #2b343c;border-radius:10px;box-shadow:0 14px 40px #000a;overflow:hidden;transform-origin:top left}
+.edge{height:12px;background:linear-gradient(90deg,#2a2320,#4b392e,#2a2320)}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 22px;border-bottom:1px solid var(--line)}
+.logo{font-size:34px;font-weight:800;font-style:italic;letter-spacing:2px;background:linear-gradient(#f5f7f8,#8f9aa3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo b{color:var(--yel);-webkit-text-fill-color:var(--yel)}
+.sub{font-size:10px;letter-spacing:5px;color:var(--dim);margin-top:-2px}
+.lamps{display:flex;gap:18px;align-items:center}
+.led{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2a3b2c;margin-right:6px}
+.led.on{background:#6fe48a;box-shadow:0 0 6px #6fe48a}
+.row{display:flex;border-bottom:1px solid var(--line)}
+.sec{padding:8px 12px 10px;border-right:1px solid var(--line);display:flex;flex-direction:column}
+.sec:last-child{border-right:none}
+.sec h3{margin:0 0 8px;font-size:11px;letter-spacing:2px;text-align:center;padding:3px 8px;background:var(--yel);color:#15171a;border-radius:2px;font-weight:800;box-shadow:0 1px 0 #000}
+.sec h3.none{background:transparent;box-shadow:none;color:var(--dim);font-weight:600}
+.body{display:flex;gap:10px;justify-content:center;align-items:flex-end;flex:1}
+.col{display:flex;flex-direction:column;align-items:center;gap:3px}
+.lbl{font-size:8px;letter-spacing:1px;color:var(--dim);text-align:center;text-transform:uppercase;white-space:nowrap;line-height:1.15}
+.val{font-family:"Courier New",monospace;font-size:9px;color:var(--ink);height:11px}
+/* knob */
+.kw{position:relative;width:62px;height:58px}
+.kw .knob{position:absolute;left:14px;top:10px;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#555f69,#1b2127 72%);border:2px solid #07090b;cursor:ns-resize;box-shadow:0 3px 6px #000a,inset 0 1px 1px #fff3;touch-action:none}
+.knob::after{content:"";position:absolute;left:50%;top:2px;width:3px;height:12px;margin-left:-1.5px;background:#f3f5f6;border-radius:2px}
+.tk{position:absolute;left:50%;top:50%;width:1px;height:4px;margin:-2px 0 0 -.5px;background:#a7b2bb;pointer-events:none}
+.tk.big{height:6px;margin-top:-3px;width:1.5px}
+.tn{position:absolute;font-size:7px;color:var(--dim);transform:translate(-50%,-50%);pointer-events:none}
+/* selector knob */
+.sel{position:relative;width:84px;height:74px}
+.sel .knob{position:absolute;left:25px;top:22px;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#555f69,#1b2127 72%);border:2px solid #07090b;box-shadow:0 3px 6px #000a,inset 0 1px 1px #fff3;cursor:pointer}
+.sel .o{position:absolute;font-size:8px;color:var(--dim);transform:translate(-50%,-50%);cursor:pointer;white-space:nowrap}
+.sel .o.act{color:var(--yel);font-weight:700}
+/* fader with scale */
+.frow{display:flex;align-items:flex-start}
+.scale{position:relative;width:16px}
+.scale .t{position:absolute;right:0;width:4px;height:1px;background:#a7b2bb}
+.scale .t.big{width:7px}
+.scale .n{position:absolute;right:9px;font-size:7px;color:var(--dim);transform:translateY(-50%)}
+.fader{writing-mode:vertical-lr;direction:rtl;width:22px;-webkit-appearance:none;appearance:none;background:transparent;margin:0;cursor:pointer}
+.fader::-webkit-slider-runnable-track{width:4px;background:#030405;border-radius:2px;box-shadow:0 0 0 1px #46525d}
+.fader::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:12px;margin-left:-9px;background:linear-gradient(#eef1f3,#7f8991 55%,#d6dbdf);border-radius:2px;border:1px solid #000;box-shadow:0 2px 3px #000b}
+.fader::-moz-range-track{width:4px;background:#030405;border-radius:2px}
+.fader::-moz-range-thumb{width:22px;height:12px;background:linear-gradient(#eef1f3,#7f8991);border-radius:2px;border:1px solid #000}
+/* toggle */
+.tgl{display:flex;gap:4px;align-items:flex-start}
+.ttrack{position:relative;width:12px;background:#030405;border-radius:6px;box-shadow:inset 0 0 0 1px #46525d;cursor:pointer;align-self:stretch}
+.tlev{position:absolute;left:1px;width:10px;height:10px;border-radius:50%;background:linear-gradient(#f0f3f5,#7d878f);transition:top .08s}
+.tlabs div{font-size:8px;color:var(--dim);cursor:pointer;white-space:nowrap}
+.tlabs div.act{color:var(--yel);font-weight:700}
+/* colourful cap switches */
+.grp{display:flex;flex-direction:column;align-items:center;gap:4px}
+.glabel{font-size:8px;letter-spacing:1.5px;color:var(--dim);padding:0 6px;border:1px solid #55616b;border-bottom:none;border-radius:3px 3px 0 0;width:100%;text-align:center;line-height:11px;height:11px}
+.caprow{display:flex;gap:5px;align-items:flex-start}
+.capwrap{display:flex;flex-direction:column;align-items:center;gap:4px;width:30px}
+.cap{width:28px;height:38px;border-radius:3px;background:linear-gradient(var(--cc),color-mix(in srgb,var(--cc) 72%,#000));border:1px solid #000;box-shadow:0 3px 0 #000b,inset 0 2px 3px #fff6;cursor:pointer;display:flex;justify-content:center;padding-top:4px;user-select:none}
+.cap:active{transform:translateY(2px);box-shadow:0 1px 0 #000b}
+.cap .l{width:5px;height:5px;border-radius:50%;background:#3b1111}
+.cap.on .l{background:#ff3d33;box-shadow:0 0 6px #ff3d33}
+.cl{font-size:7.5px;letter-spacing:.3px;color:var(--ink);white-space:nowrap}
+.rowB{display:flex;align-items:flex-end;padding:10px 14px 12px;gap:0;border-bottom:1px solid var(--line);background:linear-gradient(#171b20,#101316)}
+.rowB .blk{padding:0 9px;border-right:1px solid var(--line);display:flex;gap:10px;align-items:flex-end}
+.row>.sec{flex-shrink:0}
+.row>.sec.fxsec{flex:1 1 0;min-width:0;border-right:none;padding:6px 10px;justify-content:center}
+.fxgrid{display:grid;grid-template-columns:auto auto;gap:6px 12px;justify-content:center}
+.fxcell{display:flex;gap:8px;align-items:stretch;background:#13171b;border:1px solid var(--line);border-radius:4px;padding:4px 8px 4px 4px}
+.fxtag{writing-mode:vertical-rl;transform:rotate(180deg);background:var(--yel);color:#15171a;font-size:10px;font-weight:800;letter-spacing:2px;text-align:center;padding:6px 3px;border-radius:2px;box-shadow:0 1px 0 #000}
+.fxbody{display:flex;gap:6px;align-items:center}
+.fxbody .kw{width:54px}
+.fxbody .kw .knob{left:10px}.row>.sec.fill{flex:1 1 0;min-width:0;border-right:none;padding:0}
+.row,.rowB{overflow:hidden}
+.rowB .blk:last-child{border-right:none}
+.disp{display:flex;gap:10px;background:#050706;border:2px solid #2d363d;border-radius:5px;padding:8px 12px}
+.seg{font-family:"Courier New",monospace;font-weight:700;font-size:26px;color:#7dffa0;text-shadow:0 0 8px #2f9;min-width:60px;text-align:center;opacity:.55}
+.seg.act{opacity:1}
+.seg small{display:block;font-size:7px;letter-spacing:2px;color:var(--dim);text-shadow:none}
+/* lower */
+.lower{display:flex;background:#0b0d10}
+.bend{width:340px;border-right:2px solid #000;padding:8px 10px;background:linear-gradient(#1a1f24,#12161a);display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;justify-content:center}
+.lever{width:70px;height:44px;background:#05070a;border:1px solid #46525d;border-radius:5px;position:relative}
+.lever::after{content:"";position:absolute;left:8px;right:8px;top:18px;height:9px;border-radius:5px;background:linear-gradient(#f0f3f5,#6f7981,#d3d8dc);box-shadow:0 2px 4px #000}
+.kbd{flex:1;position:relative;min-height:190px;padding:6px 8px 0}
+.kbd .wk{position:absolute;top:6px;bottom:0;background:linear-gradient(#fbfbf7,#d9d9d1);border:1px solid #2a2a2a;border-radius:0 0 3px 3px}
+.kbd .wk.down{background:linear-gradient(#e8e8df,#b9b9ae)}
+.kbd .bk{position:absolute;top:6px;height:62%;background:linear-gradient(#3c3c3c,#050505);border-radius:0 0 2px 2px;z-index:2;box-shadow:0 3px 3px #000a}
+.kbd .bk.down{background:#222}
+.note{color:var(--dim);font-size:12px;padding:10px 20px;line-height:1.7;background:#0e1114}
+
+.lever{cursor:ew-resize;touch-action:none}
+.lever::after{left:calc(50% - 22px + var(--bx,0)*14px);right:auto;width:44px}
+.status{flex:1;text-align:center;font-family:"Courier New",monospace;font-size:14px;letter-spacing:1.5px;color:#7dffa0;text-shadow:0 0 6px #2f9;padding:0 20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.startbtn{background:#f0c93c;color:#15171a;border:0;border-radius:3px;font-weight:800;letter-spacing:2px;font-size:11px;padding:7px 12px;cursor:pointer;box-shadow:0 2px 0 #000}
+.meter{width:90px;height:8px;background:#05070a;border:1px solid #46525d;border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3fbf6a,#c9e05a);transition:width .06s}
+.meter i.hot{background:#e5534b}
+.splitmark{position:absolute;top:-1px;color:#f0c93c;font-size:11px;z-index:3;pointer-events:none;transform:translateX(-35%);display:none}
+.kbd{touch-action:none;user-select:none}
+.lamps{align-items:center}
+.fxcell{flex-direction:column;gap:3px;padding:4px 8px 4px 8px}
+.fxtag{writing-mode:horizontal-tb;transform:none;padding:2px 8px;font-size:10px;letter-spacing:3px;text-align:center}
+.bend{width:540px;gap:6px 10px;padding:8px 12px}
+.kbd{min-height:0;height:auto}
+</style>
+</head>
+<body>
+<div class="synth" id="synth">
+  <div class="edge"></div>
+  <div class="topbar">
+    <div><div class="logo">Yu_My<b>-8</b></div><div class="sub">8-VOICE POLYPHONIC SYNTHESIZER</div></div>
+    <div id="status" class="status"></div>
+    <div class="lamps"><button id="startBtn" class="startbtn">&#9654; START AUDIO</button><div class="meter" title="OUTPUT"><i id="meterbar"></i></div><div class="lbl"><span class="led" id="midiLed"></span>MIDI IN</div><div class="lbl"><span class="led" id="pwrLed"></span>AUDIO</div></div>
+  </div>
+  <div class="row" id="rowA1"></div>
+  <div class="row" id="rowA2"></div>
+  <div class="rowB" id="rowB"></div>
+  <div class="lower"><div class="bend" id="bend"></div><div class="kbd" id="kbd"></div></div>
+  <div class="edge"></div>
+</div>
+<script type="text/plain" id="wsrc">
+/* ===== Yu_My-8 synth engine (AudioWorklet) ===== */
+const TWO_PI = Math.PI * 2;
+function tanhf(x){ if(x>3) return 1; if(x<-3) return -1; const x2=x*x; return x*(27+x2)/(27+9*x2); }
+function blep(t,dt){
+  if(t<dt){ t/=dt; return t+t-t*t-1; }
+  if(t>1-dt){ t=(t-1)/dt; return t*t+t+t+1; }
+  return 0;
+}
+const clampf=(x,a,b)=>x<a?a:(x>b?b:x);
+const SEMI={"16'":-12,"8'":0,"4'":12,"2'":24};
+const W1={TRI:0,SAW:1,PUL:2,SQR:3};
+const W2={TRI:0,SAW:1,PUL:2,SQR:3,NSE:4};
+const LFOW={TRI:0,SAW:1,SQR:2,RND:3};
+
+function osc(ph,dt,w,pw){
+  if(w===0) return ph<0.5 ? 4*ph-1 : 3-4*ph;
+  if(w===1) return 2*ph-1-blep(ph,dt);
+  if(w===3) pw=0.5;
+  let y=ph<pw?1:-1;
+  y+=blep(ph,dt);
+  let t=ph-pw; if(t<0) t+=1;
+  y-=blep(t,dt);
+  return y;
+}
+
+function derive(s){
+  const n=(k,d)=>typeof s[k]==='number'?s[k]:d;
+  const env=(a,d,su,r,key,pol)=>({a:n(a,5)/100,d:n(d,40)/100,s:n(su,60)/100,r:n(r,30)/100,key:n(key,0)/100,pol:pol});
+  const fm=s.freqMod||'BOTH';
+  return {
+    v1Wave:W1[s.v1Wave]!==undefined?W1[s.v1Wave]:1,
+    v1Semi:SEMI[s.v1Range]!==undefined?SEMI[s.v1Range]:0,
+    v2Wave:W2[s.v2Wave]!==undefined?W2[s.v2Wave]:1,
+    v2Semi:SEMI[s.v2Range]!==undefined?SEMI[s.v2Range]:0,
+    v2Fine:n('v2Fine',0), v2Mode:s.v2Mode||'NORMAL', sync:s.sync==='ON',
+    xmod:n('xmod',0)/100, mix:n('mix',0)/100, noise:n('noise',0)/100, hpf:n('hpf',0)/100,
+    modLfo:n('modLfo',0)/100, modEnv:n('modEnv',0)/100, m1:fm!=='VCO-2', m2:fm!=='VCO-1',
+    pwm:n('pwm',0)/100, pwmSrc:s.pwmSrc||'MANUAL',
+    cut:n('vcfCut',70)/100, res:n('vcfRes',10)/100, f12:s.vcfSlope==='-12',
+    fEnv:n('vcfEnv',0)/100, fLfo:n('vcfLfo',0)/100, fKey:n('vcfKey',50)/100, fSrc2:s.vcfSrc==='ENV-2',
+    vcaLvl:n('vcaLvl',80)/100, vcaLfo:n('vcaLfo',0)/100, vcaGate:s.vcaSrc==='GATE',
+    e1:env('e1A','e1D','e1S','e1R','e1Key',s.e1Pol==='−'?-1:1),
+    e2:env('e2A','e2D','e2S','e2R','e2Key',1),
+    lfoWave:LFOW[s.lfoWave]!==undefined?LFOW[s.lfoWave]:0,
+    lfoRate:0.1*Math.pow(300,n('lfoRate',40)/100),
+    lfoDelay:Math.pow(n('lfoDelay',0)/100,2)*3,
+    assign:s.assign||'POLY 1', porta:n('porta',0)/100, portaOn:s.portaOn==='ON'
+  };
+}
+
+class Env{ constructor(){ this.st=0; this.v=0; this.ca=0; this.cd=0; this.cr=0; this.s=0; } }
+class Voice{
+  constructor(){
+    this.active=false; this.gate=false; this.keyDown=false;
+    this.part=1; this.key=0; this.note=0; this.pitch=60; this.target=60; this.detune=0; this.age=0;
+    this.ph1=0; this.ph2=0; this.v2=0; this.hx=0; this.hy=0; this.xp=0;
+    this.y1=0; this.y2=0; this.y3=0; this.y4=0; this.t1=0; this.t2=0; this.t3=0; this.t4=0;
+    this.ic1=0; this.ic2=0;
+    this.e1=new Env(); this.e2=new Env(); this.ga=0; this.lfoRamp=1; this.rampRate=1;
+  }
+}
+
+class Y8Synth extends AudioWorkletProcessor{
+  constructor(){
+    super();
+    this.sr=sampleRate;
+    this.vs=[]; for(let i=0;i<8;i++) this.vs.push(new Voice());
+    this.raw=[{},{}];
+    this.P=[derive({}),derive({})];
+    this.G={volume:70,balance:50,masterTune:0,arpRate:50,arpExt:false,arpRange:0,arpMode:'UP',
+            holdL:false,holdU:false,pedal:false,keyMode:'WHOLE',split:60,
+            b1:true,b2:true,b3:false,bVco:17,bVcf:0,mVco:0,mVcf:0,lfoRise:0,tuneTone:false};
+    this.bend=0; this.modPush=false; this.modWheel=0; this.modCur=0;
+    this.lfo=[{ph:0,val:0,sh:0},{ph:0,val:0,sh:0}];
+    this.stack=[[],[]]; this.rr=[0,0]; this.lastPitch=[null,null]; this.counter=0;
+    this.phys=new Set();
+    this.arpKeys=[]; this.arpSeq=[]; this.arpDirty=true; this.arpIdx=-1; this.arpDir=1;
+    this.arpCount=0; this.arpGateLeft=0; this.arpNote=null; this.extTrig=0; this.extN=0; this.sinceTick=0; this.tickInt=0;
+    this.noiseState=22222; this.tonePh=0;
+    this.port.onmessage=e=>this.onMsg(e.data);
+  }
+  rnd(){ let x=this.noiseState|0; x^=x<<13; x^=x>>>17; x^=x<<5; this.noiseState=x; return x/2147483648; }
+
+  /* ---------- messages ---------- */
+  onMsg(m){
+    switch(m.t){
+      case 'params': {
+        const p=m.part; Object.assign(this.raw[p],m.p); this.P[p]=derive(this.raw[p]); break;
+      }
+      case 'global': this.setGlobal(m.g); break;
+      case 'on': this.keyOn(m.key); break;
+      case 'off': this.keyOff(m.key); break;
+      case 'panic': this.panic(true); break;
+      case 'bend': this.bend=clampf(m.v,-1,1); break;
+      case 'mod': if(m.push!==undefined) this.modPush=!!m.push; if(m.wheel!==undefined) this.modWheel=m.wheel; break;
+      case 'pedal': { const was=this.holdOf(0)||this.holdOf(1); this.G.pedal=!!m.v; this.afterHold(was); break; }
+      case 'clock': this.onClock(); break;
+    }
+  }
+  holdOf(p){ return (p===0?this.G.holdL:this.G.holdU)||this.G.pedal; }
+  setGlobal(g){
+    const G=this.G, was=[this.holdOf(0),this.holdOf(1)];
+    const oldKM=G.keyMode, oldArp=G.arpRange;
+    Object.assign(G,g);
+    if(g.keyMode!==undefined && g.keyMode!==oldKM) this.panic(false);
+    if(g.arpRange!==undefined && g.arpRange!==oldArp){
+      if(G.arpRange){ this.panic(false); this.arpKeys=this.hold_any()? this.arpKeys : Array.from(this.phys); this.arpDirty=true; this.arpCount=0; this.arpIdx=-1; }
+      else { this.arpNoteOff(); this.arpKeys=[]; }
+    }
+    this.afterHold(was[0]||was[1], was);
+  }
+  hold_any(){ return this.holdOf(0)||this.holdOf(1); }
+  afterHold(){
+    for(let p=0;p<2;p++){
+      if(!this.holdOf(p)){
+        for(const v of this.vs) if(v.active && v.part===p && v.gate && !v.keyDown) this.release(v);
+      }
+    }
+    if(this.G.arpRange && !this.hold_any()){
+      this.arpKeys=this.arpKeys.filter(k=>this.phys.has(k)); this.arpDirty=true;
+    }
+  }
+  panic(clearPhys){
+    for(const v of this.vs){ if(v.active) this.release(v); v.keyDown=false; }
+    this.stack=[[],[]];
+    this.arpNote=null; this.arpGateLeft=0;
+    if(clearPhys){ this.phys.clear(); this.arpKeys=[]; this.arpDirty=true; }
+  }
+  release(v){
+    v.gate=false;
+    if(v.e1.st!==0) v.e1.st=3;
+    if(v.e2.st!==0) v.e2.st=3;
+  }
+
+  /* ---------- key input / arp ---------- */
+  keyOn(key){
+    const G=this.G;
+    if(G.arpRange){
+      if(this.hold_any() && this.phys.size===0){ this.arpKeys=[]; this.arpIdx=-1; }
+      this.phys.add(key);
+      if(this.arpKeys.indexOf(key)<0){ this.arpKeys.push(key); this.arpDirty=true; }
+      if(this.arpKeys.length===1 && this.arpNote===null) this.arpCount=0;
+    } else { this.phys.add(key); this.noteOn(key); }
+  }
+  keyOff(key){
+    const G=this.G;
+    this.phys.delete(key);
+    if(G.arpRange){
+      if(!this.hold_any()){
+        const i=this.arpKeys.indexOf(key); if(i>=0){ this.arpKeys.splice(i,1); this.arpDirty=true; }
+        if(!this.arpKeys.length) this.arpNoteOff();
+      }
+    } else this.noteOff(key,false);
+  }
+  buildSeq(){
+    const keys=this.arpKeys.slice().sort((a,b)=>a-b);
+    const oct=Math.max(1,this.G.arpRange), seq=[];
+    for(let o=0;o<oct;o++) for(const k of keys) seq.push(k+12*o);
+    this.arpSeq=seq; this.arpDirty=false;
+    if(this.arpIdx>=seq.length) this.arpIdx=0;
+  }
+  arpNoteOff(){
+    if(this.arpNote!==null){ this.noteOff(this.arpNote,true); this.arpNote=null; }
+  }
+  arpStep(gateSamples){
+    if(!this.arpKeys.length){ this.arpNoteOff(); return; }
+    if(this.arpDirty) this.buildSeq();
+    const seq=this.arpSeq; if(!seq.length) return;
+    const mode=this.G.arpMode;
+    let idx;
+    if(mode==='RANDOM'){ idx=Math.floor((this.rnd()*0.5+0.5)*seq.length)%seq.length; }
+    else if(mode==='DOWN'){ this.arpIdx=(this.arpIdx<=0||this.arpIdx>=seq.length)?seq.length-1:this.arpIdx-1; idx=this.arpIdx; }
+    else if(mode==='U&D'){
+      if(seq.length===1){ idx=0; this.arpIdx=0; }
+      else { if(this.arpIdx>=seq.length-1) this.arpDir=-1; else if(this.arpIdx<=0) this.arpDir=1; else if(this.arpDir===0) this.arpDir=1;
+             this.arpIdx+=this.arpDir; this.arpIdx=clampf(this.arpIdx,0,seq.length-1); idx=this.arpIdx; }
+    }
+    else { this.arpIdx=(this.arpIdx+1>=seq.length)?0:this.arpIdx+1; idx=this.arpIdx; }
+    if(mode!=='U&D') this.arpDir=1;
+    this.arpNoteOff();
+    const note=seq[idx];
+    this.arpNote=note; this.noteOn(note);
+    this.arpGateLeft=gateSamples;
+  }
+  arpPeriod(){ return this.sr/(1.5*Math.pow(16,this.G.arpRate/100)); }
+  arpTick(n){
+    const G=this.G; this.sinceTick+=n;
+    if(!G.arpRange) return;
+    if(this.arpGateLeft>0){ this.arpGateLeft-=n; if(this.arpGateLeft<=0) this.arpNoteOff(); }
+    if(G.arpExt){
+      if(this.extTrig>0){ this.extTrig=0; const gs=this.tickInt>0?this.tickInt*6*0.6:this.sr*0.1; this.arpStep(gs); }
+      return;
+    }
+    this.arpCount-=n;
+    if(this.arpCount<=0){ const per=this.arpPeriod(); this.arpCount+=per; if(this.arpCount<=0) this.arpCount=per; this.arpStep(per*0.6); }
+  }
+  onClock(){
+    this.tickInt=this.sinceTick; this.sinceTick=0;
+    this.extN++; if(this.extN>=6){ this.extN=0; this.extTrig=1; }
+  }
+
+  /* ---------- voice allocation ---------- */
+  poolOf(p){
+    const km=this.G.keyMode;
+    if(km==='WHOLE') return p===1?[0,1,2,3,4,5,6,7]:[];
+    return p===0?[0,1,2,3]:[4,5,6,7];
+  }
+  partsFor(key){
+    const km=this.G.keyMode;
+    if(km==='WHOLE') return [1];
+    if(km==='DUAL') return [0,1];
+    return [key<this.G.split?0:1];
+  }
+  setVoice(v,p,key,note,retrig,detune){
+    const d=this.P[p];
+    const wasActive=v.active;
+    v.part=p; v.key=key; v.note=note; v.keyDown=true; v.detune=detune; v.target=note;
+    if(!wasActive){
+      v.pitch=(d.portaOn&&this.lastPitch[p]!==null)?this.lastPitch[p]:note;
+      v.y1=v.y2=v.y3=v.y4=v.t1=v.t2=v.t3=v.t4=0; v.ic1=v.ic2=0; v.hx=v.hy=0; v.xp=0;
+      v.ph1=0; v.ph2=0; v.v2=0; v.ga=0; v.e1.v=0; v.e2.v=0;
+    } else if(d.portaOn && this.lastPitch[p]!==null && retrig){ /* glide from current pitch */ }
+    else if(!d.portaOn) v.pitch=note;
+    if(retrig){
+      v.gate=true; v.e1.st=1; v.e2.st=1;
+      if(d.lfoDelay>0.005){ v.lfoRamp=0; v.rampRate=1/d.lfoDelay; } else { v.lfoRamp=1; }
+    }
+    v.active=true; v.age=++this.counter; this.lastPitch[p]=note;
+  }
+  noteOn(key){
+    for(const p of this.partsFor(key)){
+      const d=this.P[p], pool=this.poolOf(p), mode=d.assign;
+      if(mode==='SOLO'||mode==='UNISON'){
+        const st=this.stack[p]; const i=st.indexOf(key); if(i>=0) st.splice(i,1); st.push(key);
+        const vs=(mode==='SOLO')?[pool[0]]:pool;
+        vs.forEach((vi,idx)=>{
+          const v=this.vs[vi];
+          const legato=v.active&&v.gate&&v.part===p;
+          const det=(mode==='UNISON'&&vs.length>1)?((idx/(vs.length-1))-0.5)*2*8:0;
+          this.setVoice(v,p,key,key,!legato,det);
+        });
+      } else {
+        const v=this.allocPoly(p,pool,key,mode);
+        this.setVoice(v,p,key,key,true,0);
+      }
+    }
+  }
+  allocPoly(p,pool,key,mode){
+    const vs=this.vs;
+    if(mode==='POLY 2'){
+      for(const i of pool){ const v=vs[i]; if(v.active&&v.part===p&&v.key===key) return v; }
+      for(const i of pool){ if(!vs[i].active) return vs[i]; }
+    } else {
+      const L=pool.length;
+      for(let k=1;k<=L;k++){ const i=pool[(this.rr[p]+k)%L]; if(!vs[i].active){ this.rr[p]=(this.rr[p]+k)%L; return vs[i]; } }
+    }
+    let best=null;
+    for(const i of pool){ const v=vs[i]; if(!v.gate && (best===null||v.age<best.age)) best=v; }
+    if(!best) for(const i of pool){ const v=vs[i]; if(best===null||v.age<best.age) best=v; }
+    this.rr[p]=pool.indexOf(vs.indexOf(best));
+    return best;
+  }
+  noteOff(key,force){
+    for(let p=0;p<2;p++){ const st=this.stack[p]; const i=st.indexOf(key); if(i>=0) st.splice(i,1); }
+    for(const v of this.vs){
+      if(!(v.active&&v.key===key&&v.keyDown)) continue;
+      const p=v.part, mode=this.P[p].assign;
+      if((mode==='SOLO'||mode==='UNISON')&&this.stack[p].length&&!force){
+        const nk=this.stack[p][this.stack[p].length-1];
+        v.key=nk; v.note=nk; v.target=nk; continue;
+      }
+      v.keyDown=false;
+      if(force||!this.holdOf(p)) this.release(v);
+    }
+  }
+
+  /* ---------- audio ---------- */
+  process(inputs,outputs){
+    const outCh=outputs[0]; const out=outCh[0]; const N=out.length;
+    for(let i=0;i<N;i++) out[i]=0;
+    let pos=0;
+    while(pos<N){ const n=Math.min(16,N-pos); this.block(out,pos,n); pos+=n; }
+    const G=this.G;
+    const gm=Math.pow(G.volume/100,1.5)*1.0;
+    for(let i=0;i<N;i++){
+      let x=out[i]*gm;
+      if(G.tuneTone){ x+=0.12*Math.sin(this.tonePh); this.tonePh+=TWO_PI*440/this.sr; if(this.tonePh>TWO_PI) this.tonePh-=TWO_PI; }
+      out[i]=tanhf(x);
+    }
+    for(let c=1;c<outCh.length;c++) outCh[c].set(out);
+    return true;
+  }
+  block(out,pos,n){
+    const sr=this.sr, dtB=n/sr, G=this.G;
+    for(let p=0;p<2;p++){
+      const d=this.P[p], l=this.lfo[p];
+      l.ph+=d.lfoRate*dtB;
+      if(l.ph>=1){ l.ph-=Math.floor(l.ph); l.sh=this.rnd(); }
+      const ph=l.ph;
+      switch(d.lfoWave){
+        case 0: l.val=ph<0.5?4*ph-1:3-4*ph; break;
+        case 1: l.val=2*ph-1; break;
+        case 2: l.val=ph<0.5?1:-1; break;
+        default: l.val=l.sh;
+      }
+    }
+    const modT=this.modPush?1:this.modWheel;
+    const tau=0.005+Math.pow(G.lfoRise/100,2)*3;
+    this.modCur+=(modT-this.modCur)*(1-Math.exp(-dtB/tau));
+    this.arpTick(n);
+    const bal=G.balance;
+    const gp=[bal>=50?(100-bal)/50:1, bal<=50?bal/50:1];
+    for(const v of this.vs) if(v.active) this.renderVoice(v,out,pos,n,dtB,gp[v.part]);
+  }
+  envCoef(e,ep,kfScale,isAttackFast){
+    const sr=this.sr;
+    const f=Math.pow(2,-kfScale*ep.key);
+    const ta=Math.max(0.0008,0.001*Math.pow(3000,ep.a)*f);
+    const td=Math.max(0.002,0.003*Math.pow(4000,ep.d)*f);
+    const tr=Math.max(0.002,0.003*Math.pow(4000,ep.r)*f);
+    e.ca=1-Math.exp(-1/(sr*ta/1.79));
+    e.cd=1-Math.exp(-1/(sr*td/5));
+    e.cr=1-Math.exp(-1/(sr*tr/5));
+    e.s=ep.s;
+  }
+  renderVoice(v,out,pos,n,dtB,partGain){
+    const sr=this.sr, G=this.G, p=v.part, d=this.P[p], lfo=this.lfo[p];
+    if(v.lfoRamp<1) v.lfoRamp=Math.min(1,v.lfoRamp+dtB*v.rampRate);
+    const lv=lfo.val*v.lfoRamp, modA=this.modCur;
+    if(d.portaOn&&d.porta>0&&v.pitch!==v.target){
+      const tau=0.004*Math.pow(1000,d.porta);
+      v.pitch+=(v.target-v.pitch)*(1-Math.exp(-dtB/tau));
+      if(Math.abs(v.target-v.pitch)<1e-3) v.pitch=v.target;
+    } else v.pitch=v.target;
+    const kf=(v.pitch-60)/12;
+    this.envCoef(v.e1,d.e1,kf); this.envCoef(v.e2,d.e2,kf);
+    const e1v=v.e1.v*d.e1.pol, e2v=v.e2.v;
+    const tuneC=G.masterTune/100;
+    const bendSemis=(G.bVco/100)*12*this.bend;
+    const mv=G.mVco/100;
+    const lfoPitch=(d.modLfo*d.modLfo*12+mv*mv*12*modA)*lv;
+    const envPitch=Math.pow(d.modEnv,1.5)*24*e1v;
+    let s1=v.pitch+tuneC+v.detune/100+d.v1Semi;
+    if(d.m1) s1+=lfoPitch+envPitch;
+    if(G.b1) s1+=bendSemis;
+    const f1=440*Math.pow(2,(s1-69)/12);
+    let f2, lowf=false;
+    if(d.v2Mode==='LOW FREQ'){ lowf=true; f2=0.1*Math.pow(400,(d.v2Fine+50)/100)*Math.pow(2,d.v2Semi/12); }
+    else {
+      const x=d.v2Fine/50, fs=7*x*Math.abs(x);
+      let s2=(d.v2Mode==='KEY OFF'?60:v.pitch)+tuneC+v.detune/100+d.v2Semi+fs;
+      if(d.m2) s2+=lfoPitch+envPitch;
+      if(G.b2) s2+=bendSemis;
+      f2=440*Math.pow(2,(s2-69)/12);
+    }
+    const dt1=Math.min(0.45,f1/sr), dt2=Math.min(0.45,f2/sr);
+    let pw=0.5;
+    if(d.pwmSrc==='MANUAL') pw=0.5-0.46*d.pwm;
+    else if(d.pwmSrc==='LFO') pw=0.5-0.46*d.pwm*lv;
+    else pw=0.5-0.46*d.pwm*e1v;
+    pw=clampf(pw,0.04,0.96);
+    const g1=Math.min(1,2*(1-d.mix))*0.5, g2=lowf?0:Math.min(1,2*d.mix)*0.5, gn=d.noise*0.5;
+    const hpOn=d.hpf>0.01;
+    const ahp=hpOn?1/(1+TWO_PI*(20*Math.pow(100,d.hpf))/sr):1;
+    let oct=0;
+    oct+=d.fEnv*8*(d.fSrc2?e2v:e1v);
+    oct+=(d.fLfo*3+(G.mVcf/100)*3*modA)*lv;
+    oct+=d.fKey*kf;
+    if(G.b3) oct+=(G.bVcf/100)*3*this.bend;
+    const fc=clampf(20*Math.pow(1000,d.cut)*Math.pow(2,oct),15,Math.min(20000,0.45*sr));
+    const f12=d.f12;
+    let lg=0,lk=0,ing=1, sg=0,sa1=0,sa2=0,sa3=0,sk=0;
+    if(!f12){ lg=1-Math.exp(-TWO_PI*fc/(2*sr)); lk=4.15*d.res; ing=1+lk*0.5; }
+    else { sg=Math.tan(Math.PI*fc/sr); sk=1.414*(1-d.res)+0.04; sa1=1/(1+sg*(sg+sk)); sa2=sg*sa1; sa3=sg*sa2; }
+    const lvl=Math.pow(d.vcaLvl,1.5)*0.55*partGain;
+    const trem=1-d.vcaLfo*0.5*(1+lv);
+    const gate=v.gate, gateAmpTarget=gate?1:0, useGate=d.vcaGate;
+    const e1=v.e1, e2=v.e2, wave1=d.v1Wave, wave2=d.v2Wave, sync=d.sync, xm=d.xmod*2;
+    let ph1=v.ph1, ph2=v.ph2, v2=v.v2;
+    let y1=v.y1,y2=v.y2,y3=v.y3,y4=v.y4,t1=v.t1,t2=v.t2,t3=v.t3,t4=v.t4, ic1=v.ic1, ic2=v.ic2;
+    let hx=v.hx, hy=v.hy, xp=v.xp, ga=v.ga;
+    for(let i=0;i<n;i++){
+      /* envelopes */
+      if(e1.st===1){ e1.v+=(1.2-e1.v)*e1.ca; if(e1.v>=1){ e1.v=1; e1.st=2; } }
+      else if(e1.st===2){ e1.v+=(e1.s-e1.v)*e1.cd; }
+      else if(e1.st===3){ e1.v-=e1.v*e1.cr; if(e1.v<1e-4){ e1.v=0; e1.st=0; } }
+      if(e2.st===1){ e2.v+=(1.2-e2.v)*e2.ca; if(e2.v>=1){ e2.v=1; e2.st=2; } }
+      else if(e2.st===2){ e2.v+=(e2.s-e2.v)*e2.cd; }
+      else if(e2.st===3){ e2.v-=e2.v*e2.cr; if(e2.v<1e-4){ e2.v=0; e2.st=0; } }
+      /* oscillators */
+      let dt1e=dt1*(1+xm*v2); if(dt1e<1e-6) dt1e=1e-6; if(dt1e>0.45) dt1e=0.45;
+      ph1+=dt1e; let wrap=false; if(ph1>=1){ ph1-=1; wrap=true; }
+      const s1o=osc(ph1,dt1e,wave1,pw);
+      if(sync&&wrap){ ph2=ph1*(dt2/dt1e); } else { ph2+=dt2; if(ph2>=1) ph2-=1; }
+      let s2o;
+      const nz=this.rnd();
+      if(wave2===4) s2o=nz*0.8; else s2o=osc(ph2,dt2,wave2,pw);
+      v2=s2o;
+      let x=s1o*g1+s2o*g2+nz*gn;
+      if(hpOn){ const y=ahp*(hy+x-hx); hx=x; hy=y; x=y; }
+      /* filter */
+      let yo;
+      if(!f12){
+        const xin=x*ing;
+        for(let j=0;j<2;j++){
+          const xi=j?xin:0.5*(xp+xin);
+          const u=xi-lk*y4;
+          const t0=tanhf(u);
+          y1+=lg*(t0-t1);  t1=tanhf(y1);
+          y2+=lg*(t1-t2);  t2=tanhf(y2);
+          y3+=lg*(t2-t3);  t3=tanhf(y3);
+          y4+=lg*(t3-t4);  t4=tanhf(y4);
+        }
+        xp=xin; yo=y4;
+      } else {
+        const v3=x-ic2, v1=sa1*ic1+sa2*v3, v2s=ic2+sa2*ic1+sa3*v3;
+        ic1=2*v1-ic1; ic2=2*v2s-ic2; yo=v2s;
+      }
+      /* amp */
+      let amp;
+      if(useGate){ ga+=(gateAmpTarget-ga)*0.01; amp=ga; } else amp=e2.v;
+      out[pos+i]+=yo*amp*lvl*trem;
+    }
+    if(!isFinite(y4)||!isFinite(ic1)||!isFinite(ic2)||!isFinite(ph1)){ y1=y2=y3=y4=t1=t2=t3=t4=0; ic1=ic2=0; ph1=ph2=0; v2=0; }
+    v.ph1=ph1; v.ph2=ph2; v.v2=v2; v.y1=y1; v.y2=y2; v.y3=y3; v.y4=y4; v.t1=t1; v.t2=t2; v.t3=t3; v.t4=t4;
+    v.ic1=ic1; v.ic2=ic2; v.hx=hx; v.hy=hy; v.xp=xp; v.ga=ga;
+    if(!v.gate){ if(useGate?(v.ga<1e-4):(e2.st===0)) v.active=false; }
+  }
+}
+registerProcessor('y8-synth',Y8Synth);
+
+/* ===== Yu_My-8 effects: chorus -> phaser -> delay -> reverb (AudioWorklet) ===== */
+class Y8FX extends AudioWorkletProcessor{
+  constructor(){
+    super();
+    const sr=sampleRate; this.sr=sr;
+    this.f={dlyOn:false,dlyT:0.4,dlyFb:0.3,dlyMix:0.2,
+            rvbOn:false,rvbSize:0.5,rvbDamp:0.4,rvbMix:0.2,
+            choOn:false,choMode:0,choRate:0.4,choDepth:0.5,
+            phOn:false,phRate:0.3,phDepth:0.5,phFb:0.4};
+    /* chorus */
+    let cl=1; while(cl<sr*0.08) cl<<=1;
+    this.cl=cl; this.cmask=cl-1; this.cbuf=new Float32Array(cl); this.cw=0; this.cphA=0; this.cphB=0.3;
+    /* phaser */
+    this.phz=[new Float32Array(6),new Float32Array(6)]; this.phLast=[0,0]; this.phph=0;
+    this.phA=[0,0]; this.phCnt=0;
+    /* delay */
+    this.dl=Math.ceil(sr*1.6); this.dbuf=[new Float32Array(this.dl),new Float32Array(this.dl)];
+    this.dw=0; this.dcur=0.3*sr; this.dlp=[0,0];
+    /* reverb (freeverb) */
+    const k=sr/44100;
+    const ct=[1116,1188,1277,1356,1422,1491,1557,1617], at=[556,441,341,225], spread=23;
+    this.combs=[[],[]]; this.aps=[[],[]];
+    for(let c=0;c<2;c++){
+      for(const t of ct){ const len=Math.round((t+c*spread)*k); this.combs[c].push({b:new Float32Array(len),i:0,f:0}); }
+      for(const t of at){ const len=Math.round((t+c*spread)*k); this.aps[c].push({b:new Float32Array(len),i:0}); }
+    }
+    this.peak=0; this.pc=0;
+    this.port.onmessage=e=>{ if(e.data.t==='fx') Object.assign(this.f,e.data.f); };
+  }
+  process(inputs,outputs){
+    const inp=inputs[0]; const out=outputs[0];
+    const N=out[0].length;
+    if(!inp||!inp.length){ for(let c=0;c<out.length;c++) out[c].fill(0); return true; }
+    const iL=inp[0], iR=inp[1]||inp[0];
+    const oL=out[0], oR=out[1]||out[0];
+    const sr=this.sr, f=this.f;
+    /* per-block derived */
+    const cRateA=0.15*Math.pow(40,f.choRate), cRateB=cRateA*0.62;
+    const cdA=(0.4+f.choDepth*3.2)*sr/1000, cdB=(0.6+f.choDepth*4.5)*sr/1000;
+    const cbA=7*sr/1000, cbB=13*sr/1000;
+    const wA=f.choMode===1?0:(f.choMode===2?0.7:1), wB=f.choMode===0?0:(f.choMode===2?0.7:1);
+    const phRate=0.05*Math.pow(120,f.phRate);
+    const dTarget=0.03*Math.pow(33,f.dlyT)*sr;
+    const dFb=f.dlyFb*0.92, dMix=f.dlyMix*1.2;
+    const rFb=f.rvbSize*0.28+0.7, rD1=f.rvbDamp*0.4, rD2=1-rD1, rMix=f.rvbMix*2.5;
+    const cbuf=this.cbuf, cmask=this.cmask;
+    for(let i=0;i<N;i++){
+      let l=iL[i], r=iR[i];
+      /* ----- chorus ----- */
+      if(f.choOn){
+        const m=(l+r)*0.5;
+        cbuf[this.cw]=m;
+        const sA=Math.sin(TWO_PI*this.cphA), sB=Math.sin(TWO_PI*this.cphB);
+        this.cphA+=cRateA/sr; if(this.cphA>=1) this.cphA-=1;
+        this.cphB+=cRateB/sr; if(this.cphB>=1) this.cphB-=1;
+        const rd=(d)=>{ let p=this.cw-d; const i0=Math.floor(p); const fr=p-i0; const a=cbuf[i0&cmask], b=cbuf[(i0+1)&cmask]; return a+(b-a)*fr; };
+        const wl=wA*rd(cbA+cdA*sA)+wB*rd(cbB+cdB*sB);
+        const wr=wA*rd(cbA-cdA*sA)+wB*rd(cbB-cdB*sB);
+        this.cw=(this.cw+1)&cmask;
+        l=l*0.6+wl*0.6; r=r*0.6+wr*0.6;
+      }
+      /* ----- phaser ----- */
+      if(f.phOn){
+        const lfoL=Math.sin(TWO_PI*this.phph), lfoR=Math.sin(TWO_PI*(this.phph+0.25));
+        this.phph+=phRate/sr; if(this.phph>=1) this.phph-=1;
+        if((this.phCnt++&7)===0){
+          const rg=f.phDepth*2.6;
+          for(let c=0;c<2;c++){
+            const fr=700*Math.pow(2,(c?lfoR:lfoL)*rg);
+            const t=Math.tan(Math.PI*Math.min(fr,sr*0.45)/sr);
+            this.phA[c]=(t-1)/(t+1);
+          }
+        }
+        const fb=f.phFb*0.85;
+        for(let c=0;c<2;c++){
+          const x=c?r:l;
+          let y=x+fb*this.phLast[c];
+          const z=this.phz[c], a=this.phA[c];
+          for(let s=0;s<6;s++){ const o=a*y+z[s]; z[s]=y-a*o; y=o; }
+          this.phLast[c]=y;
+          if(c) r=0.5*x+0.5*y; else l=0.5*x+0.5*y;
+        }
+      }
+      /* ----- delay ----- */
+      if(f.dlyOn || this.dlyTail>0){
+        this.dcur+=(dTarget-this.dcur)*0.0003;
+        const w=this.dw, len=this.dl;
+        const dts=[this.dcur,this.dcur*1.33];
+        let wet=[0,0];
+        for(let c=0;c<2;c++){
+          let p=w-dts[c]; while(p<0) p+=len;
+          const i0=Math.floor(p), fr=p-i0, b=this.dbuf[c];
+          const d=b[i0%len]+(b[(i0+1)%len]-b[i0%len])*fr;
+          this.dlp[c]+=0.45*(d-this.dlp[c]);
+          b[w]=(c?r:l)*(f.dlyOn?1:0)+dFb*this.dlp[c];
+          wet[c]=d;
+        }
+        this.dw=(w+1)%len;
+        l+=wet[0]*dMix; r+=wet[1]*dMix;
+      }
+      /* ----- reverb ----- */
+      if(f.rvbOn){
+        const inx=(l+r)*0.015;
+        let wl=0, wr=0;
+        for(let c=0;c<2;c++){
+          let acc=0;
+          const cs=this.combs[c];
+          for(let k=0;k<8;k++){
+            const cb=cs[k], o=cb.b[cb.i];
+            cb.f=o*rD2+cb.f*rD1;
+            cb.b[cb.i]=inx+cb.f*rFb;
+            if(++cb.i>=cb.b.length) cb.i=0;
+            acc+=o;
+          }
+          const as=this.aps[c];
+          for(let k=0;k<4;k++){
+            const ab=as[k], bo=ab.b[ab.i];
+            const o=-acc+bo;
+            ab.b[ab.i]=acc+bo*0.5;
+            if(++ab.i>=ab.b.length) ab.i=0;
+            acc=o;
+          }
+          if(c) wr=acc; else wl=acc;
+        }
+        l+=wl*rMix; r+=wr*rMix;
+      }
+      /* ----- output limiter ----- */
+      const al=Math.abs(l), ar=Math.abs(r);
+      if(al>0.9) l=(l<0?-1:1)*(0.9+0.1*tanhf((al-0.9)/0.1));
+      if(ar>0.9) r=(r<0?-1:1)*(0.9+0.1*tanhf((ar-0.9)/0.1));
+      oL[i]=l; oR[i]=r;
+      if(al>this.peak) this.peak=al; if(ar>this.peak) this.peak=ar;
+    }
+    this.pc+=N;
+    if(this.pc>=2048){ this.port.postMessage({peak:this.peak}); this.peak=0; this.pc=0; }
+    return true;
+  }
+}
+registerProcessor('y8-fx',Y8FX);
+
+</script>
+<script>
+/* ===== Yu_My-8 : UI widgets ===== */
+const state={}, ctrl={};
+const $=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;};
+const clone=v=>JSON.parse(JSON.stringify(v));
+let onChange=function(id,arg){};
+
+function ticks(w,r,bip){
+  for(let i=0;i<=10;i++){
+    const a=-135+27*i,t=$('div','tk'+(i%5==0?' big':''));
+    t.style.transform=`rotate(${a}deg) translateY(-${r}px)`;w.appendChild(t);
+    if(!bip&&(i==0||i==10)){const n=$('div','tn',i?'10':'0'),rad=a*Math.PI/180,rr=r+8;
+      n.style.left=`calc(50% + ${Math.sin(rad)*rr}px)`;n.style.top=`calc(50% - ${Math.cos(rad)*rr}px + 4px)`;w.appendChild(n);}
+  }
+}
+function knob(id,label,min,max,val,opt={}){
+  const col=$('div','col'),w=$('div','kw'),k=$('div','knob'),v=$('div','val');
+  state[id]=val;const init=val;
+  ticks(w,24,opt.bip);
+  const ang=x=>-135+270*(x-min)/(max-min);
+  const fmt=opt.fmt||(x=>(x/(max-min)*10).toFixed(1));
+  const upd=()=>{k.style.transform=`rotate(${ang(state[id])}deg)`;v.textContent=opt.bip?(state[id]>0?'+':'')+Math.round(state[id]):fmt(state[id]-min);};
+  let sy=0,sv=0;
+  k.addEventListener('pointerdown',e=>{k.setPointerCapture(e.pointerId);sy=e.clientY;sv=state[id];});
+  k.addEventListener('pointermove',e=>{if(!k.hasPointerCapture(e.pointerId))return;state[id]=Math.max(min,Math.min(max,sv+(sy-e.clientY)*(max-min)/(e.shiftKey?600:150)));upd();onChange(id);});
+  k.addEventListener('dblclick',()=>{state[id]=init;upd();onChange(id);});
+  k.addEventListener('wheel',e=>{e.preventDefault();state[id]=Math.max(min,Math.min(max,state[id]-Math.sign(e.deltaY)*(max-min)/100));upd();onChange(id);},{passive:false});
+  ctrl[id]={set:x=>{state[id]=x;upd();}};
+  w.appendChild(k);col.append(w,v,$('div','lbl',label));upd();return col;
+}
+function selector(id,label,opts,def){
+  const col=$('div','col'),w=$('div','sel'),k=$('div','knob');
+  state[id]=def;
+  const n=opts.length,angs=opts.map((_,i)=>n==1?0:-120+240*i/(n-1));
+  const os=opts.map((o,i)=>{const e=$('div','o',o),a=angs[i]*Math.PI/180;
+    e.style.left=(42+34*Math.sin(a))+'px';e.style.top=(39-30*Math.cos(a))+'px';
+    e.onclick=()=>{state[id]=o;upd();onChange(id);};w.appendChild(e);return e;});
+  const upd=()=>{const i=Math.max(0,opts.indexOf(state[id]));k.style.transform=`rotate(${angs[i]}deg)`;os.forEach((e,j)=>e.classList.toggle('act',j===i));};
+  k.onclick=()=>{state[id]=opts[(opts.indexOf(state[id])+1)%n];upd();onChange(id);};
+  ctrl[id]={set:x=>{state[id]=x;upd();}};
+  w.appendChild(k);col.append(w,$('div','lbl',label));upd();return col;
+}
+function fader(id,label,def,opt={}){
+  const h=opt.h||92,col=$('div','col'),row=$('div','frow'),sc=$('div','scale');
+  sc.style.height=h+'px';
+  for(let i=0;i<=10;i++){const y=6+(10-i)*(h-12)/10,t=$('div','t'+(i%5==0?' big':''));t.style.top=y+'px';sc.appendChild(t);
+    if(i%2==0){const n=$('div','n',i);n.style.top=y+'px';sc.appendChild(n);}}
+  const s=$('input','fader');s.type='range';s.min=0;s.max=100;s.value=def;s.style.height=h+'px';
+  state[id]=def;const v=$('div','val',(def/10).toFixed(1));
+  s.oninput=()=>{state[id]=+s.value;v.textContent=(s.value/10).toFixed(1);onChange(id);};
+  s.ondblclick=()=>{s.value=def;state[id]=def;v.textContent=(def/10).toFixed(1);onChange(id);};
+  ctrl[id]={set:x=>{state[id]=x;s.value=x;v.textContent=(x/10).toFixed(1);}};
+  row.append(sc,s);col.append(row,v,$('div','lbl',label));return col;
+}
+function toggle(id,label,opts,def){
+  const col=$('div','col'),box=$('div','tgl'),H=16;
+  const tr=$('div','ttrack'),lev=$('div','tlev'),labs=$('div','tlabs');tr.appendChild(lev);
+  tr.style.height=(opts.length*H)+'px';state[id]=def;
+  const upd=()=>{const i=Math.max(0,opts.indexOf(state[id]));lev.style.top=(i*H+H/2-5)+'px';[...labs.children].forEach((x,j)=>x.classList.toggle('act',j===i));};
+  opts.forEach(o=>{const l=$('div',null,o);l.style.height=H+'px';l.style.lineHeight=H+'px';l.onclick=()=>{state[id]=o;upd();onChange(id);};labs.appendChild(l);});
+  tr.onclick=()=>{state[id]=opts[(opts.indexOf(state[id])+1)%opts.length];upd();onChange(id);};
+  ctrl[id]={set:x=>{state[id]=x;upd();}};
+  box.append(tr,labs);col.append(box,$('div','lbl',label));upd();return col;
+}
+/* coloured cap switches. modes: radio | radiot (click selected = off) | multi | momentary | hold */
+function caps(id,label,opts,def,colors,mode){
+  const g=$('div','grp'),row=$('div','caprow');
+  if(label)g.appendChild($('div','glabel',label));
+  mode=mode||'radio';
+  state[id]=mode=='multi'?[]:(mode=='hold'?false:def);
+  const refresh=()=>row.querySelectorAll('.cap').forEach(x=>x._r&&x._r());
+  opts.forEach((o,i)=>{
+    const it=$('div','capwrap'),c=$('div','cap'),col=Array.isArray(colors)?colors[i]:colors;
+    c.style.setProperty('--cc',col);c.appendChild($('div','l'));it.append(c,$('div','cl',o));
+    c._r=()=>c.classList.toggle('on',mode=='multi'?state[id].includes(o):((mode=='radio'||mode=='radiot')?state[id]===o:(mode=='hold'?!!state[id]:false)));
+    if(mode=='hold'){
+      c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);state[id]=true;refresh();onChange(id,true);};
+      const up=()=>{if(state[id]){state[id]=false;refresh();onChange(id,false);}};
+      c.onpointerup=up;c.onpointercancel=up;
+    } else c.onclick=()=>{
+      if(mode=='momentary'){c.classList.add('on');setTimeout(()=>c.classList.remove('on'),170);onChange(id,o);return;}
+      if(mode=='multi'){const a=state[id],j=a.indexOf(o);j>=0?a.splice(j,1):a.push(o);}
+      else if(mode=='radiot'){state[id]=state[id]===o?'':o;}
+      else state[id]=o;
+      refresh();onChange(id,o);
+    };
+    c._r();row.appendChild(it);
+  });
+  ctrl[id]={set:x=>{state[id]=clone(x);refresh();}};
+  g.appendChild(row);return g;
+}
+function section(title,kids,minW){
+  const s=$('div','sec');if(minW)s.style.minWidth=minW+'px';
+  const h=$('h3',title?null:'none',title||'&nbsp;');const b=$('div','body');kids.forEach(k=>b.appendChild(k));
+  s.append(h,b);return s;
+}
+
+/* ===== Yu_My-8 : panel construction ===== */
+const W5=['TRI','SAW','PUL','SQR','NSE'];
+const fxKnobs=(p,names,defs)=>names.map((n,i)=>knob(p+n,n,0,100,defs[i]));
+
+document.getElementById('rowA1').append(
+  section('',[knob('volume','VOLUME',0,100,70),knob('balance','BALANCE',0,100,50,{bip:true,fmt:x=>Math.round(x-50)}),
+    fader('arpRate','ARP RATE',50),toggle('arpSync','',['INT','EXT'],'INT')],0),
+  section('LFO',[fader('lfoRate','RATE',40),fader('lfoDelay','DELAY TIME',0),selector('lfoWave','WAVE FORM',['TRI','SAW','SQR','RND'],'TRI')]),
+  section('VCO MODULATOR',[fader('modLfo','LFO MOD',0),fader('modEnv','ENV MOD',0),toggle('freqMod','FREQ MOD',['VCO-1','BOTH','VCO-2'],'BOTH'),
+    fader('pwm','PULSE WIDTH MOD',0),toggle('pwmSrc','PWM SRC',['LFO','MANUAL','ENV-1'],'MANUAL')]),
+  section('VCO-1',[knob('xmod','CROSS MOD',0,100,0),selector('v1Range','RANGE',["16'","8'","4'","2'"],"8'"),selector('v1Wave','WAVE FORM',['TRI','SAW','PUL','SQR'],'SAW')]),
+  section('VCO-2',[toggle('sync','SYNC',['OFF','ON'],'OFF'),toggle('v2Mode','RANGE MODE',['LOW FREQ','NORMAL','KEY OFF'],'NORMAL'),
+    selector('v2Range','RANGE',["16'","8'","4'","2'"],"8'"),knob('v2Fine','FINE TUNE',-50,50,0,{bip:true}),selector('v2Wave','WAVE FORM',W5,'SAW')]),
+  section('',[knob('mix','SOURCE MIX',0,100,0,{fmt:x=>(x/10).toFixed(1)}),knob('noise','NOISE LEVEL',0,100,0)]),
+  section('HPF',[fader('hpf','CUT OFF FREQ',0)]),
+  (()=>{const s=$('div','sec fill');return s;})()
+);
+
+document.getElementById('rowA2').append(
+  section('VCF',[fader('vcfCut','CUT OFF FREQ',70),fader('vcfRes','RES',10),toggle('vcfSlope','SLOPE',['-12','-24'],'-24'),
+    fader('vcfEnv','ENV MOD',0),fader('vcfLfo','LFO MOD',0),fader('vcfKey','KEY FOLLOW',50),toggle('vcfSrc','ENV SRC',['ENV-1','ENV-2'],'ENV-1')]),
+  section('VCA',[fader('vcaLvl','LEVEL',80),fader('vcaLfo','LFO MOD',0),toggle('vcaSrc','SOURCE',['ENV-2','GATE'],'ENV-2')]),
+  section('ENV-1',[fader('e1A','A',5),fader('e1D','D',40),fader('e1S','S',60),fader('e1R','R',30),knob('e1Key','KEY FOLLOW',0,100,0),toggle('e1Pol','POLARITY',['+','−'],'+')]),
+  section('ENV-2',[fader('e2A','A',5),fader('e2D','D',40),fader('e2S','S',80),fader('e2R','R',30),knob('e2Key','KEY FOLLOW',0,100,0)]),
+  (()=>{
+    const s=$('div','sec fxsec'),g=$('div','fxgrid');
+    const cell=(t,kids)=>{const c=$('div','fxcell'),tag=$('div','fxtag',t),b=$('div','fxbody');kids.forEach(k=>b.appendChild(k));c.append(tag,b);return c;};
+    g.append(
+      cell('DELAY',[caps('dlyOn','',['ON'],'',['#7fd66b'],'multi'),...fxKnobs('dly',['TIME','FEEDBACK','MIX'],[40,30,20])]),
+      cell('REVERB',[caps('rvbOn','',['ON'],'',['#7fd66b'],'multi'),...fxKnobs('rvb',['SIZE','DAMP','MIX'],[50,40,20])]),
+      cell('CHORUS',[caps('choOn','',['ON'],'',['#7fd66b'],'multi'),selector('choMode','MODE',['I','II','I+II'],'I'),...fxKnobs('cho',['RATE','DEPTH'],[40,50])]),
+      cell('PHASER',[caps('phOn','',['ON'],'',['#7fd66b'],'multi'),...fxKnobs('ph',['RATE','DEPTH','FEEDBACK'],[30,50,40])])
+    );
+    s.appendChild(g);return s;
+  })()
+);
+
+const pat={L:['A','1'],U:['A','1']};
+const side=()=>state.panelMode==='LOWER'?'L':'U';
+const partIdx=()=>state.panelMode==='LOWER'?0:1;
+function refreshDisp(){
+  document.getElementById('segL').firstChild.textContent=pat.L.join('');
+  document.getElementById('segU').firstChild.textContent=pat.U.join('');
+  document.getElementById('segL').classList.toggle('act',side()==='L');
+  document.getElementById('segU').classList.toggle('act',side()==='U');
+}
+const rowB=document.getElementById('rowB');
+const blk=(...c)=>{const b=$('div','blk');c.forEach(x=>b.appendChild(x));return b;};
+const disp=$('div','disp');
+disp.innerHTML='<div class="seg" id="segL">A1<small>LOWER</small></div><div class="seg" id="segU">A1<small>UPPER</small></div>';
+rowB.append(
+  blk(knob('masterTune','MASTER TUNE',-50,50,0,{bip:true}),caps('tune','',['TUNE'],'',['#e87ab0'],'multi')),
+  blk(caps('arpRange','ARPEGGIO RANGE',['1','2','3','4'],'',['#6fcf6a','#6fcf6a','#6fcf6a','#6fcf6a'],'radiot'),
+      caps('arpMode','MODE',['UP','DOWN','U&D','RANDOM'],'UP','#62b8f0')),
+  blk(caps('assign','ASSIGN MODE',['SOLO','UNISON','POLY 1','POLY 2'],'POLY 1','#f2994a')),
+  blk(caps('hold','HOLD',['LOWER','UPPER'],'',['#efe8d0','#efe8d0'],'multi')),
+  blk(caps('keyMode','KEY MODE',['DUAL','SPLIT','WHOLE'],'WHOLE','#f0d43a'),
+      caps('panelMode','PANEL MODE',['LOWER','UPPER'],'UPPER','#e5534b')),
+  blk(disp),
+  blk(caps('patchNum','PATCH NUMBER',['1','2','3','4','5','6','7','8','MANUAL'],'1',
+      ['#8fc7f4','#8fc7f4','#8fc7f4','#8fc7f4','#8fc7f4','#8fc7f4','#8fc7f4','#8fc7f4','#9a82d8'])),
+  blk(caps('preset','PATCH PRESET',['A','B','C','D','E','F','G','H'],'A',
+      ['#7fd66b','#7fd66b','#7fd66b','#7fd66b','#e8e46a','#e8e46a','#e8e46a','#e8e46a']),
+      caps('prot','',['PROTECT'],'',['#c7ccd1'],'multi'),caps('write','',['WRITE'],'',['#e87ab0'],'momentary'))
+);
+
+const bendPanel=document.getElementById('bend');
+const leverEl=$('div','lever');leverEl.id='lever';
+[toggle('b1','VCO-1 BEND',['ON','OFF'],'ON'),toggle('b2','VCO-2 BEND',['ON','OFF'],'ON'),toggle('b3','VCF BEND',['ON','OFF'],'OFF'),
+ fader('bVco','VCO BEND',17,{h:70}),fader('bVcf','VCF BEND',0,{h:70}),fader('mVco','LFO→VCO',0,{h:70}),fader('mVcf','LFO→VCF',0,{h:70}),
+ knob('lfoRise','LFO MOD RISE TIME',0,100,0),knob('porta','PORTAMENTO',0,100,0),toggle('portaOn','',['ON','OFF'],'OFF'),
+ caps('lfoMod','LFO MOD',['PUSH'],'',['#efe8d0'],'hold'),
+ caps('data','PATCH FILE',['SAVE','LOAD','EXPORT','IMPORT'],'',['#9a82d8','#9a82d8','#9a82d8','#9a82d8'],'momentary'),
+ (()=>{const c=$('div','col');c.append(leverEl,$('div','lbl','BENDER'));return c;})()
+].forEach(e=>bendPanel.appendChild(e));
+
+/* keyboard (61 keys C2-C7) */
+const kbdEl=document.getElementById('kbd'),NW=36,WDEG=[0,2,4,5,7,9,11],keyEls={};
+const whiteMidi=i=>36+12*Math.floor(i/7)+WDEG[i%7];
+for(let i=0;i<NW;i++){const k=$('div','wk');k.dataset.m=whiteMidi(i);k.style.left=`calc(8px + (100% - 16px) * ${i/NW})`;k.style.width=`calc((100% - 16px) / ${NW})`;kbdEl.appendChild(k);keyEls[whiteMidi(i)]=k;}
+for(let i=0;i<NW-1;i++){if(![0,1,3,4,5].includes(i%7))continue;
+  const b=$('div','bk');b.dataset.m=whiteMidi(i)+1;b.style.width=`calc((100% - 16px) / ${NW} * .58)`;b.style.left=`calc(8px + (100% - 16px) * ${(i+1)/NW} - (100% - 16px) / ${NW} * .29)`;kbdEl.appendChild(b);keyEls[whiteMidi(i)+1]=b;}
+const splitMark=$('div','splitmark','▼');kbdEl.appendChild(splitMark);
+
+/* ===== Yu_My-8 : factory patches ===== */
+const ON=['ON'];
+const FACTORY_DEFS=[
+ ['BRASS',{v1Wave:'SAW',v2Wave:'SAW',v2Fine:6,mix:50,vcfCut:28,vcfRes:12,vcfEnv:55,vcfSrc:'ENV-1',vcfKey:50,
+   e1A:14,e1D:45,e1S:55,e1R:20,e2A:8,e2D:50,e2S:85,e2R:18,lfoDelay:40,modLfo:8,lfoRate:45,choOn:ON,choMode:'I'}],
+ ['STRINGS',{v1Wave:'SAW',v2Wave:'SAW',v2Fine:9,mix:50,vcfCut:58,vcfRes:4,vcfEnv:0,
+   e2A:40,e2D:50,e2S:90,e2R:45,lfoRate:35,modLfo:6,lfoDelay:50,choOn:ON,choMode:'I+II',rvbOn:ON,rvbMIX:15}],
+ ['POLY PWM',{v1Wave:'PUL',v2Wave:'PUL',v2Fine:-8,mix:50,pwm:45,pwmSrc:'LFO',lfoRate:22,vcfCut:48,vcfRes:10,
+   e2A:12,e2D:55,e2S:80,e2R:30,choOn:ON,choMode:'II'}],
+ ['SYNC LEAD',{v1Wave:'SAW',v2Wave:'SAW',sync:'ON',v2Fine:18,mix:100,freqMod:'VCO-2',modEnv:38,
+   e1A:0,e1D:50,e1S:30,e1R:20,vcfCut:70,vcfRes:25,vcfEnv:20,e2A:2,e2D:40,e2S:85,e2R:20,
+   assign:'SOLO',porta:20,portaOn:'ON',dlyOn:ON,dlyTIME:45,dlyFEEDBACK:35,dlyMIX:25}],
+ ['WARM PAD',{v1Wave:'SAW',v2Wave:'PUL',v2Fine:5,pwm:40,pwmSrc:'LFO',lfoRate:12,mix:50,vcfCut:40,vcfRes:8,vcfEnv:30,
+   e1A:55,e1D:60,e1S:50,e1R:55,e2A:60,e2D:50,e2S:90,e2R:65,rvbOn:ON,rvbSIZE:70,rvbMIX:35,choOn:ON,choMode:'I'}],
+ ['PLUCK BASS',{v1Wave:'SAW',v1Range:"16'",v2Wave:'PUL',v2Range:"16'",v2Fine:3,mix:50,vcfCut:18,vcfRes:35,vcfEnv:55,vcfKey:30,
+   e1A:0,e1D:28,e1S:0,e1R:15,e2A:0,e2D:38,e2S:0,e2R:12,assign:'POLY 2'}],
+ ['SOLO LEAD',{v1Wave:'SQR',v2Wave:'SAW',v2Fine:7,mix:40,vcfCut:55,vcfRes:30,vcfEnv:25,e2A:3,e2D:50,e2S:85,e2R:18,
+   assign:'SOLO',porta:25,portaOn:'ON',modLfo:10,lfoRate:48,lfoDelay:55,dlyOn:ON,dlyTIME:50,dlyFEEDBACK:30,dlyMIX:22}],
+ ['BELL',{v1Wave:'TRI',v1Range:"4'",v2Wave:'TRI',v2Range:"2'",v2Fine:38,mix:45,xmod:30,vcfCut:80,vcfRes:5,
+   e2A:0,e2D:72,e2S:0,e2R:60,e1A:0,e1D:50,e1S:0,e1R:40,rvbOn:ON,rvbSIZE:75,rvbMIX:35}],
+ ['RES SWEEP',{v1Wave:'SAW',v2Wave:'SAW',v2Fine:4,mix:50,vcfCut:22,vcfRes:72,vcfEnv:70,vcfKey:60,
+   e1A:45,e1D:62,e1S:15,e1R:40,e2A:6,e2D:55,e2S:85,e2R:40,choOn:ON,choMode:'I'}],
+ ['SUPER UNISON',{assign:'UNISON',v1Wave:'SAW',v2Wave:'SAW',v2Fine:5,mix:50,vcfCut:62,vcfRes:10,
+   e2A:6,e2D:50,e2S:85,e2R:25,choOn:ON,choMode:'I+II'}],
+ ['PWM STRINGS',{v1Wave:'PUL',v2Wave:'PUL',v2Fine:-6,mix:50,pwm:55,pwmSrc:'LFO',lfoRate:28,vcfCut:52,
+   e2A:35,e2D:50,e2S:90,e2R:40,choOn:ON,choMode:'II',rvbOn:ON,rvbMIX:20}],
+ ['CLAV',{v1Wave:'PUL',pwm:55,pwmSrc:'MANUAL',v2Wave:'PUL',v2Range:"4'",mix:35,vcfCut:38,vcfRes:18,vcfEnv:40,
+   e1A:0,e1D:24,e1S:0,e1R:14,e2A:0,e2D:33,e2S:0,e2R:12,assign:'POLY 2'}],
+ ['ORGAN',{v1Wave:'SQR',v2Wave:'SQR',v2Range:"4'",mix:50,vcfCut:85,vcfRes:0,vcaSrc:'GATE',phOn:ON,phRATE:22,phDEPTH:45}],
+ ['SUB BASS',{v1Wave:'TRI',v1Range:"16'",v2Wave:'SQR',v2Range:"16'",mix:35,vcfCut:28,vcfRes:15,vcfEnv:20,
+   e2A:2,e2D:40,e2S:90,e2R:18,assign:'SOLO'}],
+ ['SCI-FI',{v1Wave:'SAW',v2Wave:'TRI',v2Mode:'LOW FREQ',v2Fine:10,mix:0,xmod:55,vcfCut:55,vcfRes:40,
+   e2A:20,e2D:50,e2S:85,e2R:50,phOn:ON,dlyOn:ON,dlyFEEDBACK:55,dlyMIX:35}],
+ ['WIND',{v2Wave:'NSE',mix:100,vcfCut:38,vcfRes:40,vcfEnv:35,e1A:55,e1D:60,e1S:50,e1R:55,
+   e2A:55,e2D:50,e2S:90,e2R:55,vcfLfo:20,lfoWave:'RND',lfoRate:30,rvbOn:ON,rvbSIZE:80,rvbMIX:35}]
+];
+
+/* ===== Yu_My-8 : application (engine glue, patches, keyboard, MIDI) ===== */
+const WSRC=document.getElementById('wsrc').textContent;
+const statusEl=document.getElementById('status');
+let statusTimer=null;
+const names=['INIT','INIT'];
+function baseStatus(){ return names[partIdx()]+'  ['+state.panelMode+']'; }
+function status(msg,keep){
+  statusEl.textContent=msg; clearTimeout(statusTimer);
+  if(!keep) statusTimer=setTimeout(()=>{statusEl.textContent=baseStatus();},2600);
+}
+
+/* ----- key sets ----- */
+const GLOBAL_KEYS=['volume','balance','masterTune','arpRate','arpSync','arpRange','arpMode','hold','keyMode','panelMode',
+  'patchNum','preset','prot','write','tune','data','lfoMod','b1','b2','b3','bVco','bVcf','mVco','mVcf','lfoRise'];
+const DEF=clone(state);
+const FX_KEYS=Object.keys(state).filter(k=>/^(dly|rvb|cho|ph[A-Z])/.test(k));
+const PATCH_KEYS=Object.keys(state).filter(k=>!GLOBAL_KEYS.includes(k));
+const SYNTH_KEYS=PATCH_KEYS.filter(k=>!FX_KEYS.includes(k));
+const pick=(o,keys)=>{const r={};keys.forEach(k=>{if(k in o)r[k]=clone(o[k]);});return r;};
+const partStore=[pick(DEF,PATCH_KEYS),pick(DEF,PATCH_KEYS)];
+let splitNote=60;
+
+/* ----- message builders ----- */
+function globalMsg(){
+  const s=state;
+  return {volume:s.volume,balance:s.balance,masterTune:s.masterTune,arpRate:s.arpRate,arpExt:s.arpSync==='EXT',
+    arpRange:parseInt(s.arpRange)||0,arpMode:s.arpMode,holdL:s.hold.includes('LOWER'),holdU:s.hold.includes('UPPER'),
+    keyMode:s.keyMode,split:splitNote,b1:s.b1==='ON',b2:s.b2==='ON',b3:s.b3==='ON',bVco:s.bVco,bVcf:s.bVcf,
+    mVco:s.mVco,mVcf:s.mVcf,lfoRise:s.lfoRise,tuneTone:s.tune.includes('TUNE')};
+}
+function fxMsg(){
+  const s=state;
+  return {dlyOn:s.dlyOn.includes('ON'),dlyT:s.dlyTIME/100,dlyFb:s.dlyFEEDBACK/100,dlyMix:s.dlyMIX/100,
+    rvbOn:s.rvbOn.includes('ON'),rvbSize:s.rvbSIZE/100,rvbDamp:s.rvbDAMP/100,rvbMix:s.rvbMIX/100,
+    choOn:s.choOn.includes('ON'),choMode:['I','II','I+II'].indexOf(s.choMode),choRate:s.choRATE/100,choDepth:s.choDEPTH/100,
+    phOn:s.phOn.includes('ON'),phRate:s.phRATE/100,phDepth:s.phDEPTH/100,phFb:s.phFEEDBACK/100};
+}
+const sendGlobal=()=>eng.send({t:'global',g:globalMsg()});
+const sendFx=()=>eng.sendFx({t:'fx',f:fxMsg()});
+
+/* ----- audio engine ----- */
+const eng={
+  ctx:null,node:null,fx:null,ready:false,starting:false,q:[],fq:null,mode:'',
+  send(m){ if(this.ready) this.node.port.postMessage(m); else this.q.push(m); },
+  sendFx(m){ if(this.ready) this.fx.port.postMessage(m); else this.fq=m; },
+  /* Preferred path: AudioWorklet. Some WebViews (e.g. in-app previews) refuse worklet module URLs. */
+  async startWorklet(ctx){
+    if(!window.AudioWorkletNode||!ctx.audioWorklet) throw new Error('no AudioWorklet');
+    const dataUrl='data:application/javascript;charset=utf-8,'+encodeURIComponent(WSRC);
+    try{ await ctx.audioWorklet.addModule(dataUrl); }
+    catch(e1){
+      const url=URL.createObjectURL(new Blob([WSRC],{type:'application/javascript'}));
+      await ctx.audioWorklet.addModule(url);
+    }
+    const node=new AudioWorkletNode(ctx,'y8-synth',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[1]});
+    const fx=new AudioWorkletNode(ctx,'y8-fx',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2]});
+    node.connect(fx); fx.connect(ctx.destination);
+    this.node=node; this.fx=fx; this.mode='worklet';
+  },
+  /* Fallback: run the very same DSP classes on the main thread through a ScriptProcessorNode. */
+  startCompat(ctx){
+    const procs={};
+    class Base{ constructor(){ this.port={onmessage:null,postMessage(){}}; } }
+    new Function('AudioWorkletProcessor','registerProcessor','sampleRate',WSRC)(Base,(n,c)=>{procs[n]=c;},ctx.sampleRate);
+    const make=name=>{
+      const inst=new procs[name](); const ui={onmessage:null,postMessage(m){ if(inst.port.onmessage) inst.port.onmessage({data:m}); }};
+      inst.port.postMessage=m=>{ if(ui.onmessage) ui.onmessage({data:m}); };
+      return {inst,port:ui};
+    };
+    const syn=make('y8-synth'), fx=make('y8-fx');
+    const N=2048, mono=new Float32Array(N);
+    const sp=ctx.createScriptProcessor(N,1,2);
+    sp.onaudioprocess=e=>{
+      const L=e.outputBuffer.getChannelData(0), R=e.outputBuffer.getChannelData(1);
+      syn.inst.process([],[[mono]]);
+      fx.inst.process([[mono,mono]],[[L,R]]);
+    };
+    sp.connect(ctx.destination);
+    this.sp=sp; this.node=syn; this.fx=fx; this.mode='compat';
+  },
+  async start(){
+    if(this.starting) return; this.starting=true;
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) throw new Error('Web Audio is not supported in this browser');
+      const ctx=new AC({latencyHint:'interactive'});
+      const forceCompat=/compat/.test(location.hash+location.search);
+      let ok=false;
+      if(!forceCompat){ try{ await this.startWorklet(ctx); ok=true; }catch(e){ console.warn('AudioWorklet unavailable, using compatibility mode:',e); } }
+      if(!ok) this.startCompat(ctx);
+      const node=this.node, fx=this.fx;
+      const bar=document.getElementById('meterbar');
+      fx.port.onmessage=e=>{ if(e.data&&e.data.peak!==undefined){ const p=Math.min(1,e.data.peak); bar.style.width=(p*100)+'%'; bar.classList.toggle('hot',p>0.9); } };
+      this.ctx=ctx;
+      for(let p=0;p<2;p++) node.port.postMessage({t:'params',part:p,p:pick(partStore[p],SYNTH_KEYS)});
+      node.port.postMessage({t:'global',g:globalMsg()});
+      fx.port.postMessage({t:'fx',f:fxMsg()});
+      this.ready=true;
+      this.q.forEach(m=>node.port.postMessage(m)); this.q=[];
+      await ctx.resume();
+      document.getElementById('pwrLed').classList.add('on');
+      document.getElementById('startBtn').style.display='none';
+      status('AUDIO READY'+(this.mode==='compat'?' (COMPAT MODE)':'')+'  '+baseStatus());
+      window.__yumy8={ctx,node,fx,sr:ctx.sampleRate,mode:this.mode};
+    }catch(err){
+      this.starting=false;
+      status('AUDIO ERROR: '+err.message,true);
+      console.error(err);
+    }
+  }
+};
+
+/* ----- patch memory ----- */
+const FACTORY=FACTORY_DEFS.map(([name,o])=>Object.assign({name},o));
+let userBank={};
+try{ userBank=JSON.parse(localStorage.getItem('yumy8.user.v1')||'{}')||{}; }catch(e){ userBank={}; }
+function persist(){ try{ localStorage.setItem('yumy8.user.v1',JSON.stringify(userBank)); }catch(e){} }
+const initPatch=Object.assign({name:'INIT'},pick(DEF,PATCH_KEYS));
+const getPatch=idx=>userBank[idx]||FACTORY[idx]||initPatch;
+const slotIndex=s=>'ABCDEFGH'.indexOf(pat[s][0])*8+(parseInt(pat[s][1])-1);
+const slotName=s=>pat[s][0]+pat[s][1];
+
+function applyToPanel(obj){
+  PATCH_KEYS.forEach(k=>{ if(ctrl[k]) ctrl[k].set(clone(k in obj?obj[k]:DEF[k])); });
+}
+function loadPatch(p,patch){
+  const full=Object.assign(pick(DEF,PATCH_KEYS),pick(patch,PATCH_KEYS));
+  partStore[p]=full; names[p]=patch.name||'USER';
+  eng.send({t:'params',part:p,p:pick(full,SYNTH_KEYS)});
+  if(p===partIdx()){ applyToPanel(full); sendFx(); }
+  status(slotName(p===0?'L':'U')+'  '+names[p]);
+}
+function recall(){ const s=side(); if(pat[s][1]==='M') return; loadPatch(partIdx(),getPatch(slotIndex(s))); }
+function selectDisplay(){
+  const s=side();
+  ctrl.preset.set(pat[s][0]); ctrl.patchNum.set(pat[s][1]==='M'?'MANUAL':pat[s][1]); refreshDisp();
+}
+function writePatch(){
+  if(state.prot.includes('PROTECT')){ status('MEMORY PROTECT ON'); return; }
+  const s=side(); if(pat[s][1]==='M'){ status('SELECT A PATCH NUMBER FIRST'); return; }
+  userBank[slotIndex(s)]=Object.assign({name:names[partIdx()]},clone(partStore[partIdx()]));
+  persist(); status('WRITTEN  '+slotName(s)+'  '+names[partIdx()]);
+}
+function download(name,obj){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,1)],{type:'application/json'}));
+  a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}
+function pickFile(cb){
+  const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json';
+  i.onchange=()=>{ const f=i.files[0]; if(!f) return; const r=new FileReader();
+    r.onload=()=>{ try{ cb(JSON.parse(r.result)); }catch(e){ status('INVALID FILE'); } }; r.readAsText(f); };
+  i.click();
+}
+function fileOp(o){
+  const p=partIdx();
+  if(o==='SAVE'){ download('yumy8-bank.json',{app:'Yu_My-8',type:'bank',user:userBank}); status('BANK SAVED'); }
+  else if(o==='LOAD'){ pickFile(j=>{ if(j&&j.type==='bank'&&j.user){ userBank=j.user; persist(); status('BANK LOADED'); recall(); } else status('NOT A BANK FILE'); }); }
+  else if(o==='EXPORT'){ download('yumy8-'+(names[p]||'patch').replace(/\W+/g,'_')+'.json',{app:'Yu_My-8',type:'patch',patch:Object.assign({name:names[p]},partStore[p])}); status('PATCH EXPORTED'); }
+  else if(o==='IMPORT'){ pickFile(j=>{ if(j&&j.type==='patch'&&j.patch){ loadPatch(p,j.patch); pat[side()][1]='M'; selectDisplay(); } else status('NOT A PATCH FILE'); }); }
+}
+
+/* ----- change routing ----- */
+const handlers={
+  panelMode(){ selectDisplay(); applyToPanel(partStore[partIdx()]); sendFx(); status(baseStatus(),true); },
+  patchNum(o){ const s=side(); if(o==='MANUAL'){ pat[s][1]='M'; refreshDisp(); status('MANUAL'); return; } pat[s][1]=o; refreshDisp(); recall(); },
+  preset(o){ const s=side(); pat[s][0]=o; if(pat[s][1]==='M'){ pat[s][1]='1'; ctrl.patchNum.set('1'); } refreshDisp(); recall(); },
+  write(){ writePatch(); },
+  data(o){ fileOp(o); },
+  lfoMod(on){ eng.send({t:'mod',push:!!on}); },
+  keyMode(){ sendGlobal(); status('KEY MODE  '+state.keyMode+(state.keyMode==='SPLIT'?'  (shift+click a key to set split)':'')); },
+  arpRange(){ sendGlobal(); status(state.arpRange?'ARPEGGIO  RANGE '+state.arpRange:'ARPEGGIO OFF'); },
+  prot(){ status(state.prot.includes('PROTECT')?'MEMORY PROTECT ON':'MEMORY PROTECT OFF'); }
+};
+onChange=function(id,arg){
+  if(handlers[id]) return handlers[id](arg);
+  if(PATCH_KEYS.includes(id)){
+    partStore[partIdx()][id]=clone(state[id]);
+    if(FX_KEYS.includes(id)) sendFx();
+    else eng.send({t:'params',part:partIdx(),p:{[id]:clone(state[id])}});
+  } else sendGlobal();
+};
+
+/* ----- keyboard (on-screen / computer / touch) ----- */
+const down=new Set();
+const visKey=(m,on)=>{ const e=keyEls[m]; if(e) e.classList.toggle('down',on); };
+function keyDown(m){ if(down.has(m)) return; down.add(m); visKey(m,true); eng.send({t:'on',key:m}); }
+function keyUp(m){ if(!down.has(m)) return; down.delete(m); visKey(m,false); eng.send({t:'off',key:m}); }
+const NN=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const noteName=m=>NN[m%12]+(Math.floor(m/12)-1);
+function placeSplit(){
+  const e=keyEls[splitNote]; if(!e){ splitMark.style.display='none'; return; }
+  splitMark.style.display='block'; splitMark.style.left=e.style.left;
+}
+function setSplit(m){ splitNote=m; placeSplit(); sendGlobal(); status('SPLIT POINT  '+noteName(m)); }
+const ptrs={};
+kbdEl.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('[data-m]'); if(!el) return; const m=+el.dataset.m;
+  if(e.shiftKey){ setSplit(m); return; }
+  kbdEl.setPointerCapture(e.pointerId); ptrs[e.pointerId]=m; keyDown(m); e.preventDefault();
+});
+kbdEl.addEventListener('pointermove',e=>{
+  if(!(e.pointerId in ptrs)) return;
+  const el=document.elementFromPoint(e.clientX,e.clientY), t=el&&el.closest?el.closest('[data-m]'):null;
+  if(!t||!kbdEl.contains(t)) return;
+  const m=+t.dataset.m; if(m!==ptrs[e.pointerId]){ keyUp(ptrs[e.pointerId]); ptrs[e.pointerId]=m; keyDown(m); }
+});
+const relPtr=e=>{ if(e.pointerId in ptrs){ keyUp(ptrs[e.pointerId]); delete ptrs[e.pointerId]; } };
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>kbdEl.addEventListener(ev,relPtr));
+
+const KMAP={a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12,o:13,l:14,p:15,';':16,"'":17};
+let octShift=0; const kdown={};
+addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  const t=e.target; if(t&&((t.tagName==='INPUT'&&t.type!=='range')||t.tagName==='TEXTAREA'||t.isContentEditable)) return;
+  const k=e.key.toLowerCase();
+  if(k==='z'||k==='x'){ if(!e.repeat){ octShift=Math.max(-2,Math.min(2,octShift+(k==='x'?1:-1))); status('KEYBOARD OCTAVE '+(octShift>=0?'+':'')+octShift); } return; }
+  if(k in KMAP){ if(e.repeat||kdown[k]!==undefined) return; const m=60+octShift*12+KMAP[k]; kdown[k]=m; keyDown(m); e.preventDefault(); }
+});
+addEventListener('keyup',e=>{ const k=e.key.toLowerCase(); if(k in kdown){ keyUp(kdown[k]); delete kdown[k]; } });
+addEventListener('blur',()=>{ Object.keys(kdown).forEach(k=>{keyUp(kdown[k]);delete kdown[k];}); });
+
+/* ----- bender lever ----- */
+let lev0=null;
+function setBend(v){ leverEl.style.setProperty('--bx',v); eng.send({t:'bend',v}); }
+function bendFromX(x){ if(lev0) setBend(Math.max(-1,Math.min(1,(x-lev0.x)/lev0.w))); }
+leverEl.addEventListener('pointerdown',e=>{ leverEl.setPointerCapture(e.pointerId); const r=leverEl.getBoundingClientRect(); lev0={x:r.left+r.width/2,w:Math.max(10,r.width/2-24)}; bendFromX(e.clientX); });
+leverEl.addEventListener('pointermove',e=>{ if(leverEl.hasPointerCapture(e.pointerId)) bendFromX(e.clientX); });
+['pointerup','pointercancel'].forEach(ev=>leverEl.addEventListener(ev,()=>setBend(0)));
+
+/* ----- MIDI ----- */
+let midiStarted=false, midiTimer=null;
+function midiBlink(){ const l=document.getElementById('midiLed'); l.classList.add('on'); clearTimeout(midiTimer); midiTimer=setTimeout(()=>l.classList.remove('on'),90); }
+function onMidi(ev){
+  const d=ev.data; if(!d||!d.length) return;
+  const st=d[0];
+  if(st===0xF8){ eng.send({t:'clock'}); return; }
+  if(st>=0xF0) return;
+  midiBlink();
+  const cmd=st&0xF0;
+  if(cmd===0x90&&d[2]>0){ keyDown(d[1]); }
+  else if(cmd===0x80||cmd===0x90){ keyUp(d[1]); }
+  else if(cmd===0xE0){ setBend(((d[2]<<7|d[1])-8192)/8192); }
+  else if(cmd===0xB0){
+    if(d[1]===1) eng.send({t:'mod',wheel:d[2]/127});
+    else if(d[1]===64) eng.send({t:'pedal',v:d[2]>=64});
+    else if(d[1]===7){ ctrl.volume.set(d[2]/127*100); sendGlobal(); }
+    else if(d[1]===123||d[1]===120){ down.forEach(m=>visKey(m,false)); down.clear(); eng.send({t:'panic'}); }
+  }
+  else if(cmd===0xC0){ const idx=d[1]%64, s=side(); pat[s][0]='ABCDEFGH'[idx>>3]; pat[s][1]=String((idx&7)+1); selectDisplay(); recall(); }
+}
+async function initMidi(){
+  if(midiStarted) return; midiStarted=true;
+  if(!navigator.requestMIDIAccess) return;
+  try{
+    const acc=await navigator.requestMIDIAccess();
+    const hook=()=>{ let n=0; acc.inputs.forEach(i=>{ i.onmidimessage=onMidi; n++; }); if(n) status('MIDI IN: '+Array.from(acc.inputs.values()).map(i=>i.name).join(', ')); };
+    hook(); acc.onstatechange=hook;
+  }catch(e){ /* MIDI not permitted */ }
+}
+
+/* ----- start-up ----- */
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>{ eng.start(); initMidi(); },{once:true,capture:true}));
+addEventListener('pointerdown',()=>{ if(eng.ctx&&eng.ctx.state==='suspended') eng.ctx.resume(); },true);
+document.getElementById('startBtn').addEventListener('click',()=>{ eng.start(); initMidi(); });
+
+pat.U=['A','1']; pat.L=['A','2'];
+loadPatch(0,getPatch(1));
+loadPatch(1,getPatch(0));
+selectDisplay(); placeSplit();
+status('CLICK OR PRESS A KEY TO START AUDIO',true);
+
+function fit(){const s=document.getElementById('synth'),z=Math.min(1,(document.documentElement.clientWidth-24)/1800);s.style.zoom=z;}
+addEventListener('resize',fit);fit();
+
+</script>
+</body>
+</html>
