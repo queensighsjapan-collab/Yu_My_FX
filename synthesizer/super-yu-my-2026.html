@@ -88,6 +88,8 @@ body.low #cables path{filter:none}
 #pp .it b{color:var(--mg);padding:0 6px;cursor:pointer}
 #pp input[type=text]{width:100%;background:#050912;border:1px solid var(--line);color:var(--cy);padding:6px 8px;font-family:inherit;font-size:13px;user-select:text;-webkit-user-select:text}
 #pp .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .jack.cut{color:#ff8aa0;text-decoration:line-through}
+.jack.cut i{background:#ff3355!important;box-shadow:0 0 7px #ff3355!important}
 @keyframes blk{50%{outline-color:transparent}}
 .knob.learning,.sel.learning{outline:2px dashed #fff;outline-offset:1px;animation:blk .7s infinite}
 .knob.midi::after{content:"";position:absolute;top:1px;right:5px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 5px #fff}
@@ -122,6 +124,7 @@ body.low #cables path{filter:none}
 <div class="row" id="vcoRow"></div>
 <div class="row" id="modRow"></div>
 <div class="row" id="fxRow"></div>
+<div class="row" id="exRow"></div>
 <div class="row" id="scRow"></div>
 <div class="row" id="seqRow"></div>
 <svg id="cables"></svg>
@@ -594,6 +597,16 @@ const fxRow=$('#fxRow');
   const jru=J(u,[['ut.in1','IN1','in'],['ut.in2','IN2','in'],['ut.in3','IN3','in'],['ut.mix','MIX','out'],['ut.inv','INV','out'],['ut.cmp','CMP','out'],['ut.max','MAX','out']]);
   jru.style.cssText='display:flex;gap:4px;margin-top:4px;flex-wrap:wrap';
   fxRow.appendChild(u);
+  const col=$('#exRow');
+  [1,2].forEach(n=>{
+    const a=module('M','ADSR '+n,'GATE: KEY / SEQ / CMP / EXT',250);a.style.width='';a.style.flex='0 1 330px';a.style.minWidth='250px';
+    K(a,[['A',0,1,.05,null,v=>wp(E.xenv[n-1],'a',envTime(v,.001,4))],['D',0,1,.3,null,v=>wp(E.xenv[n-1],'d',envTime(v,.005,4))],
+         ['S',0,1,.6,null,v=>wp(E.xenv[n-1],'s',v)],['R',0,1,.3,null,v=>wp(E.xenv[n-1],'r',envTime(v,.005,6))],
+         ['LEVEL',0,1,1,null,v=>{E.xlvl[n-1].gain.value=v}]]);
+    a.appendChild(selector(['KEY','SEQ','CMP','EXT'],n===1?0:1,i=>E.xGate(n-1,i)));
+    const jr=J(a,[[`adsr${n}.gate`,'GATE','in'],[`adsr${n}.out`,'OUT','out'],[`adsr${n}.inv`,'INV','out']]);
+    col.appendChild(a);
+  });
 }
 let scopeMode=0;
 {
@@ -796,7 +809,21 @@ $('#cpHalf').onclick=()=>{if(cpCable){setAmt(cpCable,.5);updCP()}};
 $('#cpInv').onclick=()=>{if(cpCable){setAmt(cpCable,-(cpCable.amt==null?1:cpCable.amt));updCP()}};
 $('#cpDel').onclick=()=>{if(cpCable){const i=cables.indexOf(cpCable);closeCP();removeCable(i);drawCables()}};
 window.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeCP()});
-$('#clr').onclick=()=>{while(cables.length)removeCable(0);drawCables()};
+const CUTABLE=new Set(['rm1.x','rm1.y','rm2.x','rm2.y','rm3.x','rm3.y','fA.in','fB.in','cr.in','ch.in','dl.in','rv.in']);
+const cuts=new Set();
+function setCut(id,on){
+  const j=document.querySelector(`.jack[data-id="${id}"]`);
+  if(on)cuts.add(id);else cuts.delete(id);
+  if(j)j.classList.toggle('cut',on);
+  if(E)E.setCut(id,on);
+}
+function clearCuts(){[...cuts].forEach(id=>setCut(id,false))}
+CUTABLE.forEach(id=>{const j=document.querySelector(`.jack[data-id="${id}"]`);if(!j)return;
+  j.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();const on=!cuts.has(id);setCut(id,on);toast(on?id+': ノーマル接続を CUT しました(右クリックで復帰)':id+': ノーマル接続を復帰しました')})});
+$$('.jack.in').forEach(j=>{if(CUTABLE.has(j.dataset.id))return;
+  j.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();toast(j.dataset.id+': このジャックにノーマル接続はありません')})});
+controls.push(()=>{cuts.forEach(id=>E.setCut(id,true))});
+$('#clr').onclick=()=>{while(cables.length)removeCable(0);clearCuts();drawCables()};
 addCable('sh.out','fA.cut','#ffb020');
 const outs=$$('.jack.out'),ins=$$('.jack.in');
 $('#mutate').onclick=()=>{
@@ -822,7 +849,7 @@ function capture(){
   for(const id in IDX.ks)knobs[id]=+IDX.ks[id].getVal().toFixed(4);
   for(const id in IDX.ss)sels[id]=IDX.ss[id].getIdx();
   return{app:'SUPER Yu_My 2026',ver:1,knobs,sels,parts:vcoPart.slice(),
-    cables:cables.map(c=>[c.from,c.to,c.color,+(c.amt==null?1:c.amt).toFixed(3)]),mx:mxState.map(r=>r.slice()),
+    cables:cables.map(c=>[c.from,c.to,c.color,+(c.amt==null?1:c.amt).toFixed(3)]),cuts:[...cuts],mx:mxState.map(r=>r.slice()),
     seq:{pitch:SQ.pitches.map(p=>Math.round(p.dataset.v*24)),gate:bitsOf(SQ.gates),tie:bitsOf(SQ.ties),rat:bitsOf(SQ.rats),trig:bitsOf(SQ.trigs),open:bitsOf(SQ.opens),
       prob:SQ.probs.map(c=>Math.round(c.dataset.p*100)),bpm:+SQ.bpm.value,trans:!!SQ.trans}};
 }
@@ -830,6 +857,7 @@ function applyState(st){
   for(const id in st.knobs||{}){const k=IDX.ks[id];if(k)k.setVal(st.knobs[id])}
   for(const id in st.sels||{}){const sl=IDX.ss[id];if(sl)sl.setIdx(st.sels[id])}
   (st.parts||[]).forEach((p,i)=>vcoPartSet[i]&&vcoPartSet[i](p));
+  if(st.cuts){clearCuts();st.cuts.forEach(id=>setCut(id,true))}
   if(st.cables){while(cables.length)removeCable(0);st.cables.forEach(c=>addCable(c[0],c[1],c[2],c[3]));drawCables()}
   if(st.mx)st.mx.forEach((r,si)=>r.forEach((l,di)=>{mxState[si][di]=l;mxPaint[si][di]();if(E)E.setMx(si,di,MXLV[l])}));
   if(st.seq){const q=st.seq;
@@ -846,6 +874,7 @@ function mergeState(base,p){
   if(p.knobs)Object.assign(st.knobs,p.knobs);
   if(p.sels)Object.assign(st.sels,p.sels);
   if(p.parts)st.parts=p.parts;
+  if(p.cuts)st.cuts=p.cuts.slice();
   if(p.cables)st.cables=p.cables.map((c,i)=>[c[0],c[1],c[2]||cableColors[i%cableColors.length],c[3]==null?1:c[3]]);
   if(p.mxClear)st.mx=st.mx.map(r=>r.map(()=>0));
   if(p.mx)st.mx=p.mx;
@@ -944,6 +973,7 @@ const TK={
  'AMP':{A:'アタック。',D:'ディケイ。',S:'サスティン。',R:'リリース。',VEL:'ベロシティ感度。',VOL:'このパートの音量。'},
  'FOLDER':{FOLD:'ウェーブフォールドの深さ。倍音が急増します。',SYM:'フォールドの対称性。偶数次倍音を足す。','FB AMT':'FB出力から戻すフィードバック量。',LIMIT:'出力のリミット(暴れ防止)。'},
  'UTILITY':{ATT1:'アッテニュエーター1。',ATT2:'アッテニュエーター2。',OFFSET:'固定オフセット電圧。',THRESH:'コンパレータ(CMP)のしきい値。'},
+ 'ADSR':{A:'アタック。',D:'ディケイ。',S:'サスティン。',R:'リリース。',LEVEL:'出力量。'},
  'DELAY':{TIME:'ディレイタイム。',FDBK:'フィードバック量。',TONE:'リピートの音色(高域のカット)。',MOD:'ディレイタイムの揺れ。',MIX:'原音とのバランス。'},
  'REVERB':{DECAY:'残響の長さ。',DAMP:'高域の減衰。',PRE:'プリディレイ。',MIX:'原音とのバランス。'},
  'CHORUS':{RATE:'変調速度。',DEPTH:'変調深度。',FDBK:'フィードバック。',MIX:'原音とのバランス。'},
@@ -1144,6 +1174,7 @@ function buildEngine(){
   };
 
   /* ---- envelopes ---- */
+  e.gK=cs(0);e.gS=cs(0);       // 汎用ADSR用ゲート: 鍵盤(B) / シーケンサー
   e.env={A:wn('adsr',1,1),B:wn('adsr',1,1)};
   ['A','B'].forEach(p=>{S(`env${p}.out`,e.env[p]);T(`env${p}.gate`,e.env[p],0)});
 
@@ -1175,6 +1206,19 @@ function buildEngine(){
   const wfIn=gn(1),wfFold=gn(1);e.wf=wn('folder',2,1);wfIn.connect(e.wf,0,0);wfFold.connect(e.wf,0,1);
   T('wf.in',wfIn);T('wf.fold',wfFold);S('wf.out',e.wf);
   e.util=wn('util',3,4);
+  /* ---- 汎用ADSR 1/2 ---- */
+  e.xenv=[];e.xlvl=[];e.xgIn=[];e.xmode=[0,1];
+  [1,2].forEach((n,i)=>{
+    const nd=wn('adsr',1,1),gIn=gn(1),lv=gn(1),inv=gn(-1);
+    gIn.connect(nd,0,0);nd.connect(lv);lv.connect(inv);
+    e.xenv.push(nd);e.xlvl.push(lv);e.xgIn.push(gIn);
+    S(`adsr${n}.out`,lv);S(`adsr${n}.inv`,inv);T(`adsr${n}.gate`,gIn);
+  });
+  e.xGate=(i,m)=>{const g=e.xgIn[i];
+    [[e.gK,0],[e.gS,0],[e.util,2]].forEach(([n,o])=>{try{n.disconnect(g,o,0)}catch(_){}});
+    try{e.gK.disconnect(g)}catch(_){} try{e.gS.disconnect(g)}catch(_){}
+    if(m===0)e.gK.connect(g);else if(m===1)e.gS.connect(g);else if(m===2)e.util.connect(g,2,0);
+    e.xmode[i]=m};
   ['ut.in1','ut.in2','ut.in3'].forEach((id,i)=>{const g=gn(1);g.connect(e.util,0,i);T(id,g)});
   ['ut.mix','ut.inv','ut.cmp','ut.max'].forEach((id,i)=>S(id,e.util,i));
 
@@ -1347,6 +1391,9 @@ function buildEngine(){
     if(c.to==='sh.in')shUpd();
   };
 
+  e.setCut=(id,on)=>{const t=tgt[id];if(!t||!t.normal.length)return;
+    if(on&&!t.cutFlag){t.cutFlag=true;t.n++;if(t.n===1)t.normal.forEach(n=>{try{n.src.disconnect(n.dst,n.out,n.inp)}catch(_){}})}
+    else if(!on&&t.cutFlag){t.cutFlag=false;t.n--;if(t.n===0)t.normal.forEach(n=>{try{n.src.connect(n.dst,n.out,n.inp)}catch(_){}})}};
   e.setAmt=(c,a)=>{if(c.g)c.g.gain.setTargetAtTime(a,ctx.currentTime,.01)};
 
   /* ---- quality ---- */
@@ -1355,7 +1402,7 @@ function buildEngine(){
   /* ---- voices (part B, paraphonic) ---- */
   e.voices=4;e.glide=.1;e.spread=.3;e.pbRange=2;e.held=new Map();e.bAll=false;e.bend=0;
   const bV=()=>e.vcos.filter(v=>v.part==='B');
-  const gate=(p,val,t)=>e.env[p].parameters.get('gate').setValueAtTime(val,t);
+  const gate=(p,val,t)=>{e.env[p].parameters.get('gate').setValueAtTime(val,t);if(p==='B')e.gK.offset.setValueAtTime(val,t)};
   e.stack=1;
   const slots=()=>{const bb=bV(),n=Math.max(1,Math.min(e.stack,bb.length||1)),o=[];for(let i=0;i+n<=bb.length;i+=n)o.push(bb.slice(i,i+n));return o};
   e.setStack=n=>{e.stack=n;const now=ctx.currentTime;e.held.clear();gate('B',0,now);bV().forEach(v=>{v.note=null;v.vg.gain.setTargetAtTime(0,now,.003)});e.bAll=false};
@@ -1387,6 +1434,7 @@ function buildEngine(){
   e.setBend=b=>{e.bend=b;e.pbC.offset.setTargetAtTime(b*e.pbRange/12,ctx.currentTime,.005)};
   e.panic=()=>{
     const t=ctx.currentTime;['A','B'].forEach(p=>e.env[p].parameters.get('gate').cancelScheduledValues(t));
+    e.gS.offset.cancelScheduledValues(t);e.gS.offset.setValueAtTime(0,t);e.gK.offset.cancelScheduledValues(t);
     gate('A',0,t);gate('B',0,t);e.held.clear();bV().forEach(v=>v.note=null);seqStop();
   };
 
@@ -1430,7 +1478,7 @@ function setSeqPitch(val,t,glide){
     });
   });
 }
-function seqGate(val,t){seqParts().forEach(p=>E.env[p].parameters.get('gate').setValueAtTime(val,t))}
+function seqGate(val,t){E.gS.offset.setValueAtTime(val,t);seqParts().forEach(p=>E.env[p].parameters.get('gate').setValueAtTime(val,t))}
 function scheduleStep(i,t){
   const sd=60/Math.max(40,+SQ.bpm.value||120)/4;
   const on=SQ.gates[i].classList.contains('on'),tie=SQ.ties[i].classList.contains('on'),rat=SQ.rats[i].classList.contains('on');
@@ -1473,6 +1521,7 @@ function seqStop(){
   if(!SEQ.on)return;
   SEQ.on=false;clearInterval(SEQ.timer);SEQ.q=[];SEQ.held=false;
   if(E){const t=ctx.currentTime;['A','B'].forEach(p=>E.env[p].parameters.get('gate').cancelScheduledValues(t));
+    E.gS.offset.cancelScheduledValues(t);E.gS.offset.setValueAtTime(0,t);
     seqParts().forEach(p=>E.env[p].parameters.get('gate').setValueAtTime(E.held.size&&p==='B'?1:0,t))}
   $$('.play',SQ.grid).forEach(x=>x.classList.remove('play'));
   SQ.play.classList.remove('on');SQ.play.textContent='▶ PLAY';SQ.running=false;
