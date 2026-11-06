@@ -94,13 +94,14 @@
   .nav-grid .card{ grid-column: span 2; }
   .nav-grid .card:nth-child(5){ grid-column: 3 / 5; } /* 5・6枚目は2段目の中央寄せ */
   .nav-grid .card:nth-child(6){ grid-column: 5 / 7; }
+  .nav-grid .card:nth-child(7){ grid-column: 4 / 6; } /* 7枚目は3段目の中央 */
   @media (max-width: 1100px) and (min-width: 761px){
     .nav-grid{ grid-template-columns: repeat(2, 1fr); max-width: 640px; }
-    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6){ grid-column: auto; }
+    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6), .nav-grid .card:nth-child(7){ grid-column: auto; }
   }
   @media (max-width: 760px){
     .nav-grid{ grid-template-columns: 1fr; max-width: 420px; }
-    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6){ grid-column: auto; }
+    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6), .nav-grid .card:nth-child(7){ grid-column: auto; }
   }
 
   .card{
@@ -172,6 +173,7 @@
   #card-oddity{ --card-color: #ff6a13; --card-glow: rgba(255,106,19,0.35); }
   #card-mogu{ --card-color: #d9dbe3; --card-glow: rgba(217,219,227,0.35); }
   #card-yumy8{ --card-color: #f0c93c; --card-glow: rgba(240,201,60,0.35); }
+  #card-super2026{ --card-color: #19f0ff; --card-glow: rgba(25,240,255,0.35); }
   #card-soon{ --card-color: var(--ink-dim); --card-glow: rgba(111,122,144,0.25); }
 
   footer{
@@ -293,6 +295,24 @@
       <div class="label">Yu_My-8</div>
       <div class="desc">8ボイス・ポリフォニック<br>ラダーフィルター・アルペジエーター・FX4種搭載</div>
       <span class="tag">POLY 8</span>
+    </a>
+
+    <a class="card" id="card-super2026" href="super-yu-my-2026.html">
+      <div class="icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="5" width="40" height="38" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <circle cx="13" cy="14" r="3" stroke="currentColor" stroke-width="2"></circle>
+          <circle cx="24" cy="14" r="3" stroke="currentColor" stroke-width="2"></circle>
+          <circle cx="35" cy="14" r="3" stroke="currentColor" stroke-width="2"></circle>
+          <circle cx="13" cy="26" r="2" fill="currentColor"></circle>
+          <circle cx="24" cy="26" r="2" fill="currentColor"></circle>
+          <circle cx="35" cy="26" r="2" fill="currentColor"></circle>
+          <path d="M13 26 Q18 38 24 34 T35 26" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+      </div>
+      <div class="label">SUPER Yu_My 2026</div>
+      <div class="desc">VCO12基・セミモジュラー<br>リングモジュレーター・S&amp;H・パッチケーブル搭載</div>
+      <span class="tag">SEMI-MODULAR</span>
     </a>
   </div>
 
