@@ -26,6 +26,7 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:6px 14px 
 .sub{white-space:nowrap;font-size:11px;letter-spacing:3px;color:var(--dim)}
 .sp{flex:1}
 .pill{border:1px solid var(--line);padding:4px 10px;font-size:11px;letter-spacing:2px;cursor:pointer;color:var(--tx);background:var(--panel);white-space:nowrap}
+.mslot{display:inline-flex;gap:6px;align-items:baseline;padding:4px 8px;letter-spacing:1px}.mslot small{font-size:10px;letter-spacing:0;color:var(--dim);max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mslot.empty{opacity:.65}#undoBtn:not(.ready){opacity:.5}
 .pill.on{border-color:var(--cy);color:var(--cy);box-shadow:inset 0 0 8px rgba(25,240,255,.3)}
 #pwr{border-color:var(--mg);color:var(--mg);font-weight:700}
 #pwr.on{background:var(--mg);color:#000;box-shadow:0 0 14px var(--mg)}
@@ -120,6 +121,7 @@ body.low #cables path{filter:none}
   <span class="sub">VISUAL</span>
   <span class="pill vz" data-v="low">LOW</span><span class="pill vz on" data-v="high">HIGH</span>
 </header>
+<div class="row" id="memRow" style="align-items:center;flex-wrap:wrap;gap:6px;padding:4px 14px"><span class="sub" style="letter-spacing:2px">MEMORY</span></div>
 
 <div class="row" id="vcoRow"></div>
 <div class="row" id="modRow"></div>
@@ -918,7 +920,45 @@ const FACTORY={
       'BIT CRUSH/BITS':9,'BIT CRUSH/RATE':2.5,'BIT CRUSH/MIX':.35,'BIT CRUSH/DRIVE':.2,'DELAY/MIX':.22,'REVERB/MIX':.15},
     sels:{'LFO 3#0':0},
     cables:[['rm1.out','wf.in'],['wf.out','fA.in'],['lfo3.out','wf.fold']],
-    seq:{pitch:[0,0,7,0,12,0,7,5,0,0,7,0,12,15,12,7],gate:'1011101111011011',tie:T16(),rat:T16(6,14),trig:T16(0,8),open:T16(),bpm:120}}
+    seq:{pitch:[0,0,7,0,12,0,7,5,0,0,7,0,12,15,12,7],gate:'1011101111011011',tie:T16(),rat:T16(6,14),trig:T16(0,8),open:T16(),bpm:120}}  ,
+  'Freak Modulation':{
+    knobs:{'VCO 01/LEVEL':.55,'VCO 02/LEVEL':.4,'VCO 01/FM':.3,'VCO 02/FM':.25,'VCO 03/OCT':1,'VCO 03/FM':.4,'VCO 03/LEVEL':.35,
+      'RING MOD 1/MIX':.8,'RING MOD 2/MIX':.6,'RING MOD 2/DRIVE':.3,
+      'FOLDER / FEEDBACK/FOLD':.45,'FOLDER / FEEDBACK/SYM':.2,'FOLDER / FEEDBACK/LIMIT':.6,
+      'SAMPLE & HOLD/RATE':7,'SAMPLE & HOLD/QUANT':.4,'SAMPLE & HOLD/LEVEL':.8,'LFO 1/RATE':3.2,'LFO 2/RATE':.7,'LFO 2/DEPTH':.8,
+      'PART A FILTER/CUTOFF':3200,'PART A FILTER/RES':.3,'PART A FILTER/ENV':.35,'PART A FILTER/DRIVE':.25,
+      'PART A AMP / ENV/A':.01,'PART A AMP / ENV/D':.45,'PART A AMP / ENV/S':.3,'PART A AMP / ENV/R':.3,
+      'BIT CRUSH/BITS':10,'BIT CRUSH/RATE':3,'BIT CRUSH/MIX':.3,'DELAY/MIX':.3,'DELAY/FDBK':.5,'REVERB/MIX':.25},
+    sels:{'VCO 01#0':0,'VCO 02#0':1,'VCO 03#0':3,'SAMPLE & HOLD#1':1,'LFO 2#0':1,'DELAY#0':3},
+    cables:[['vco2.out','vco1.fm',null,.55],['vco1.out','vco2.fm',null,.3],['lfo1.out','vco3.fm',null,.5],
+      ['rm1.out','rm2.x'],['rm2.out','wf.in'],['wf.out','fA.in'],['sh.out','fA.cut',null,.6],['lfo2.out','wf.fold',null,.7],['sh.out','cr.bits',null,.3]],
+    seq:{pitch:[0,7,3,12,0,5,10,7,0,12,7,3,5,0,10,15],gate:'1110110111011101',tie:T16(),rat:T16(3,11),trig:T16(0,3,6,9,12),open:T16(5,13),bpm:132}},
+  'Basic Lead':{
+    knobs:{'VCO 05/LEVEL':.7,'VCO 06/LEVEL':.7,'VCO 06/FINE':8,'VCO 07/LEVEL':0,'VCO 08/LEVEL':0,
+      'LEAD KEYBOARD/GLIDE':.3,'LEAD KEYBOARD/SPREAD':.35,'LEAD KEYBOARD/MOD W':.5,
+      'PART B FILTER/CUTOFF':2400,'PART B FILTER/RES':.3,'PART B FILTER/ENV':.4,'PART B FILTER/KEY':.5,'PART B FILTER/DRIVE':.2,
+      'PART B AMP / ENV/A':.02,'PART B AMP / ENV/D':.35,'PART B AMP / ENV/S':.7,'PART B AMP / ENV/R':.3,
+      'LFO 1/RATE':5,'LFO 1/DEPTH':.5,'DELAY/MIX':.25,'DELAY/FDBK':.35,'REVERB/MIX':.2},
+    sels:{'VCO 05#0':0,'VCO 06#0':0,'LEAD KEYBOARD#0':1,'PART B FILTER#0':0,'DELAY#0':2},
+    cables:[['lfo1.out','vco5.pitch',null,.06],['lfo1.out','vco6.pitch',null,.06]],
+    seq:{gate:T16()}},
+  'Ring Mod Bell':{
+    knobs:{'VCO 01/LEVEL':.8,'VCO 05/COARSE':5,'VCO 05/LEVEL':0,'VCO 02/LEVEL':0,'VCO 03/LEVEL':0,'VCO 04/LEVEL':0,'VCO 06/LEVEL':0,'VCO 07/LEVEL':0,'VCO 08/LEVEL':0,
+      'RING MOD 1/MIX':1,'RING MOD 1/X LVL':1,'RING MOD 1/Y LVL':1,'RING MOD 1/DRIVE':.35,'PART A FILTER/DRIVE':.3,'PART A AMP / ENV/VOL':1,
+      'PART A FILTER/CUTOFF':6500,'PART A FILTER/RES':.15,'PART A FILTER/ENV':.2,'PART A FILTER/KEY':.4,
+      'PART A AMP / ENV/A':.005,'PART A AMP / ENV/D':.7,'PART A AMP / ENV/S':0,'PART A AMP / ENV/R':.7,
+      'DELAY/MIX':.3,'DELAY/FDBK':.45,'REVERB/MIX':.4,'REVERB/DECAY':4},
+    sels:{'VCO 01#0':3,'VCO 05#0':3,'STEP SEQUENCER#0':2,'DELAY#0':2,'REVERB#0':0},
+    seq:{pitch:[12,0,7,0,16,0,9,0,12,0,4,0,14,0,7,0],gate:'1010101010101010',tie:T16(),rat:T16(),trig:T16(),open:T16(),bpm:96}},
+  'Drone':{
+    knobs:{'VCO 01/LEVEL':.5,'VCO 02/LEVEL':.5,'VCO 03/LEVEL':.5,'VCO 04/LEVEL':.4,'VCO 01/OCT':-1,'VCO 02/OCT':-1,'VCO 02/FINE':-9,'VCO 03/FINE':7,'VCO 04/COARSE':7,'VCO 01/PWM':.6,
+      'LFO 2/RATE':.12,'LFO 3/RATE':.07,'LFO 3/DEPTH':.7,
+      'PART A FILTER/CUTOFF':1400,'PART A FILTER/RES':.35,'PART A FILTER/ENV':.1,'PART A FILTER/DRIVE':.2,
+      'PART A AMP / ENV/A':.8,'PART A AMP / ENV/D':.5,'PART A AMP / ENV/S':1,'PART A AMP / ENV/R':.85,
+      'CHORUS / PHASER/MIX':.45,'CHORUS / PHASER/DEPTH':.6,'REVERB/MIX':.5,'REVERB/DECAY':6,'DELAY/MIX':.25,'DELAY/FDBK':.5,'STEREO/WIDTH':1.5},
+    sels:{'VCO 01#0':0,'VCO 02#0':0,'VCO 03#0':1,'VCO 04#0':2,'REVERB#0':1,'DELAY#0':0},
+    cables:[['lfo3.out','fA.cut',null,.5],['lfo2.out','vco1.pwm',null,.7]],
+    seq:{pitch:Array(16).fill(0),gate:T16(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15),tie:T16(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15),rat:T16(),trig:T16(),open:T16(),bpm:60}}
 };
 let curName='INIT';
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(_){return null}};
@@ -1013,6 +1053,32 @@ document.addEventListener('mouseover',ev=>{clearTimeout(tipT);tipEl.style.displa
     const w=tipEl.offsetWidth,h=tipEl.offsetHeight;const x=Math.min(innerWidth-w-6,Math.max(4,r.left));let y=r.bottom+6;if(y+h>innerHeight)y=r.top-h-6;
     tipEl.style.left=x+'px';tipEl.style.top=y+'px'},450)});
 document.addEventListener('mousedown',()=>{clearTimeout(tipT);tipEl.style.display='none'});
+/* ---- QUICK MEMORY M1-M12 / RESET / UNDO ---- */
+const MEMKEY='syu2026.mem';
+const MEMDEF=['Acid Ring Bass','Crystal Random','Wide Pad (KEYS)','Metal Fold Seq','Freak Modulation','Basic Lead','Ring Mod Bell','Drone',null,null,null,null];
+let mem=(()=>{try{const m=JSON.parse(lsGet(MEMKEY)||'null');if(Array.isArray(m)&&m.length===12)return m}catch(_){}return MEMDEF.map(n=>n?{f:n}:null)})();
+const memSave=()=>lsSet(MEMKEY,JSON.stringify(mem));
+let undoSt=null,undoName='INIT',memCur=-1;
+const memBtns=[];
+function memPaint(){memBtns.forEach((b,i)=>{const m=mem[i];b.classList.toggle('empty',!m);b.classList.toggle('on',i===memCur);
+  $('small',b).textContent=m?(m.f||m.name):'—';
+  b.dataset.tip='MEMORY M'+(i+1)+': '+(m?(m.f||m.name):'(空き)')+'\nクリック: 呼び出し\nShift+クリック: 現在の音を保存\nAlt+クリック: このメモリを空にする'})}
+function undoPush(){undoSt=capture();undoName=curName;$('#undoBtn').classList.add('ready')}
+function memRecall(i){const m=mem[i];if(!m){toast('M'+(i+1)+' は空です(Shift+クリックで現在の音を保存)');return}
+  undoPush();if(m.f&&FACTORY[m.f])loadFactory(m.f);else if(m.st){applyState(mergeState(DEFAULT,m.st));setCur(m.name)}
+  memCur=i;memPaint();toast('M'+(i+1)+': '+(m.f||m.name))}
+function memStore(i){const nm=(curName&&curName!=='INIT'?curName:'MEMORY '+(i+1));mem[i]={name:nm,st:capture()};memCur=i;memSave();memPaint();toast('M'+(i+1)+' に保存: '+nm)}
+const mr=$('#memRow');
+for(let i=0;i<12;i++){const b=el('span','pill mslot','M'+(i+1)+'<small></small>');
+  b.onclick=ev=>{if(ev.altKey){mem[i]=null;if(memCur===i)memCur=-1;memSave();memPaint();toast('M'+(i+1)+' を空にしました')}else if(ev.shiftKey)memStore(i);else memRecall(i)};
+  mr.appendChild(b);memBtns.push(b)}
+mr.appendChild(el('div','sp'));
+const rb=(id,t,tip)=>{const b=el('span','pill',t);b.id=id;b.dataset.tip=tip;mr.appendChild(b);return b};
+rb('resetBtn','RESET','全部を初期設定に戻します(ノブ・ケーブル・CUT・シーケンス)。\n直前の状態は UNDO で戻せます。\n音が出なくなったらまずこれ。').onclick=()=>{undoPush();applyState(DEFAULT);setCur('INIT');memCur=-1;memPaint();toast('初期設定に戻しました(UNDOで元に戻せます)')};
+rb('cabRstBtn','CABLES RESET','ケーブルと CUT だけを全部外します(ノブの設定は残る)。\n配線ミスで音が出ないときに。UNDOで戻せます。').onclick=()=>{undoPush();while(cables.length)removeCable(0);clearCuts();closeCP();drawCables();toast('ケーブルとCUTを全て外しました(UNDOで戻せます)')};
+rb('undoBtn','UNDO','RESET / CABLES RESET / メモリ呼び出しの直前の状態に戻します。\nもう一度押すと元(やり直し)に戻ります。').onclick=()=>{if(!undoSt){toast('UNDOできる操作がありません');return}
+  const cur=capture(),cn=curName;applyState(mergeState(DEFAULT,undoSt));setCur(undoName);undoSt=cur;undoName=cn;memCur=-1;memPaint();toast('UNDO しました')};
+memPaint();
 {
   const pp=el('div','');pp.id='pp';
   pp.innerHTML=`<input type="text" id="pname" value="INIT" maxlength="40" spellcheck="false">
