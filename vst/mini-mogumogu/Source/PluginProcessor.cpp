@@ -254,7 +254,8 @@ void MoguProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midi)
                     if (auto b = pi->getBpm())
                         if (*b >= 1.0) { hostOk = true; ppq = *q; bpm = *b; hostPlaying = pi->getIsPlaying(); }
     hostDriven.store (hostOk);
-    const bool seqOn = hostOk ? hostPlaying : R ("run").load() > 0.5f;
+    // RUN is the on/off switch of the sequencer in both clock modes; HOST SYNC only chooses the clock (DAW transport or internal TEMPO)
+    const bool seqOn = (hostOk ? hostPlaying : true) && R ("run").load() > 0.5f;
     running.store (seqOn);
 
     mm::Params prm;

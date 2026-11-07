@@ -89,9 +89,15 @@ int main (int argc, char** argv)
     MockHead head; head.bpm = 120; head.ppq = 0; head.playing = false;
     check (render (60, &head) < 1e-3f, "host stopped -> silent");
     head.playing = true;
-    check (render (200, &head, nullptr, &pk) > 0.005f && p.hostDriving(), "host playing -> pattern plays from the DAW clock");
+    check (render (200, &head) < 1e-3f, "host playing but RUN off -> sequencer stays silent (no stuck sound)");
+    { juce::MidiBuffer m; m.addEvent (juce::MidiMessage::noteOn (1, 48, 0.8f), 0); head.playing = true;
+      check (render (60, &head, &m) > 0.01f, "host playing, RUN off -> MIDI keys still play");
+      juce::MidiBuffer o; o.addEvent (juce::MidiMessage::noteOff (1, 48), 0); render (1, &head, &o); render (300, &head); }
+    p.setValue ("run", 1.f);
+    check (render (200, &head, nullptr, &pk) > 0.005f && p.hostDriving(), "host playing + RUN on -> pattern plays from the DAW clock");
     head.playing = false; render (400, &head);
     check (render (40, &head) < 1e-3f, "host stop silences");
+    p.setValue ("run", 0.f);
 
     // ---- KEY -> TRANS
     p.setValue ("hostSync", 0.f); p.setValue ("run", 1.f); render (20);

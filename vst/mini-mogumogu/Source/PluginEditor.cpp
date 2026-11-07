@@ -459,7 +459,7 @@ public:
         {
             auto* b = new Btn (t, std::move (f), std::move (st)); owned.add (b); addAndMakeVisible (b); b->setBounds (x, y, w, 36); return b;
         };
-        auto* run = addBtn ("RUN", 1162, 186, 74, [this] { proc.setValue ("run", proc.value ("run") > 0.5f ? 0.f : 1.f); }, [this] { return proc.seqRunning(); });
+        auto* run = addBtn ("RUN", 1162, 186, 74, [this] { proc.setValue ("run", proc.value ("run") > 0.5f ? 0.f : 1.f); }, [this] { return proc.value ("run") > 0.5f; });
         run->altText = "STOP";
         addBtn ("RND", 1242, 186, 56, [this] { proc.randomizeSteps(); });
         addBtn ("RESET", 1304, 186, 74, [this] { proc.resetSteps(); });
