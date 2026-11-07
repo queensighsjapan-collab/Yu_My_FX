@@ -114,6 +114,35 @@ int main()
         check (std::abs (b90 - 24) <= 2 && std::abs (b120 - 32) <= 2 && std::abs (b180 - 48) <= 2, "host sync: 90/120/180 BPM give 24/32/48 steps in 4 s");
         check (std::abs ((double) b180 / (double) b90 - 2.0) < 0.2, "host sync: 180 BPM is about twice as fast as 90 BPM");
         check (std::abs (noBpm - base) <= 1 && std::abs (base - 33) <= 2, "host sync without host tempo falls back to the TEMPO knob");
+        // ---- stuck-sound guards: nothing may sound without a held key, whatever the host transport does
+        {
+            p.setCurrentProgram (4);
+            setP ("hsync", 1.0f); setP ("arpon", 1.0f); setP ("arplt", 0.0f); setP ("msq", 1.0f);
+            head.bpm = 120; head.hasBpm = true; head.playing = true; head.ppq = 0;
+            juce::AudioBuffer<float> b (2, bs);
+            auto runHost = [&] (int blocks, juce::MidiBuffer first = {})
+            {
+                double acc = 0;
+                for (int i = 0; i < blocks; ++i)
+                {
+                    b.clear(); juce::MidiBuffer m; if (i == 0) m = first;
+                    p.processBlock (b, m); acc += rms (b);
+                    if (head.playing) head.ppq += (double) bs / sr * head.bpm / 60.0;
+                }
+                return (float) (acc / blocks);
+            };
+            check (runHost (300) < 1e-4f, "DAW playing, arp + mod-seq on, no key held: silent");
+            runHost (1, on (48, 100)); runHost (100);
+            runHost (1, off (48));
+            check (runHost (400) < 1e-3f, "arp: releasing the key stops the arpeggio (no stuck sound)");
+            runHost (1, on (48, 100)); runHost (50);
+            head.playing = false; head.ppq = 0; runHost (20);
+            juce::MidiBuffer ao; ao.addEvent (juce::MidiMessage::allNotesOff (1), 0);
+            runHost (1, ao);
+            check (runHost (400) < 1e-3f, "transport stop + all-notes-off while the arp runs: silent");
+            head.playing = true;
+            setP ("arpon", 0.0f); setP ("msq", 0.0f);
+        }
         p.setPlayHead (nullptr);
         setP ("hsync", 0.0f);
     }
