@@ -32,18 +32,18 @@ Minimoog 系のモノフォニック・アナログモデリング・シンセ�
 - **MODULATION**：`SOURCE`（OSC3 / LFO TRI / LFO SQR / S&H / NOISE）、`RATE`、`PITCH`（ピッチへの深さ）、`FILTER`（カットオフへの深さ）。MOD ホイールを上げると、PITCH / FILTER の深さが最大まで上がります。
 - **EFFECTS**：`DRIVE`（AMOUNT）／ CHORUS（RATE・DEPTH・MIX）／ DELAY（TIME・FEEDBACK・TONE・MIX、`SYNC`：FREE は TIME、1/8・1/8.・1/4 は曲のテンポに同期）／ REVERB（SIZE・MIX）。
 - **SEQUENCER**：
-  - `RUN`：開始／停止。`RND`：ランダムなパターン、`RESET`：初期パターンに戻す。
+  - `RUN`：シーケンサーのオン／オフ（HOST SYNC の ON／OFF に関係なく効きます。OFF の間は MIDI 鍵盤で普通に弾けます）。`RND`：ランダムなパターン、`RESET`：初期パターンに戻す。
   - `TEMPO`（HOST SYNC OFF のときのテンポ）、`LENGTH`（1〜16）、`GATE`（音の長さ）、`SWING`、`RATE`（1/8・1/16・1/32）。
   - `DIRECTION`：FWD / REV / PING（行って戻る）/ RND。
   - `KEY>TRANS`：ON のとき、再生中に鍵盤を押すと C3 を基準にパターンを移調します（鍵盤は鳴りません）。`TRANSPOSE` に現在の移調量が出ます。
   - 各ステップ：上の赤い丸が ON/OFF、ノート表示を上下ドラッグ（またはホイール）で C1〜C5、`TIE` でタイ（次のステップへ音をつなぐ）。再生中のステップは光ります。LENGTH より後ろのステップは暗くなります。
-- **HOST SYNC**（上部）：ON ＝ DAW の再生・停止・テンポ・再生位置に合わせます（画面に `CLOCK: DAW` と出ます）。OFF ＝ `RUN` と `TEMPO` で単体動作（`CLOCK: INTERNAL`）。
+- **HOST SYNC**（上部）：シーケンサーのテンポの出どころを選びます。ON ＝ DAW のテンポ・再生位置に合わせます（`RUN` が ON のときに DAW の再生・停止に連動。画面に `CLOCK: DAW` と出ます）。OFF ＝ 内部の `TEMPO` で動きます（`CLOCK: INTERNAL`）。どちらでも、`RUN` が OFF の間はシーケンサーは鳴りません。
 
 ## 4. MIDI
 ノートオン／オフ、ピッチベンド、CC 1（モジュレーション）、CC 5（GLIDE）、CC 7（VOLUME）、CC 71（EMPHASIS）、CC 72（LOUDNESS DECAY）、CC 73（LOUDNESS ATTACK）、CC 74（CUTOFF）、CC 75（CONTOUR）、CC 91（REVERB MIX）、CC 93（CHORUS MIX）、CC 120 / 123（オールノートオフ）。
 
 ## 5. DAW での使い方のヒント
-- シーケンサーだけで鳴らすなら、インストゥルメントトラックを作って DAW を再生するだけです（HOST SYNC ON）。
+- シーケンサーだけで鳴らすなら、インストゥルメントトラックを作り、`RUN` を ON にして DAW を再生します（HOST SYNC ON）。`RUN` が OFF なら、DAW を再生しても鳴りません。
 - つまみは DAW のオートメーションで動かせます（シーケンサーの各ステップのノート／ON／TIE も同様）。
 - リバーブとディレイの余韻は、ノートを止めても少し残ります。
 

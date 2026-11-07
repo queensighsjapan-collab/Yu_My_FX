@@ -8,8 +8,9 @@
 - 音源：3オシレーター（TRI / SHK / SAW / SQR / PLS1 / PLS2）＋ノイズ（WHITE / PINK）、24dB/oct ラダーフィルター（ドライブ付き）、フィルター EG・アンプ EG、グライド、モジュレーション（OSC3 / LFO TRI / LFO SQR / S&H / NOISE）
 - エフェクト：ドライブ、コーラス、ディレイ（FREE / 1/8 / 1/8. / 1/4、DAW のテンポに同期）、リバーブ、出力コンプレッサー
 - シーケンサー：16ステップ（ON / ノート C1〜C5 / TIE）、LENGTH、GATE、SWING、RATE（1/8・1/16・1/32）、方向（FWD / REV / PING / RND）、KEY>TRANS
-- **HOST SYNC ON（既定）**：DAW の再生／停止・テンポ・再生位置に合わせて鳴ります
-- **HOST SYNC OFF**：`RUN` と `TEMPO` で単体でも鳴ります（Standalone 版もこちら）
+- **RUN**：シーケンサーのオン／オフ（初期は OFF。OFF の間は MIDI 鍵盤で普通に弾けます）
+- **HOST SYNC ON（既定）**：RUN が ON のとき、DAW の再生／停止・テンポ・再生位置に合わせて鳴ります
+- **HOST SYNC OFF**：RUN が ON のとき、`TEMPO`（内部クロック）で単体でも鳴ります（Standalone 版もこちら）
 - MIDI：ノート、ピッチベンド、モジュレーションホイール、CC（1, 5, 7, 71〜75, 91, 93）、All Notes Off（120, 123）
 - プリセット：工場出荷 10 音色（DAW のプログラム切替／画面上部の PRESET 欄）。つまみ・シーケンスの状態は DAW のプロジェクトに保存されます
 - 画面：固定比率でリサイズ可能（幅 640〜3840px）。PC キーボード（A W S E D F T G Y H U J K O L P ;、Z / X でオクターブ、スペースで RUN）
