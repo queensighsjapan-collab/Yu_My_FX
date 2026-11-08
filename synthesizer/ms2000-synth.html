@@ -9,13 +9,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DotGothic16&family=Noto+Sans+JP:wght@400;500&display=swap">
 <style>
 :root{
-  /* Layout: a fixed 1700px-wide hardware panel; narrow screens scroll sideways.
+  /* Layout: a fixed 1716px-wide hardware panel; narrow screens scroll sideways.
      Left column: display and patch bay. Middle: oscillators to LFOs. Right: effects, pitch, arpeggiator. Keys and wheels below. */
-  --bg:#0e1315; --fg:#dce7e5; --muted:#8ea3a0;
-  --panel-a:#227991; --panel-b:#16596f; --ink:#f2f7f5; --rule:rgba(242,247,245,.55);
-  --wood-a:#5a2315; --wood-b:#2b100a; --wood-hi:#80361f;
-  --lcd-bg:#a9bd5c; --lcd-fg:#18240a; --lcd-grid:rgba(169,189,92,.6);
-  --led:#ff5238; --led-off:#52211a;
+  --bg:#0e1315; --fg:#dce7e5; --muted:#8f97a6;
+  --panel-a:#222839; --panel-b:#151a25; --ink:#ece6d6; --rule:rgba(255,176,46,.55); --amber:#ffb02e; --field:#0b0e14;
+  --wood-a:#5e3519; --wood-b:#2b1a10; --wood-hi:#9a6234;
+  --lcd-bg:#1c1206; --lcd-bg2:#2a1b09; --lcd-fg:#ffb02e; --lcd-grid:rgba(0,0,0,.35);
+  --led:#ff6a2b; --led-off:#40261a;
   --f-label:'Barlow Condensed','Arial Narrow',sans-serif;
   --f-lcd:'DotGothic16','Courier New',monospace;
   --f-ui:'Noto Sans JP',system-ui,sans-serif;
@@ -44,122 +44,152 @@ h1{font:500 24px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
 .back{display:inline-block;margin:0 0 14px;padding:7px 16px;border:1px solid var(--muted);border-radius:20px;color:var(--muted);font:500 14px/1 var(--f-label);letter-spacing:.18em;text-decoration:none;transition:color .2s,border-color .2s}
 .back:hover,.back:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
 .ch.cur{text-decoration:underline;animation:cb 1s steps(1) infinite}
-@keyframes cb{50%{background:rgba(24,36,10,.28)}}
-@media (prefers-reduced-motion:reduce){.ch.cur{animation:none;background:rgba(24,36,10,.28)}}
+@keyframes cb{50%{background:rgba(255,176,46,.45)}}
+@media (prefers-reduced-motion:reduce){.ch.cur{animation:none;background:rgba(255,176,46,.45)}}
 .lcd{cursor:default}
 .foot{margin:14px 0 0;color:var(--muted);font-size:15px;line-height:1.7}
 
 .scroller{overflow-x:auto;overflow-y:hidden}
-.sizer{width:1700px}
-.stage{width:1700px}
+.sizer{width:1716px}
+.stage{width:1716px}
 
 /* instrument body */
-.synth{display:grid;grid-template-columns:36px 1fr 36px;border-radius:8px;overflow:hidden;
+.synth{display:grid;grid-template-columns:28px 1fr 28px;border-radius:8px;overflow:hidden;
   box-shadow:0 24px 50px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.05)}
 .wood{
   background:
-    repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.22) 2px 3px,rgba(255,170,110,.05) 3px 5px,rgba(0,0,0,.12) 5px 6px),
-    repeating-linear-gradient(90deg,rgba(0,0,0,.18) 0 7px,rgba(0,0,0,0) 7px 13px,rgba(130,55,28,.25) 13px 16px),
-    linear-gradient(90deg,var(--wood-b),var(--wood-a) 45%,var(--wood-hi) 60%,var(--wood-b));
+    repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.22) 2px 3px,rgba(255,200,130,.07) 3px 5px,rgba(0,0,0,.12) 5px 6px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 7px,rgba(0,0,0,0) 7px 13px,rgba(217,160,96,.12) 13px 16px),
+    linear-gradient(90deg,var(--wood-hi),var(--wood-a));
 }
+.wood:first-child{box-shadow:inset -2px 0 0 rgba(0,0,0,.55)}
+.wood:last-child{box-shadow:inset 2px 0 0 rgba(0,0,0,.55)}
 .main{display:flex;flex-direction:column;min-width:0}
 .panel{
-  display:grid;grid-template-columns:304px 1fr 420px;gap:14px;padding:16px 18px 14px;color:var(--ink);
+  display:grid;grid-template-columns:294px 908px 404px;grid-template-rows:548px 132px;column-gap:15px;row-gap:10px;
+  height:706px;padding:8px 8px 8px 16px;color:var(--ink);
   background:
-    repeating-linear-gradient(90deg,rgba(255,255,255,.028) 0 1px,rgba(0,0,0,0) 1px 3px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 1px,rgba(0,0,0,0) 1px 3px),
     linear-gradient(180deg,var(--panel-a),var(--panel-b));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -12px 20px rgba(0,0,0,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16)
 }
-.col{display:flex;flex-direction:column;gap:12px;min-width:0}
-.col>.srow,.col>.sec.vp{flex:1}
-.srow{display:flex;gap:10px;min-width:0}
+.col{display:flex;flex-direction:column;min-width:0}
+#mid,#right{margin-top:22px;height:526px;justify-content:space-between}
+#left{gap:12px}
+.srow{display:flex;gap:8px;min-width:0}
 .srow>.sec{flex:1 1 auto}
+#mid>.srow:nth-child(1){height:156px}
+#mid>.srow:nth-child(2){height:170px}
+#mid>.srow:nth-child(3){height:182px}
+#right>.srow:nth-child(1){height:156px}
+#right>.srow:nth-child(2){height:104px}
+#right>.srow:nth-child(3){height:104px}
+#right>.srow:nth-child(4){height:136px}
+#right>.srow:nth-child(1) .ctl{padding:0}
+#right>.srow:nth-child(1)>.sec{flex:1 1 0}
+#right>.srow:nth-child(1) .row{justify-content:space-between;gap:8px}
+#right>.srow:nth-child(1) .lbl{font-size:11.5px;letter-spacing:0}
 
 /* sections */
 .sec{display:flex;flex-direction:column;min-width:0}
-.sec>h3{margin:0 0 6px;display:flex;align-items:center;gap:8px;font:600 14px/1 var(--f-label);letter-spacing:.14em;color:var(--ink)}
+.sec>h3{margin:0 0 4px;display:flex;align-items:center;gap:8px;font:600 14px/1 var(--f-label);letter-spacing:.1em;color:var(--ink);height:18px}
 .sec>h3::after{content:"";flex:1;height:1px;background:var(--rule)}
-.row{display:flex;align-items:stretch;justify-content:space-around;gap:0;flex:1}
-.ctl{display:grid;grid-template-rows:1fr auto auto;justify-items:center;align-items:center;gap:2px;min-width:0;padding:0 3px}
+.row{display:flex;align-items:center;justify-content:space-around;gap:0;flex:1}
+.ctl{display:grid;grid-template-rows:auto auto auto;justify-items:center;align-items:center;gap:2px;min-width:0;padding:0 3px}
 .ctl>svg{align-self:center}
 .lbl{font:600 12.5px/1.05 var(--f-label);letter-spacing:.015em;text-align:center;color:var(--ink);text-transform:uppercase;white-space:nowrap}
-.ro{font:600 11.5px/1 var(--f-label);letter-spacing:.02em;color:#e4f5f0;white-space:nowrap;min-height:12px}
+.ro{font:600 11.5px/1 var(--f-label);letter-spacing:.02em;color:var(--ink);white-space:nowrap;min-height:12px}
 .stack{display:flex;flex-direction:column;justify-content:space-around;gap:4px;padding-right:10px}
 
 /* knobs */
 .knob{display:block;overflow:visible;cursor:ns-resize;touch-action:none;outline:none}
 .knob:focus-visible{filter:drop-shadow(0 0 3px #fff)}
-.knob .tk{stroke:rgba(242,247,245,.85);stroke-width:1;stroke-linecap:round}
+.knob .tk{stroke:rgba(236,230,214,.8);stroke-width:1;stroke-linecap:round}
 .knob .t{fill:var(--ink);font:600 10.5px var(--f-label);letter-spacing:.02em;opacity:.85}
-.knob .t.on{opacity:1;font-weight:700}
+.knob .t.on{opacity:1;fill:var(--amber)}
+.knob .arc{fill:none;stroke-width:2;stroke-linecap:round;opacity:.85}
 
 /* buttons */
 .bctl .bt{display:flex;flex-direction:column;align-items:center;gap:4px}
 .led{display:block;width:6px;height:6px;border-radius:50%;background:var(--led-off);box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
-.led.on{background:var(--led);box-shadow:0 0 6px 1px rgba(255,82,56,.75)}
+.led.on{background:var(--led);box-shadow:0 0 6px 1px rgba(255,106,43,.75)}
 .cap{appearance:none;border:0;padding:0;width:30px;height:15px;border-radius:2px;cursor:pointer;
-  background:linear-gradient(#6a7174,#2c3234);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 3px rgba(0,0,0,.55)}
-.cap:active,.cap[aria-pressed="true"]{background:linear-gradient(#2c3234,#40474a);transform:translateY(1px);box-shadow:0 1px 1px rgba(0,0,0,.5)}
+  background:linear-gradient(#6c7378,#23282b);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 2px 3px rgba(0,0,0,.55)}
+.cap:active,.cap[aria-pressed="true"]{background:linear-gradient(#23282b,#2e3438);transform:translateY(1px);box-shadow:0 1px 1px rgba(0,0,0,.5)}
 .cap:focus-visible{outline:2px solid #fff;outline-offset:2px}
 
 /* left column */
-.brand{display:flex;flex-direction:column;gap:3px}
-.wm{font:700 30px/1 var(--f-label);letter-spacing:.14em;color:var(--ink)}
-.wm-sub{font:600 12px/1 var(--f-label);letter-spacing:.16em;color:#e4f5f0}
-.lcd{position:relative;background:var(--lcd-bg);border-radius:3px;padding:8px 10px;width:244px;
-  box-shadow:inset 0 2px 6px rgba(0,0,0,.5),0 0 0 3px #0b1113,0 0 0 4px rgba(255,255,255,.14)}
-.lcd::after{content:"";position:absolute;inset:8px 10px;pointer-events:none;
+.brand{height:72px;display:flex;flex-direction:column;justify-content:flex-start;padding:0 0 0 2px;margin-top:-2px}
+.wm{font:700 38px/40px var(--f-label);letter-spacing:.1em;color:var(--ink);margin-top:2px}
+.wm-bar{width:56px;height:2px;background:var(--amber);margin:2px 0 4px 2px}
+.wm-sub{font:600 11.5px/1 var(--f-label);letter-spacing:.12em;color:var(--muted);white-space:nowrap}
+.lcd{position:relative;background:#050608;border-radius:5px;padding:4px;width:292px;height:72px;flex:none;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+.lcd-in{position:relative;height:100%;border-radius:3px;padding:5px 8px;background:linear-gradient(180deg,var(--lcd-bg2),var(--lcd-bg))}
+.lcd::after{content:"";position:absolute;inset:4px;pointer-events:none;border-radius:3px;
   background-image:linear-gradient(transparent 2px,var(--lcd-grid) 2px 3px),linear-gradient(90deg,transparent 2px,var(--lcd-grid) 2px 3px);
   background-size:3px 3px}
-.ln{display:flex;height:24px}
-.ch{display:block;width:14px;font:400 19px/24px var(--f-lcd);color:var(--lcd-fg);text-align:center;white-space:pre}
-.brow{display:flex;justify-content:space-around;padding-top:2px}
-.vph,.vpr{display:grid;grid-template-columns:14px repeat(3,1fr);align-items:center;justify-items:center}
-.vph{font:600 11.5px/1 var(--f-label);letter-spacing:.06em;color:#e4f5f0;margin-bottom:2px}
-.vpr b{font:700 15px var(--f-label);color:var(--ink)}
-.vpr .ctl{width:100%}
+.ln{display:flex;height:27px}
+.ch{display:block;flex:1;font:400 21px/27px var(--f-lcd);color:var(--lcd-fg);text-align:center;white-space:pre;background:rgba(255,176,46,.10);margin:1.5px 1px}
+.brow{display:flex;justify-content:space-around;padding-top:0;margin-top:-4px;margin-bottom:-4px}
+.brow .ctl{grid-template-rows:auto auto}
+.vph,.vpr{display:grid;grid-template-columns:22px 100px 100px 56px;column-gap:4px;align-items:center;justify-items:center}
+.vph{font:600 12.5px/1 var(--f-label);letter-spacing:.04em;color:var(--ink);margin:2px 0 0}
+.vpr{flex:1}
+.vpr b{font:600 18px var(--f-label);color:var(--ink)}
+.vpr .ctl{width:100%;padding:0}
+.sec.vp{flex:1}
 .sec.vp .row{flex-direction:column;justify-content:space-between;gap:0}
+.dd{appearance:none;-webkit-appearance:none;width:100px;height:26px;padding:0 24px 0 8px;border:1px solid rgba(143,151,166,.6);border-radius:3px;background:#0d0f13 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffb02e' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 7px center;
+  color:var(--ink);font:500 14px var(--f-label);letter-spacing:.03em;cursor:pointer}
+.dd:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+.dd option{background:#12151a;color:var(--ink)}
 
-/* mod sequence */
-.steps{flex:1 1 90px;min-width:0;display:flex;gap:2px;align-self:stretch;margin-left:6px;touch-action:none;cursor:ns-resize;padding-block:4px}
-.st{flex:1;position:relative;background:rgba(0,0,0,.3);border-radius:1px}
-.st i{position:absolute;left:0;right:0;bottom:0;background:var(--ink);opacity:.9}
-.sec.grow{flex:1 1 0;min-width:0}
-.seqrow{align-items:center;justify-content:flex-start}
+/* mod sequence / vocoder bars */
+.steps{flex:1 1 90px;min-width:0;display:flex;gap:2px;align-self:stretch;touch-action:none;cursor:ns-resize}
+.st{flex:1;position:relative;background:transparent;border-radius:1px}
+.st i{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#f2ead6,#d4c9ac);border-radius:1px}
+.st.cur i{background:linear-gradient(180deg,#ffe2a0,#ffb02e)}
+.st.cur{outline:1px solid var(--led);outline-offset:0}
+.sec.grow{min-width:0}
+.seqrow{align-items:center;justify-content:flex-start;gap:6px}
+.seqrow .steps{align-self:stretch}
+.field{background:var(--field);border-radius:3px;padding:6px 6px 0}
 
 /* keyboard deck */
-.deck{display:flex;background:linear-gradient(#0c1012,#151a1c);border-top:3px solid #080b0c}
-.deck-l{width:226px;flex:none;display:flex;align-items:flex-end;justify-content:center;gap:14px;padding:16px 18px 14px}
+.deck{display:flex;height:224px;background:linear-gradient(#0b0d10,#161a1d);border-top:3px solid #050607}
+.deck-l{width:234px;flex:none;display:flex;align-items:flex-end;justify-content:center;gap:16px;padding:0 18px 14px 14px}
 .oct{display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:4px}
 .oct .row2{display:flex;flex-direction:column;gap:10px}
-.dl{font:600 13px/1.1 var(--f-label);letter-spacing:.06em;color:#c9d6d3;text-align:center;text-transform:uppercase}
+.dl{font:600 13px/1.1 var(--f-label);letter-spacing:.04em;color:rgba(236,230,214,.8);text-align:center;text-transform:uppercase}
 .wcol{display:flex;flex-direction:column;align-items:center;gap:6px}
-.wh{position:relative;width:38px;height:150px;border-radius:6px;background:#050607;overflow:hidden;cursor:ns-resize;touch-action:none;
+.wh{position:relative;width:38px;height:146px;border-radius:6px;background:#050607;overflow:hidden;cursor:ns-resize;touch-action:none;
   box-shadow:inset 0 0 0 2px #1d2224,0 1px 0 rgba(255,255,255,.08)}
 .wh .rg{position:absolute;inset:3px;border-radius:4px;
   background:repeating-linear-gradient(180deg,#2c3032 0 2px,#101213 2px 5px,#3d4244 5px 6px,#0c0d0e 6px 9px)}
 .wh::after{content:"";position:absolute;inset:3px;border-radius:4px;pointer-events:none;
   background:linear-gradient(180deg,rgba(0,0,0,.85),rgba(0,0,0,0) 28%,rgba(0,0,0,0) 72%,rgba(0,0,0,.85))}
-.wh .mk{position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;background:rgba(255,82,56,.7);z-index:2}
-.keys{position:relative;width:1378px;height:196px;flex:none;touch-action:none;user-select:none;-webkit-user-select:none}
+.wh .mk{position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;background:rgba(255,106,43,.75);z-index:2}
+.keys{position:relative;width:1378px;height:186px;margin-top:20px;flex:none;touch-action:none;user-select:none;-webkit-user-select:none}
 .wk,.bk{position:absolute;top:0;cursor:pointer}
-.wk{width:52px;height:196px;border-radius:0 0 4px 4px;
-  background:linear-gradient(180deg,#d9d5cb 0,#f7f4ee 8%,#ebe7de 86%,#c9c4b8 100%);box-shadow:inset -1px 0 #b9b4a8}
-.wk.down{background:linear-gradient(180deg,#b9b5aa 0,#dcd8cd 10%,#cfcabe 100%);transform:translateY(1px)}
-.bk{width:32px;height:120px;z-index:2;border-radius:0 0 3px 3px;
+.wk{width:52px;height:186px;border-radius:0 0 4px 4px;
+  background:linear-gradient(180deg,#d9d5c8 0,#f3eddc 8%,#eee8d8 86%,#c9c3b0 100%);box-shadow:inset -1px 0 #9b9582}
+.wk.down{background:linear-gradient(180deg,#d9c07a,#ffb02e);transform:translateY(1px)}
+.bk{width:32px;height:115px;z-index:2;border-radius:0 0 3px 3px;
   background:linear-gradient(180deg,#303435 0,#101213 70%,#050606 100%);box-shadow:inset 1px 0 rgba(255,255,255,.1),2px 3px 4px rgba(0,0,0,.5)}
-.bk.down{background:linear-gradient(180deg,#242829,#0a0b0c);height:117px}
-.vocrow{grid-column:1/-1;border-top:1px solid var(--rule);padding-top:10px;display:flex;gap:28px;align-items:stretch}
-.vocrow>.voc{flex:1 1 0;min-width:0}
-.vocrow>.grow{flex:0 0 280px}
-.sec.voc .row{justify-content:flex-start;gap:20px;align-items:center}
-.barblk{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.barcap{font:600 13px/1 var(--f-label);letter-spacing:.12em}
-.steps.vb{margin-left:0;height:64px;min-width:0;flex:none}
-.nums{display:flex;gap:2px}
-.nums span{flex:1;text-align:center;font:600 10.5px/1 var(--f-label);color:#e4f5f0}
-.st.cur{outline:1px solid var(--led);outline-offset:0}
-.steps.pan .st::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,255,255,.25)}
+.bk.down{background:linear-gradient(180deg,#8a6a24,#c98a1c);height:112px}
+
+/* vocoder row */
+.vocrow{grid-column:1/-1;display:grid;grid-template-columns:520px 1fr 1fr 404px;column-gap:8px;align-items:stretch}
+.vocrow>.sec{min-width:0}
+.sec.voc .row{justify-content:space-around;gap:0;align-items:center}
+.sec.voc .stack{padding-right:0}
+.sec.bars .field{flex:1;display:flex;flex-direction:column;margin-top:2px}
+.steps.vb{margin:0;flex:1;min-width:0}
+.nums{display:flex;gap:2px;height:16px;align-items:center}
+.nums span{flex:1;text-align:center;font:600 10.5px/1 var(--f-label);color:var(--ink)}
+.steps.pan .st::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(255,176,46,.8);z-index:1}
+.sec.seqsec .field{flex:1;display:flex;align-items:stretch;margin-top:2px;padding:6px}
 </style>
 
 <header class="top">
@@ -212,7 +242,7 @@ h1{font:500 24px/1.3 var(--f-ui);margin:0 0 6px;text-wrap:balance}
     </div>
   </div>
 </div>
-<p class="foot">鍵盤は44鍵(F2〜C6)。パネルは横幅1700pxの固定で、画面が狭いときは横にスクロールします。</p>
+<p class="foot">鍵盤は44鍵(F2〜C6)。パネルは横幅1716pxの固定で、画面が狭いときは横にスクロールします。</p>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <radialGradient id="kb" cx="34%" cy="28%" r="85%">
@@ -227,6 +257,9 @@ const ANG0 = -135, ANG1 = 135;
 const P = (c, r, a) => { const t = a * Math.PI / 180; return [c + r * Math.sin(t), c - r * Math.cos(t)]; };
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const C = {}, V = {};
+const ACC = { 'OSC 1': '#ffb02e', 'OSC 2': '#ffb02e', 'MIXER': '#ffb02e', 'FILTER': '#38c7d9', 'AMP': '#38c7d9',
+  'EG 1': '#d86bd1', 'EG 2': '#d86bd1', 'LFO 1': '#d86bd1', 'LFO 2': '#d86bd1', 'VIRTUAL PATCH': '#d86bd1',
+  'MOD FX': '#7fd16a', 'DELAY FX': '#7fd16a', 'EQ': '#7fd16a', 'PITCH': '#ff7a50', 'ARPEGGIATOR': '#ff7a50', 'VOCODER': '#ff7a50', 'MASTER': '#ece6d6' };
 const scale = 1;
 
 /* ---------- control definitions ---------- */
@@ -272,19 +305,19 @@ const vp = () => {
   const dd = [4, 0, 5, 6];
   for (let i = 1; i <= 4; i++) {
     h += `<div class="vpr"><b>${i}</b>`
-      + ctl(S('vs' + i, '', SRC, { plain: 1, ro: 1, small: 1, def: i - 1, lcd: `VP${i} SOURCE` }), 'VIRTUAL PATCH')
-      + ctl(S('vd' + i, '', DST, { plain: 1, ro: 1, small: 1, def: dd[i - 1], lcd: `VP${i} DEST` }), 'VIRTUAL PATCH')
-      + ctl(K('vi' + i, '', { min: -63, max: 63, def: 0, small: 1, ro: 1, fmt: sg, lcd: `VP${i} INTENSITY` }), 'VIRTUAL PATCH')
+      + ctl(S('vs' + i, '', SRC, { dd: 1, def: i - 1, lcd: `VP${i} SOURCE` }), 'VIRTUAL PATCH')
+      + ctl(S('vd' + i, '', DST, { dd: 1, def: dd[i - 1], lcd: `VP${i} DEST` }), 'VIRTUAL PATCH')
+      + ctl(K('vi' + i, '', { min: -63, max: 63, def: 0, size: 44, fmt: sg, lcd: `VP${i} INTENSITY` }), 'VIRTUAL PATCH')
       + '</div>';
   }
   return h + '</div></section>';
 };
-const seq = () => `<section class="sec grow"><h3>MOD SEQUENCE</h3><div class="row seqrow">
+const seq = () => `<section class="sec grow seqsec"><h3>MOD SEQUENCE</h3><div class="row seqrow">
   <div class="stack">${ctl(B('msq', 'ON/OFF'), 'MOD SEQ')}${ctl(B('msk', 'KEY SYNC'), 'MOD SEQ')}</div>
-  <div class="steps" id="steps">${'<span class="st"><i></i></span>'.repeat(16)}</div></div></section>`;
+  <div class="field" style="flex:1;display:flex;flex-direction:column"><div class="steps" id="steps">${'<span class="st"><i></i></span>'.repeat(16)}</div><div class="nums">${Array.from({ length: 16 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div></div></div></section>`;
 
 $('#left').innerHTML = `
-  <div class="brand"><div class="wm">Yu_My</div><div class="wm-sub">ANALOG MODELING SYNTHESIZER</div></div>
+  <div class="brand"><div class="wm">YM2000</div><div class="wm-bar"></div><div class="wm-sub">ANALOG MODELING SYNTHESIZER &nbsp;/&nbsp; Yu_My</div></div>
   <div class="lcd" id="lcd" aria-live="polite"></div>
   ${sec('MASTER', [
     K('vol', 'VOLUME', { def: 100 }), K('ai1', 'AUDIO IN 1', { def: 80 }), K('ai2', 'AUDIO IN 2', { def: 0 }),
@@ -320,8 +353,8 @@ $('#mid').innerHTML = `
 
 $('#right').innerHTML = `
   <div class="srow">
-    ${sec('MOD FX', [S('mft', 'TYPE', ['CHO/FLG','ENS','PHASER'], { R: 27 }), K('mfs', 'SPEED', { size: 44 }), K('mfd', 'DEPTH', { size: 44, def: 0 })])}
-    ${sec('DELAY FX', [S('dt', 'TYPE', ['STEREO','CROSS','L/R'], { R: 27 }), K('dtm', 'TIME', { size: 44 }), K('ddp', 'DEPTH', { size: 44, def: 0 })])}
+    ${sec('MOD FX', [S('mft', 'TYPE', ['CHO/FLG','ENS','PHASER'], { R: 20 }), K('mfs', 'SPEED', { size: 32 }), K('mfd', 'DEPTH', { size: 32, def: 0 })])}
+    ${sec('DELAY FX', [S('dt', 'TYPE', ['STEREO','CROSS','L/R'], { R: 20 }), K('dtm', 'TIME', { size: 32 }), K('ddp', 'DEPTH', { size: 32, def: 0 })])}
   </div>
   <div class="srow">
     ${sec('PITCH', [K('ptn', 'TUNE', { min: -50, max: 50, def: 0, fmt: sg }), K('pbr', 'BEND RANGE', { min: -12, max: 12, def: 2, int: 1, fmt: sg }),
@@ -334,26 +367,25 @@ $('#right').innerHTML = `
   </div>
   <div class="srow">
     ${sec('ARPEGGIATOR', [{ stack: [B('arpon', 'ON/OFF'), B('arplt', 'LATCH')] },
-      S('arpt', 'TYPE', ['UP','DOWN','ALT1','ALT2','RANDOM','TRIGGER'], { R: 34 }),
+      S('arpt', 'TYPE', ['UP','DOWN','ALT1','ALT2','RANDOM','TRIGGER'], { R: 28 }),
       K('arpr', 'RANGE', { min: 1, max: 4, def: 1, int: 1 }), K('arpg', 'GATE TIME', { def: 64 }),
       K('arptm', 'TEMPO', { min: 20, max: 300, def: 120, int: 1, fmt: v => v + ' BPM' })])}
   </div>`;
 
 /* ---------- vocoder row ---------- */
 const vLev = Array(16).fill(100), vPan = Array(16).fill(64);
-const barBlock = (id, cap, cls) => `<div class="barblk"><div class="barcap">${cap}</div><div class="steps vb ${cls}" id="${id}">${'<span class="st"><i></i></span>'.repeat(16)}</div><div class="nums">${Array.from({ length: 16 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div></div>`;
+const barSec = (id, cap, cls) => `<section class="sec bars"><h3>${cap}</h3><div class="field"><div class="steps vb ${cls}" id="${id}">${'<span class="st"><i></i></span>'.repeat(16)}</div><div class="nums">${Array.from({ length: 16 }, (_, i) => `<span>${i + 1}</span>`).join('')}</div></div></section>`;
 $('.panel').insertAdjacentHTML('beforeend', `<div class="vocrow"><section class="sec voc"><h3>VOCODER</h3><div class="row vrow">
-  ${[S('vmode', 'VOICE MODE', ['SINGLE', 'VOCODER'], { R: 36 }),
-     S('vsrc', 'SOURCE', ['MIC', 'FILE', 'DEMO'], { R: 30, def: 2 }),
+  ${[S('vmode', 'VOICE MODE', ['SINGLE', 'VOCODER'], { R: 20 }),
+     S('vsrc', 'SOURCE', ['MIC', 'FILE', 'DEMO'], { R: 22, def: 2 }),
      { stack: [B('micon', 'MIC ON', { action: 1 }), B('vload', 'LOAD FILE', { mom: 1, action: 1 })] },
      K('vfs', 'FORMANT SHIFT', { min: -2, max: 2, def: 0, int: 1, fmt: sg }),
      K('vcl', 'CLARITY', { def: 30 })].map(x => item(x, 'VOCODER')).join('')}
-  ${barBlock('vlev', 'CH LEVEL', '')}${barBlock('vpan', 'CH PAN', 'pan')}
-</div></section>${seq()}</div>`);
+</div></section>${barSec('vlev', 'CH LEVEL', '')}${barSec('vpan', 'CH PAN', 'pan')}${seq()}</div>`);
 
 /* ---------- LCD ---------- */
 const lcd = $('#lcd');
-lcd.innerHTML = [0, 1].map(() => `<div class="ln">${'<span class="ch"> </span>'.repeat(16)}</div>`).join('');
+lcd.innerHTML = '<div class="lcd-in">' + [0, 1].map(() => `<div class="ln">${'<span class="ch"> </span>'.repeat(16)}</div>`).join('') + '</div>';
 const lines = [...lcd.querySelectorAll('.ln')].map(l => [...l.children]);
 const put = (i, t) => { t = (t + ' '.repeat(16)).slice(0, 16); lines[i].forEach((s, k) => { s.textContent = t[k]; }); };
 let tm;
@@ -371,6 +403,8 @@ function knobSvg(d) {
   if (sel) { r = 13; S_ = 2 * d.R + 34; }
   else { S_ = d.size || (d.small ? 40 : 46); r = S_ * 0.3; }
   const c = S_ / 2;
+  const acc = ACC[d.sec] || '#ece6d6';
+  const arcEl = (sel || d.plain) ? '' : `<path class="arc" stroke="${acc}" d=""/>`;
   let g = '';
   const pos = i => ANG0 + (ANG1 - ANG0) * i;
   if (sel) {
@@ -404,13 +438,14 @@ function knobSvg(d) {
     <circle cx="${c}" cy="${c + 1.2}" r="${r + 1.8}" fill="#04080a" opacity=".5"/>
     <circle cx="${c}" cy="${c}" r="${r + .9}" fill="#0b0c0d" stroke="rgba(255,255,255,.16)" stroke-width=".6"/>
     <circle cx="${c}" cy="${c}" r="${r}" fill="url(#kb)"/>
+    <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${acc}" stroke-opacity=".9" stroke-width="1.4"/>
     <circle cx="${c}" cy="${c}" r="${r - 1.4}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width=".8"/>
-    <circle cx="${c}" cy="${c}" r="${r + .3}" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.2" stroke-dasharray="1 1.5"/>
+    ${arcEl}
     <g class="ind"><line x1="${c}" y1="${c - r * .3}" x2="${c}" y2="${c - r * .92}" stroke="#f4f4ef" stroke-width="2" stroke-linecap="round"/></g>`;
   vx1 = Math.max(vx1, S_);
   const VW_ = vx1 - vx0;
   const svg = `<svg class="knob" width="${VW_.toFixed(0)}" height="${S_}" viewBox="${vx0.toFixed(1)} 0 ${VW_.toFixed(1)} ${S_}" tabindex="0" role="slider" aria-label="${esc(d.lcd || d.label || d.id)}" aria-valuemin="${d.labels ? 0 : d.min}" aria-valuemax="${d.labels ? n - 1 : d.max}"><rect x="${vx0.toFixed(1)}" width="${VW_.toFixed(1)}" height="${S_}" fill="transparent"/>${g}${body}</svg>`;
-  return { svg, c };
+  return { svg, c, r };
 }
 const angleOf = (d, v) => {
   const f = d.labels ? v / (d.labels.length - 1) : (v - d.min) / (d.max - d.min);
@@ -423,7 +458,12 @@ const fmtV = (d, v) => {
 };
 function paintK(d) {
   const v = V[d.id];
+  if (d.dd) { d.sel.value = String(Math.round(v)); return; }
   d.ind.setAttribute('transform', `rotate(${angleOf(d, v)} ${d.c} ${d.c})`);
+  if (d.arc) {
+    const a1 = angleOf(d, v), R = d.r + 10, [x0, y0] = P(d.c, R, ANG0), [x1, y1] = P(d.c, R, a1);
+    d.arc.setAttribute('d', a1 <= ANG0 + .01 ? '' : `M${x0.toFixed(2)} ${y0.toFixed(2)}A${R} ${R} 0 ${a1 - ANG0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`);
+  }
   if (d.labels && !d.plain) d.svg.querySelectorAll('.t').forEach((t, i) => t.classList.toggle('on', i === Math.round(v)));
   if (d.roEl) d.roEl.textContent = fmtV(d, v);
   d.svg.setAttribute('aria-valuenow', Math.round(v));
@@ -463,10 +503,16 @@ function attach(d) {
   });
 }
 function buildKnob(h, d) {
-  const { svg, c } = knobSvg(d);
-  d.c = c;
+  if (d.dd) {
+    h.innerHTML = `<select class="dd" aria-label="${esc(d.lcd || d.id)}">${d.labels.map((l, i) => `<option value="${i}">${esc(l)}</option>`).join('')}</select>`;
+    d.sel = h.querySelector('select');
+    d.sel.addEventListener('change', () => setV(d, +d.sel.value));
+    paintK(d); return;
+  }
+  const { svg, c, r } = knobSvg(d);
+  d.c = c; d.r = r;
   h.innerHTML = svg + (d.label ? `<div class="lbl">${esc(d.label)}</div>` : '') + (d.ro ? '<div class="ro"></div>' : '');
-  d.svg = h.querySelector('svg'); d.ind = d.svg.querySelector('.ind'); d.roEl = h.querySelector('.ro');
+  d.svg = h.querySelector('svg'); d.ind = d.svg.querySelector('.ind'); d.arc = d.svg.querySelector('.arc'); d.roEl = h.querySelector('.ro');
   paintK(d); attach(d);
 }
 
