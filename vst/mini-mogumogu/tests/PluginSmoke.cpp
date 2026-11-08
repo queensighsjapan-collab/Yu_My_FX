@@ -99,6 +99,25 @@ int main (int argc, char** argv)
     check (render (40, &head) < 1e-3f, "host stop silences");
     p.setValue ("run", 0.f);
 
+    // ---- chaos guard: random transport start/stop/jumps and RUN toggles must never leave a sound hanging
+    {
+        juce::Random rr (11); p.setValue ("hostSync", 1.f);
+        MockHead h; h.bpm = 133; h.ppq = 0; h.playing = true;
+        for (int i = 0; i < 900; ++i)
+        {
+            if (rr.nextInt (40) == 0) h.playing = ! h.playing;
+            if (rr.nextInt (60) == 0) h.ppq = rr.nextFloat() * 64.0;
+            if (rr.nextInt (50) == 0) p.setValue ("run", rr.nextBool() ? 1.f : 0.f);
+            if (rr.nextInt (70) == 0) p.setValue ("sqDir", (float) rr.nextInt (4));
+            render (1, &h);
+        }
+        p.setValue ("run", 0.f); h.playing = true;
+        render (10, &h); render (400, &h);
+        check (render (60, &h) < 1e-3f, "chaos: after random transport / RUN changes, RUN off ends in silence");
+        p.setValue ("hostSync", 0.f); p.setValue ("run", 1.f); render (100); p.setValue ("run", 0.f); render (400);
+        check (render (60) < 1e-3f, "chaos: internal clock RUN off ends in silence");
+    }
+
     // ---- KEY -> TRANS
     p.setValue ("hostSync", 0.f); p.setValue ("run", 1.f); render (20);
     { juce::MidiBuffer m; m.addEvent (juce::MidiMessage::noteOn (1, 55, 0.8f), 0); render (2, nullptr, &m); }

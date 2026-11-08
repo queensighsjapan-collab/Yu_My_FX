@@ -1,0 +1,44 @@
+name: VST tests (Linux)
+# Runs the headless plug-in tests of every VST on each push / PR: the smoke test (MIDI, sequencer / arpeggiator, DAW transport,
+# "no stuck sound" guards, state) and pluginval (strictness 5, including opening the editor). A failing test fails the check.
+on:
+  push:
+    paths: ['vst/**', '.github/workflows/vst-tests.yml']
+  pull_request:
+    paths: ['vst/**', '.github/workflows/vst-tests.yml']
+  workflow_dispatch:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: mini-mogumogu, dir: vst/mini-mogumogu, opt: MM_BUILD_TESTS, smoke: MiniMogumogu_SmokeTest, vst3: MiniMogumogu_VST3 }
+          - { name: ym303,         dir: vst/ym303,         opt: YM_BUILD_TESTS, smoke: YM303_SmokeTest,        vst3: YM303_VST3 }
+          - { name: ym2000,        dir: vst/ym2000,        opt: YM_BUILD_TESTS, smoke: YM2000_SmokeTest,       vst3: YM2000_VST3 }
+    name: test (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+            libxext-dev libfreetype-dev libfontconfig1-dev libgl1-mesa-dev
+      - name: Configure
+        run: cmake -S ${{ matrix.dir }} -B build -DCMAKE_BUILD_TYPE=Release -D${{ matrix.opt }}=ON
+      - name: Build
+        run: cmake --build build --target ${{ matrix.smoke }} ${{ matrix.vst3 }} --parallel
+      - name: Smoke test
+        run: |
+          f=$(find build -type f -name "${{ matrix.smoke }}" | head -1)
+          echo "running $f"
+          xvfb-run -a "$f" | tee smoke.log
+          ! grep -q "^FAIL" smoke.log
+      - name: pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip
+          unzip -q pluginval.zip
+          v=$(find build -type d -name "*.vst3" | head -1)
+          echo "validating $v"
+          xvfb-run -a ./pluginval --strictness-level 5 --validate-in-process "$v"
