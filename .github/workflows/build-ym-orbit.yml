@@ -1,0 +1,45 @@
+name: Build YM Orbit (macOS VST3)
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['vst/ym-orbit/**', '.github/workflows/build-ym-orbit.yml']
+
+defaults:
+  run:
+    working-directory: vst/ym-orbit
+    shell: bash
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target YMOrbit_VST3 --parallel
+
+      # Ad-hoc signed (not notarized): the tester must clear the quarantine
+      # flag after installing — see TESTER-MAC.md, which ships inside the zip.
+      - name: Sign and package
+        run: |
+          BUNDLE="build/YMOrbit_artefacts/Release/VST3/YM Orbit.vst3"
+          test -d "$BUNDLE"
+          chmod -R u+rwX,go+rX "$BUNDLE"
+          chmod +x "$BUNDLE/Contents/MacOS/YM Orbit"
+          codesign --force --deep --sign - "$BUNDLE"
+          codesign --verify --deep --strict --verbose=2 "$BUNDLE"
+          echo "architectures: $(lipo -archs "$BUNDLE/Contents/MacOS/YM Orbit")"
+          mkdir -p dist package
+          cp -R "$BUNDLE" package/
+          cp TESTER-MAC.md package/
+          (cd package && ditto -c -k . "../dist/YM-Orbit-1.2.0-macOS.zip")
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM-Orbit-1.2.0-macOS
+          path: vst/ym-orbit/dist/YM-Orbit-1.2.0-macOS.zip
