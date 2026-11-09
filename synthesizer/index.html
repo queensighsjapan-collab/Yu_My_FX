@@ -95,13 +95,15 @@
   .nav-grid .card:nth-child(5){ grid-column: 3 / 5; } /* 5・6枚目は2段目の中央寄せ */
   .nav-grid .card:nth-child(6){ grid-column: 5 / 7; }
   .nav-grid .card:nth-child(7){ grid-column: 4 / 6; } /* 7枚目は3段目の中央 */
+  .nav-grid .card:nth-child(9){ grid-column: 3 / 5; } /* 9・10枚目は4段目の中央寄せ */
+  .nav-grid .card:nth-child(10){ grid-column: 5 / 7; }
   @media (max-width: 1100px) and (min-width: 761px){
     .nav-grid{ grid-template-columns: repeat(2, 1fr); max-width: 640px; }
-    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6), .nav-grid .card:nth-child(7){ grid-column: auto; }
+    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6), .nav-grid .card:nth-child(7), .nav-grid .card:nth-child(9), .nav-grid .card:nth-child(10){ grid-column: auto; }
   }
   @media (max-width: 760px){
     .nav-grid{ grid-template-columns: 1fr; max-width: 420px; }
-    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6), .nav-grid .card:nth-child(7){ grid-column: auto; }
+    .nav-grid .card, .nav-grid .card:nth-child(5), .nav-grid .card:nth-child(6), .nav-grid .card:nth-child(7), .nav-grid .card:nth-child(9), .nav-grid .card:nth-child(10){ grid-column: auto; }
   }
 
   .card{
@@ -175,6 +177,8 @@
   #card-yumy8{ --card-color: #f0c93c; --card-glow: rgba(240,201,60,0.35); }
   #card-super2026{ --card-color: #19f0ff; --card-glow: rgba(25,240,255,0.35); }
   #card-bacteria{ --card-color: #5cf07a; --card-glow: rgba(92,240,122,0.35); }
+  #card-ymdrums{ --card-color: #ff4757; --card-glow: rgba(255,71,87,0.35); }
+  #card-ymvocoder{ --card-color: #a55eea; --card-glow: rgba(165,94,234,0.35); }
   #card-soon{ --card-color: var(--ink-dim); --card-glow: rgba(111,122,144,0.25); }
 
   footer{
@@ -333,6 +337,38 @@
       <div class="label">YuMy Bacteria</div>
       <div class="desc">Access Virus TI風・マルチ16パート<br>ボーコーダー・ランダム生成・アルペジエーター搭載</div>
       <span class="tag">VIRTUAL ANALOG</span>
+    </a>
+
+    <a class="card" id="card-ymdrums" href="ym-drums.html">
+      <div class="icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <rect x="19.5" y="5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <rect x="34" y="5" width="9" height="9" rx="2" fill="currentColor"></rect>
+          <rect x="5" y="19.5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <rect x="19.5" y="19.5" width="9" height="9" rx="2" fill="currentColor"></rect>
+          <rect x="34" y="19.5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <rect x="5" y="34" width="9" height="9" rx="2" fill="currentColor"></rect>
+          <rect x="19.5" y="34" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+          <rect x="34" y="34" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2.5"></rect>
+        </svg>
+      </div>
+      <div class="label">YM DRUMS</div>
+      <div class="desc">16ボイス・ドラムマシン<br>32ステップ・シーケンサー／リバーブ搭載</div>
+      <span class="tag">DRUM MACHINE</span>
+    </a>
+
+    <a class="card" id="card-ymvocoder" href="ym-vocoder.html">
+      <div class="icon">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="19" y="3" width="10" height="20" rx="5" stroke="currentColor" stroke-width="2.5"></rect>
+          <path d="M12 20 a12 12 0 0 0 24 0 M24 32 V41 M16 41 H32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>
+          <path d="M6 12 V20 M42 12 V20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path>
+        </svg>
+      </div>
+      <div class="label">YM VOCODER</div>
+      <div class="desc">10バンド・アナリシス<br>ラックマウント型ボコーダー／アンサンブル搭載</div>
+      <span class="tag">VOCODER</span>
     </a>
   </div>
 

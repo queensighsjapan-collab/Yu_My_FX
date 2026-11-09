@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<link rel="icon" href="data:," />
+<title>YM Vocoder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    color-scheme: dark;
+    --panel:#17181a;
+    --panel-2:#1e2023;
+    --panel-3:#26282c;
+    --edge:#33363b;
+    --edge-hi:#45484e;
+    --ink:#ece5d3;
+    --ink-dim:#a89f8a;
+    --ink-faint:#6f6a5c;
+    --accent:#ff7a1a;
+    --accent-soft:#ffb066;
+    --red:#ff3b30;
+    --green:#3ddc68;
+    --amber:#ffc233;
+    --led-off:#3a2320;
+    --screw:#0c0d0e;
+    --fader-track:#0b0b0c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#08090a radial-gradient(1400px 500px at 50% -10%, #1c1e20 0%, #08090a 60%);
+    color:var(--ink);
+    font-family:"Barlow", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:10px 8px 28px;
+  }
+
+  /* ============ 19" 2U RACK UNIT ============ */
+  .rack-unit{
+    display:flex;align-items:stretch;width:100%;
+    filter:drop-shadow(0 22px 44px rgba(0,0,0,.65));
+  }
+  /* rack ears */
+  .rack-ear{
+    flex:0 0 36px;
+    background:linear-gradient(90deg,#101112,#26282c 55%,#191b1d);
+    border:1px solid var(--edge);
+    display:flex;flex-direction:column;justify-content:space-between;align-items:center;
+    padding:16px 0;
+  }
+  .rack-ear.left{border-radius:8px 0 0 8px;border-right:2px solid #000;}
+  .rack-ear.right{border-radius:0 8px 8px 0;border-left:2px solid #000;background:linear-gradient(270deg,#101112,#26282c 55%,#191b1d);}
+  .ear-hole{
+    width:17px;height:17px;border-radius:50%;flex:none;
+    background:radial-gradient(circle at 38% 32%, #3d4046, #060707 72%);
+    box-shadow:inset 0 2px 4px rgba(0,0,0,.95), inset 0 -1px 1px rgba(255,255,255,.14), 0 1px 0 rgba(255,255,255,.06);
+    position:relative;
+  }
+  .ear-hole::after{content:"";position:absolute;left:3px;right:3px;top:7px;height:2.5px;background:#000;border-radius:2px;transform:rotate(42deg);opacity:.85;}
+  .ear-label{
+    writing-mode:vertical-rl;font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:700;
+    letter-spacing:.34em;color:var(--ink-faint);text-transform:uppercase;
+  }
+  /* grab handles */
+  .handle{
+    flex:0 0 26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+    background:linear-gradient(180deg,#202226,#17181a);
+    border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);
+  }
+  .handle .mount{width:16px;height:12px;background:linear-gradient(180deg,#33363b,#141518);border:1px solid #000;border-radius:2px;box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}
+  .handle .bar{
+    width:9px;height:104px;margin:-2px 0;border-radius:5px;
+    background:linear-gradient(90deg,#050506,#43464c 45%,#0c0d0e);
+    border:1px solid #000;box-shadow:2px 3px 6px rgba(0,0,0,.6), inset 0 0 2px rgba(255,255,255,.2);
+  }
+  /* main chassis */
+  .rack-main{
+    flex:1;min-width:0;
+    background:linear-gradient(180deg,#232529 0%,var(--panel) 10%,var(--panel) 92%,#101112 100%);
+    border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex;flex-direction:column;
+  }
+  /* top silkscreen strip */
+  .panel-top{
+    display:flex;align-items:center;gap:14px;
+    padding:8px 14px 7px;border-bottom:1px solid var(--edge);
+  }
+  .brand{display:flex;align-items:baseline;gap:12px;flex:none;}
+  .brand h1{
+    margin:0;font-family:"Barlow Condensed",sans-serif;font-weight:700;
+    font-size:24px;letter-spacing:.14em;line-height:1;color:var(--ink);white-space:nowrap;
+  }
+  .brand h1 .thin{color:var(--accent);font-weight:600;}
+  .brand p{margin:0;font-family:"Barlow Condensed",sans-serif;letter-spacing:.32em;font-size:10.5px;color:var(--ink-dim);text-transform:uppercase;white-space:nowrap;}
+  .status-line{flex:1;min-width:0;font-size:12.5px;color:var(--ink-dim);line-height:1.35;}
+  .status-line b{color:var(--accent-soft);font-weight:600;}
+  .model{
+    flex:none;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;letter-spacing:.18em;
+    border:1px solid var(--edge-hi);border-radius:4px;padding:5px 10px;color:var(--accent-soft);background:#101114;
+  }
+  .size-tag{flex:none;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.2em;color:var(--ink-faint);border:1px solid var(--edge);border-radius:4px;padding:5px 8px;}
+
+  /* horizontal section flow */
+  .panel-row{display:flex;align-items:stretch;flex:1;}
+  section.psec{
+    padding:10px 12px 12px;min-width:0;
+    display:flex;flex-direction:column;gap:9px;
+  }
+  section.psec + section.psec{border-left:1px solid var(--edge);}
+  section.psec > h2{
+    margin:0;font-family:"Barlow Condensed",sans-serif;font-weight:600;
+    font-size:12.5px;letter-spacing:.26em;color:var(--ink);text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;white-space:nowrap;
+  }
+  section.psec > h2 .no{color:var(--accent);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:0;}
+  section.psec > h2::after{content:"";flex:1;height:1px;background:var(--edge);}
+  .psec.remote{flex:0 0 118px;}
+  .psec.mic{flex:0 0 168px;}
+  .psec.inst{flex:0 0 178px;}
+  .psec.guitar{flex:0 0 120px;align-items:center;}
+  .psec.guitar > h2{align-self:stretch;}
+  .psec.voice{flex:1 1 auto;}
+  .psec.balance{flex:0 0 122px;align-items:center;}
+  .psec.balance > h2{align-self:stretch;}
+  .psec.output{flex:0 0 176px;}
+  .col{display:flex;flex-direction:column;gap:9px;min-width:0;}
+  .note{font-size:11.5px;color:var(--ink-faint);line-height:1.45;margin:0;}
+  .note b{color:var(--ink-dim);font-weight:600;}
+  .printed{font-family:"Barlow Condensed",sans-serif;font-size:10px;font-weight:600;letter-spacing:.18em;color:var(--ink-faint);text-transform:uppercase;text-align:center;}
+
+  /* ---------- buttons / switches ---------- */
+  .btn{
+    cursor:pointer;font-family:"Barlow Condensed",sans-serif;font-weight:600;letter-spacing:.16em;
+    font-size:12px;text-transform:uppercase;color:var(--ink);
+    background:linear-gradient(180deg,#33363b,#222427);
+    border:1px solid var(--edge-hi);border-radius:5px;padding:7px 11px;
+    box-shadow:0 2px 0 #0a0a0b, inset 0 1px 0 rgba(255,255,255,.09);
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap;justify-content:center;
+  }
+  .btn:active{transform:translateY(1px);box-shadow:0 1px 0 #0a0a0b;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+  .btn.on{background:linear-gradient(180deg,#5a3410,#3a2108);border-color:#8a5416;color:var(--accent-soft);}
+  .btn .dot{width:8px;height:8px;border-radius:50%;background:var(--led-off);flex:none;}
+  .btn.on .dot,.btn.lit .dot{background:var(--amber);box-shadow:0 0 7px var(--amber);}
+  .btn.mic-on .dot{background:var(--red);box-shadow:0 0 7px var(--red);}
+  .btnrow{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+  .switch-stack{display:flex;flex-direction:column;gap:8px;}
+  .switch-stack .btn{width:100%;padding:9px 5px;letter-spacing:.1em;font-size:11.5px;}
+  .fname{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-dim);
+    max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fname:empty{display:none;}
+
+  .power-btn{
+    display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;width:100%;
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;letter-spacing:.22em;font-size:13px;
+    color:var(--ink);background:linear-gradient(180deg,#2e3034,#1b1c1f);
+    border:1px solid var(--edge-hi);border-radius:6px;padding:9px 12px;
+    box-shadow:0 3px 0 #0a0a0b, inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .power-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0a0a0b;}
+  .power-led{width:9px;height:9px;border-radius:50%;background:var(--led-off);box-shadow:inset 0 1px 1px rgba(0,0,0,.7);flex:none;}
+  body.powered .power-led{background:var(--red);box-shadow:0 0 8px var(--red), inset 0 1px 1px rgba(255,255,255,.4);}
+
+  /* phones jack (printed panel furniture) */
+  .phones{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .jack{
+    width:30px;height:30px;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, #000 0 34%, #3a3d42 38%, #101112 78%, #2c2e32);
+    border:1px solid #000;box-shadow:inset 0 1px 2px rgba(255,255,255,.15), 0 1px 2px rgba(0,0,0,.7);
+  }
+
+  /* ---------- knobs ---------- */
+  .knob-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;width:70px;flex:none;margin:0 auto;}
+  .knob{
+    --rot:-135deg;
+    width:50px;height:50px;border-radius:50%;cursor:ns-resize;touch-action:none;position:relative;
+    background:radial-gradient(circle at 34% 28%, #4b4e54, #26282c 55%, #141518 100%);
+    border:1px solid #050506;
+    box-shadow:0 4px 10px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.18), inset 0 -6px 10px rgba(0,0,0,.55);
+  }
+  .knob::before{
+    content:"";position:absolute;left:50%;top:3px;width:4px;height:15px;margin-left:-2px;border-radius:2px;
+    background:var(--accent);box-shadow:0 0 4px rgba(255,122,26,.6);
+    transform-origin:2px 22px;transform:rotate(var(--rot));
+  }
+  .knob::after{
+    content:"";position:absolute;inset:17px;border-radius:50%;
+    background:radial-gradient(circle at 40% 32%, #3a3d42, #1d1e21 75%);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.12);
+  }
+  .knob-label{font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:600;letter-spacing:.15em;color:var(--ink-dim);text-transform:uppercase;text-align:center;line-height:1.15;}
+  .knob-val{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--accent-soft);}
+
+  /* ---------- level meters ---------- */
+  .meter-shell{width:100%;}
+  .meter-label{font-family:"Barlow Condensed",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.15em;color:var(--ink-dim);text-transform:uppercase;margin-bottom:4px;display:flex;justify-content:space-between;}
+  .meter{
+    height:11px;border-radius:3px;background:#0a0b0c;border:1px solid #000;overflow:hidden;position:relative;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.9);
+  }
+  .meter-fill{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,#1f9d4d 0%,var(--green) 55%,var(--amber) 78%,var(--red) 96%);
+    transition:width .05s linear;
+  }
+  .meter.hot .meter-fill{filter:brightness(1.25);}
+
+  /* ---------- dB selector ---------- */
+  .db-switch{display:flex;border:1px solid var(--edge-hi);border-radius:5px;overflow:hidden;}
+  .db-switch button{
+    cursor:pointer;background:#141518;color:var(--ink-dim);border:0;padding:7px 0;flex:1;
+    font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  }
+  .db-switch button + button{border-left:1px solid var(--edge);}
+  .db-switch button.sel{background:#4a2c0d;color:var(--accent-soft);}
+  .ctl-label{font-family:"Barlow Condensed",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.15em;color:var(--ink-dim);text-transform:uppercase;margin-bottom:4px;}
+
+  /* ---------- voice character slider bank ---------- */
+  .bank-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
+  .bank-head .presets{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .bank-head .presets .btn{padding:5px 9px;font-size:11px;}
+  .bank-head .presets span{font-family:"Barlow Condensed",sans-serif;font-size:10.5px;letter-spacing:.15em;color:var(--ink-dim);font-weight:600;}
+  .channels{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px;}
+  .chan{min-width:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 1px 5px;border-radius:5px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.03);}
+  .chan.cons{background:rgba(255,122,26,.06);border-color:rgba(255,122,26,.18);}
+  .band-meter{width:9px;height:40px;background:#0a0b0c;border:1px solid #000;border-radius:2px;display:flex;align-items:flex-end;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.9);}
+  .band-meter i{display:block;width:100%;height:0%;background:linear-gradient(0deg,#1f9d4d,var(--green) 55%,var(--amber) 82%,var(--red));}
+  .chan.cons .band-meter i{background:linear-gradient(0deg,#b35a12,var(--accent) 60%,var(--amber));}
+  input[type=range].vfader{
+    writing-mode:vertical-lr;direction:rtl;
+    width:24px;height:96px;cursor:pointer;accent-color:var(--accent);
+    background:transparent;margin:0;
+  }
+  .chan .freq{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;color:var(--ink);text-align:center;line-height:1.2;}
+  .chan.cons .freq{font-size:8.5px;letter-spacing:-.02em;overflow-wrap:anywhere;line-height:1.15;}
+  .chan .freq small{display:block;color:var(--ink-faint);font-weight:500;font-size:8.5px;letter-spacing:.08em;}
+  .chan .dbval{font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--accent-soft);min-height:11px;}
+  .scale-row{display:grid;grid-template-columns:repeat(11,1fr);gap:3px;margin-top:2px;}
+  .scale-row div{text-align:center;font-size:9px;color:var(--ink-faint);font-family:"JetBrains Mono",monospace;}
+
+  /* ============ SECOND STRIP: files + keyboard ============ */
+  .strip2{
+    margin-top:10px;width:100%;
+    background:linear-gradient(180deg,var(--panel-3),var(--panel-2));
+    border:1px solid var(--edge);border-radius:8px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 14px 30px rgba(0,0,0,.5);
+    padding:10px 14px 12px;
+    display:flex;gap:18px;align-items:stretch;
+  }
+  .files-col{flex:0 0 300px;display:flex;flex-direction:column;gap:10px;border-right:1px solid var(--edge);padding-right:16px;}
+  .files-col h2,.kb-col h2{margin:0;font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:12.5px;letter-spacing:.26em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+  .files-col h2 .no,.kb-col h2 .no{color:var(--accent);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:0;}
+  .file-group{display:flex;flex-direction:column;gap:5px;}
+  .file-group .ctl-label{margin:0;}
+  .kb-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
+  .kb-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .kb-head .spacer{flex:1;}
+  .oct-read{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--accent-soft);min-width:64px;text-align:center;}
+  .keyboard{position:relative;height:104px;user-select:none;-webkit-user-select:none;touch-action:none;}
+  .key-w{
+    position:absolute;top:0;bottom:0;border:1px solid #0a0a0b;border-top:0;border-radius:0 0 5px 5px;
+    background:linear-gradient(180deg,#c9c2ae,#efe9d8 12%,#e3dcc8);
+    cursor:pointer;
+  }
+  .key-w.active{background:linear-gradient(180deg,#c98a3a,var(--accent) 30%,#e08a35);}
+  .key-b{
+    position:absolute;top:0;height:58%;border:1px solid #000;border-top:0;border-radius:0 0 4px 4px;z-index:2;
+    background:linear-gradient(180deg,#3c3e42,#101112 70%);
+    cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,.5);
+  }
+  .key-b.active{background:linear-gradient(180deg,#8a4d10,var(--accent) 55%,#c96a17);}
+  .key-name{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-family:"JetBrains Mono",monospace;font-size:9px;color:#7a7260;pointer-events:none;}
+  .chord-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+  .chord-row span{font-family:"Barlow Condensed",sans-serif;font-size:11px;letter-spacing:.15em;color:var(--ink-dim);font-weight:600;}
+
+  footer{margin:12px auto 0;color:var(--ink-faint);font-size:12.5px;line-height:1.55;padding:0 6px;}
+  footer b{color:var(--ink-dim);font-weight:600;}
+
+  /* ============ narrow screens: stack gracefully ============ */
+  @media (max-width:1240px){
+    .panel-row{flex-wrap:wrap;}
+    .psec.voice{flex:1 1 100%;order:6;border-left:0;border-top:1px solid var(--edge);}
+    .psec.balance{order:7;}
+    .psec.output{order:8;}
+    section.psec + section.psec.psec.voice{border-left:0;}
+  }
+  @media (max-width:820px){
+    .handle{display:none;}
+    .rack-unit{flex-direction:column;}
+    .rack-ear{flex:0 0 26px;flex-direction:row;padding:0 14px;}
+    .rack-ear.left{border-radius:8px 8px 0 0;border-right:1px solid var(--edge);border-bottom:2px solid #000;}
+    .rack-ear.right{border-radius:0 0 8px 8px;border-left:1px solid var(--edge);border-top:2px solid #000;}
+    .ear-label{display:none;}
+    .rack-main{border-top:0;border-bottom:0;}
+    .panel-top{flex-wrap:wrap;}
+    .status-line{flex:1 1 100%;order:3;}
+    .size-tag{display:none;}
+    .panel-row{flex-direction:column;}
+    section.psec{flex:none;width:100%;}
+    section.psec + section.psec{border-left:0;border-top:1px solid var(--edge);}
+    .psec.voice{order:0;border-top:1px solid var(--edge);}
+    .psec.balance,.psec.output{order:0;}
+    .psec.guitar,.psec.balance{align-items:flex-start;}
+    .psec.guitar > h2,.psec.balance > h2{align-self:auto;width:100%;}
+    .strip2{flex-direction:column;}
+    .files-col{flex:none;border-right:0;border-bottom:1px solid var(--edge);padding-right:0;padding-bottom:12px;}
+    .keyboard{height:120px;}
+    input[type=range].vfader{height:88px;width:20px;}
+    .channels{gap:1px;}
+    .scale-row{display:none;}
+  }
+
+</style>
+</head>
+<body>
+<div class="rack-unit">
+  <div class="rack-ear left" aria-hidden="true">
+    <span class="ear-hole"></span>
+    <span class="ear-label">Rack Mount</span>
+    <span class="ear-hole"></span>
+  </div>
+  <div class="handle" aria-hidden="true"><span class="mount"></span><span class="bar"></span><span class="mount"></span></div>
+
+  <div class="rack-main">
+    <div class="panel-top">
+      <div class="brand">
+        <h1>YM <span class="thin">VOCODER</span></h1>
+        <p>Rack Vocoder</p>
+      </div>
+      <div class="status-line" id="statusLine">Press <b>POWER</b> to start the audio engine. Headphones recommended — the microphone path can feed back through speakers.</div>
+      <div class="size-tag">19 IN · 2U</div>
+      <div class="model">VC-350</div>
+    </div>
+
+    <div class="panel-row">
+      <!-- REMOTE -->
+      <section class="psec remote">
+        <h2><span class="no">01</span> Remote</h2>
+        <div class="switch-stack">
+          <button class="btn" id="holdBtn" type="button"><span class="dot"></span>HOLD</button>
+          <button class="btn on" id="ensBtn" type="button"><span class="dot"></span>ENSEMBLE</button>
+        </div>
+        <p class="note"><b>HOLD</b> freezes the current vowel shape. <b>ENSEMBLE</b> is the stereo chorus that widens the output.</p>
+      </section>
+
+      <!-- MICROPHONE -->
+      <section class="psec mic">
+        <h2><span class="no">02</span> Microphone</h2>
+        <button class="btn" id="micBtn" type="button"><span class="dot"></span>MIC ON</button>
+        <div class="knob-wrap" data-knob="micLevel">
+          <div class="knob" role="slider" aria-label="Mic level" tabindex="0"></div>
+          <div class="knob-label">Mic<br/>Level</div>
+          <div class="knob-val"></div>
+        </div>
+        <div class="meter-shell">
+          <div class="meter-label"><span>Input</span><span>Peak</span></div>
+          <div class="meter" id="micMeter"><div class="meter-fill" id="micMeterFill"></div></div>
+        </div>
+        <p class="note">Voice is compressed, then analysed into <b>10 bands + a consonant channel</b>. Keep the meter mostly green.</p>
+      </section>
+
+      <!-- INSTRUMENT -->
+      <section class="psec inst">
+        <h2><span class="no">03</span> Instrument</h2>
+        <div>
+          <div class="ctl-label">Input Level</div>
+          <div class="db-switch" id="dbSwitch">
+            <button type="button" data-db="-30">−30 dB</button>
+            <button type="button" data-db="-15" class="sel">−15 dB</button>
+            <button type="button" data-db="0">0 dB</button>
+          </div>
+        </div>
+        <div class="knob-wrap" data-knob="waveMix">
+          <div class="knob" role="slider" aria-label="Wave mix saw to pulse" tabindex="0"></div>
+          <div class="knob-label">Saw / Pulse<br/>Mix</div>
+          <div class="knob-val"></div>
+        </div>
+        <p class="note">Carrier level for the external instrument input. The synth keyboard below plays through this section.</p>
+      </section>
+
+      <!-- GUITAR -->
+      <section class="psec guitar">
+        <h2><span class="no">04</span> Guitar</h2>
+        <div class="knob-wrap" data-knob="harmonics">
+          <div class="knob" role="slider" aria-label="Harmonics brightness" tabindex="0"></div>
+          <div class="knob-label">Harmo-<br/>nics</div>
+          <div class="knob-val"></div>
+        </div>
+        <p class="note" style="text-align:center;">Brightness of the carrier's top end.</p>
+      </section>
+
+      <!-- VOICE CHARACTER -->
+      <section class="psec voice">
+        <div class="bank-head">
+          <h2 style="margin:0;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12.5px;letter-spacing:.26em;text-transform:uppercase;"><span class="no" style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0;">05&nbsp;&nbsp;</span>Voice Character Control</h2>
+          <div class="presets">
+            <span>SHAPE</span>
+            <button class="btn" type="button" data-preset="flat">FLAT</button>
+            <button class="btn" type="button" data-preset="bright">BRIGHT</button>
+            <button class="btn" type="button" data-preset="dark">DARK</button>
+            <button class="btn" type="button" data-preset="robot">ROBOT</button>
+          </div>
+        </div>
+        <div class="channels" id="channels"></div>
+        <div class="scale-row" id="scaleRow"></div>
+      </section>
+
+      <!-- BALANCE -->
+      <section class="psec balance">
+        <h2><span class="no">06</span> Balance</h2>
+        <div class="knob-wrap" data-knob="balance">
+          <div class="knob" role="slider" aria-label="Balance direct mic to vocoder" tabindex="0"></div>
+          <div class="knob-label">Balance<br/>Mic / Voc</div>
+          <div class="knob-val"></div>
+        </div>
+        <p class="note" style="text-align:center;">Direct voice vs. vocoder blend.</p>
+      </section>
+
+      <!-- OUTPUT / PHONES / POWER -->
+      <section class="psec output">
+        <h2><span class="no">07</span> Output</h2>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div class="knob-wrap" data-knob="volume" style="margin:0;">
+            <div class="knob" role="slider" aria-label="Output volume" tabindex="0"></div>
+            <div class="knob-label">Volume</div>
+            <div class="knob-val"></div>
+          </div>
+          <div class="phones">
+            <div class="jack" aria-hidden="true"></div>
+            <div class="printed">Phones</div>
+          </div>
+        </div>
+        <div class="meter-shell">
+          <div class="meter-label"><span>Output</span><span>Peak</span></div>
+          <div class="meter" id="outMeter"><div class="meter-fill" id="outMeterFill"></div></div>
+        </div>
+        <button class="power-btn" id="powerBtn" type="button"><span class="power-led"></span>POWER</button>
+      </section>
+    </div>
+  </div>
+
+  <div class="handle" aria-hidden="true"><span class="mount"></span><span class="bar"></span><span class="mount"></span></div>
+  <div class="rack-ear right" aria-hidden="true">
+    <span class="ear-hole"></span>
+    <span class="ear-label">YM Series</span>
+    <span class="ear-hole"></span>
+  </div>
+</div>
+
+<!-- SECOND STRIP: file sources + carrier keyboard -->
+<div class="strip2">
+  <div class="files-col">
+    <h2><span class="no">08</span> File Sources</h2>
+    <div class="file-group">
+      <div class="ctl-label">Modulator — Voice File</div>
+      <div class="btnrow">
+        <button class="btn" id="modFileBtn" type="button">LOAD VOICE FILE</button>
+        <button class="btn" id="modPlayBtn" type="button" disabled>PLAY</button>
+      </div>
+      <span class="fname" id="modFname"></span>
+    </div>
+    <div class="file-group">
+      <div class="ctl-label">Carrier — Instrument File</div>
+      <div class="btnrow">
+        <button class="btn" id="carFileBtn" type="button">LOAD INSTRUMENT FILE</button>
+        <button class="btn" id="carPlayBtn" type="button" disabled>PLAY</button>
+      </div>
+      <span class="fname" id="carFname"></span>
+    </div>
+    <p class="note">No mic handy? Loop a voice file as the modulator and a bright instrument file as the carrier — saw / pulse with fast attack and full sustain works best.</p>
+  </div>
+  <div class="kb-col">
+    <div class="kb-head">
+      <h2><span class="no">09</span> Carrier Keyboard</h2>
+      <div class="spacer"></div>
+      <button class="btn" id="octDown" type="button">OCT −</button>
+      <div class="oct-read" id="octRead">C3 – C5</div>
+      <button class="btn" id="octUp" type="button">OCT +</button>
+    </div>
+    <div class="keyboard" id="keyboard"></div>
+    <div class="chord-row">
+      <span>CHORD</span>
+      <button class="btn chord-btn" type="button" data-chord="maj">MAJOR</button>
+      <button class="btn chord-btn" type="button" data-chord="min">MINOR</button>
+      <button class="btn chord-btn" type="button" data-chord="dom7">7TH</button>
+      <button class="btn chord-btn" type="button" data-chord="power">POWER</button>
+      <button class="btn chord-btn" type="button" data-chord="dim">DIM</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <b>How to play it:</b> POWER on → MIC ON and allow microphone access → hold a chord on the carrier keyboard (or press a CHORD button) → speak. Your voice's spectrum is printed onto the carrier, band by band. No mic handy? Load a voice file as the modulator and an instrument file as the carrier, press PLAY on both, and shape the result with the Voice Character sliders.
+</footer>
+
+<input type="file" id="modFileInput" accept="audio/*" hidden />
+<input type="file" id="carFileInput" accept="audio/*" hidden />
+
+<script>
+(function(){
+"use strict";
+
+/* ================= state ================= */
+var BAND_FREQS = [125, 250, 375, 550, 750, 1050, 1450, 2000, 2800, 4000];
+var BAND_LABELS = ["125","250","375","550","750","1.05k","1.45k","2k","2.8k","4k"];
+var N_BANDS = 10;              // + consonant channel = 11
+var charGain = [];             // per-channel character multiplier 0..2
+for (var i=0;i<11;i++) charGain.push(1);
+charGain[10] = 1.00;           // consonant channel: unity by default
+
+var S = {
+  powered:false, micOn:false, hold:false, ensemble:true,
+  micLevel:0.8, waveMix:0.35, harmonics:0.82, balance:0.78, volume:0.75,
+  carDb:-15, baseMidi:48, activeChord:null
+};
+
+/* ================= audio graph ================= */
+var AC = window.AudioContext || window.webkitAudioContext;
+var ctx=null;
+var nodes = {};   // named nodes
+var bands = [];   // {envAnalyser, carGain, envSmooth}
+var cons = null;  // consonant channel
+var activeNotes = {};  // midi -> {saw,pulse,gain}
+var micStream=null, micSource=null;
+var modFile = {buf:null, src:null, playing:false, name:""};
+var carFile = {buf:null, src:null, playing:false, name:""};
+
+function makeRectifier(){
+  var ws = ctx.createWaveShaper();
+  var curve = new Float32Array(1024);
+  for (var i=0;i<1024;i++){ var x = i/511.5 - 1; curve[i] = Math.abs(x); }
+  ws.curve = curve; ws.oversample = "none";
+  return ws;
+}
+
+/* One analysis chain: BPF/HP -> rectifier -> smoothing LPF -> analyser.
+   The JS control loop reads the analyser and drives the carrier gain,
+   which makes HOLD (freeze updates) and the meters share one value. */
+function buildAnalysisChain(filter, mode){
+  var rect = makeRectifier();
+  var smooth = ctx.createBiquadFilter();
+  smooth.type = "lowpass"; smooth.Q.value = 0.4;
+  var an = ctx.createAnalyser(); an.fftSize = 512;
+  // All channels, consonant included, share the same follower smoothing.
+  smooth.frequency.value = 28; an.smoothingTimeConstant = 0.55;
+  filter.connect(rect); rect.connect(smooth); smooth.connect(an);
+  return an;
+}
+
+function buildGraph(){
+  ctx = new AC({ latencyHint:"interactive" });
+
+  /* --- modulator path: sources -> compressor -> mic level -> modBus --- */
+  nodes.comp = ctx.createDynamicsCompressor();
+  nodes.comp.threshold.value = -18; nodes.comp.knee.value = 18;
+  nodes.comp.ratio.value = 5; nodes.comp.attack.value = 0.004; nodes.comp.release.value = 0.18;
+  nodes.micGain = ctx.createGain(); nodes.micGain.gain.value = S.micLevel * 1.6;
+  nodes.modBus = ctx.createGain(); nodes.modBus.gain.value = 1;
+  nodes.comp.connect(nodes.micGain); nodes.micGain.connect(nodes.modBus);
+
+  nodes.micAnalyser = ctx.createAnalyser(); nodes.micAnalyser.fftSize = 512;
+  nodes.modBus.connect(nodes.micAnalyser);
+
+  /* direct (dry voice) path */
+  nodes.directGain = ctx.createGain(); nodes.directGain.gain.value = 0;
+
+  /* --- carrier path: sources -> file gain -> harmonics LPF -> split --- */
+  nodes.carFileGain = ctx.createGain();
+  nodes.carFileGain.gain.value = Math.pow(10, S.carDb/20);
+  nodes.synthBus = ctx.createGain(); nodes.synthBus.gain.value = 0.9;
+  nodes.harmonics = ctx.createBiquadFilter();
+  nodes.harmonics.type = "lowpass"; nodes.harmonics.Q.value = 0.5;
+  nodes.harmonics.frequency.value = harmFreq(S.harmonics);
+  nodes.carBus = ctx.createGain(); nodes.carBus.gain.value = 1;
+  nodes.carFileGain.connect(nodes.carBus);
+  nodes.synthBus.connect(nodes.carBus);
+  nodes.carBus.connect(nodes.harmonics);
+
+  /* --- vocoder core --- */
+  nodes.vocSum = ctx.createGain(); nodes.vocSum.gain.value = 1;
+  bands = [];
+  for (var b=0;b<N_BANDS;b++){
+    var f = BAND_FREQS[b];
+    var aF = ctx.createBiquadFilter(); aF.type="bandpass"; aF.frequency.value=f; aF.Q.value = 8;
+    nodes.modBus.connect(aF);
+    var an = buildAnalysisChain(aF, "vowel");
+    var cF = ctx.createBiquadFilter(); cF.type="bandpass"; cF.frequency.value=f; cF.Q.value = 4.5;
+    var cG = ctx.createGain(); cG.gain.value = 0;
+    nodes.harmonics.connect(cF); cF.connect(cG); cG.connect(nodes.vocSum);
+    bands.push({ analyser:an, carGain:cG, env:0, buf:new Float32Array(512) });
+  }
+  /* 11th channel: consonant / sibilance — high-pass path from the voice,
+     gated by its own envelope, fed from the carrier's top end. */
+  var cHPa = ctx.createBiquadFilter(); cHPa.type="highpass"; cHPa.frequency.value = 6200;
+  nodes.modBus.connect(cHPa);
+  var cAn = buildAnalysisChain(cHPa, "cons");
+  var cHPc = ctx.createBiquadFilter(); cHPc.type="highpass"; cHPc.frequency.value = 6200;
+  var cCG = ctx.createGain(); cCG.gain.value = 0;
+  nodes.harmonics.connect(cHPc); cHPc.connect(cCG); cCG.connect(nodes.vocSum);
+  cons = { analyser:cAn, carGain:cCG, env:0, buf:new Float32Array(512) };
+
+  nodes.vocGain = ctx.createGain(); nodes.vocGain.gain.value = 0;
+
+  /* --- ensemble: two modulated delay lines (BBD-style stereo chorus) --- */
+  nodes.ensIn = ctx.createGain();
+  nodes.vocSum.connect(nodes.ensIn);
+  nodes.ensDry = ctx.createGain(); nodes.ensDry.gain.value = 0; // set by ensemble state
+  nodes.ensIn.connect(nodes.ensDry); nodes.ensDry.connect(nodes.vocGain);
+  nodes.ensWetL = ctx.createGain(); nodes.ensWetR = ctx.createGain();
+  var dL = ctx.createDelay(0.06); dL.delayTime.value = 0.016;
+  var dR = ctx.createDelay(0.06); dR.delayTime.value = 0.021;
+  var lfoL = ctx.createOscillator(); lfoL.frequency.value = 0.55;
+  var lfoLg = ctx.createGain(); lfoLg.gain.value = 0.0035;
+  lfoL.connect(lfoLg); lfoLg.connect(dL.delayTime); lfoL.start();
+  var lfoR = ctx.createOscillator(); lfoR.frequency.value = 0.42;
+  var lfoRg = ctx.createGain(); lfoRg.gain.value = 0.0042;
+  lfoR.connect(lfoRg); lfoRg.connect(dR.delayTime); lfoR.start();
+  var panL = ctx.createStereoPanner(); panL.pan.value = -0.65;
+  var panR = ctx.createStereoPanner(); panR.pan.value =  0.65;
+  nodes.ensIn.connect(dL); dL.connect(nodes.ensWetL); nodes.ensWetL.connect(panL); panL.connect(nodes.vocGain);
+  nodes.ensIn.connect(dR); dR.connect(nodes.ensWetR); nodes.ensWetR.connect(panR); panR.connect(nodes.vocGain);
+  applyEnsemble();
+
+  /* --- mix / master --- */
+  nodes.mix = ctx.createGain();
+  nodes.directGain.connect(nodes.mix);
+  nodes.modBus.connect(nodes.directGain);
+  nodes.vocGain.connect(nodes.mix);
+  nodes.master = ctx.createGain(); nodes.master.gain.value = Math.pow(S.volume,2) * 1.15;
+  nodes.mix.connect(nodes.master);
+  nodes.outAnalyser = ctx.createAnalyser(); nodes.outAnalyser.fftSize = 512;
+  nodes.master.connect(nodes.outAnalyser);
+  nodes.master.connect(ctx.destination);
+  applyBalance();
+}
+
+function harmFreq(v){ return 700 * Math.pow(18000/700, v); }  // 700 Hz .. 18 kHz log
+
+function applyEnsemble(){
+  if (!ctx) return;
+  var t = ctx.currentTime;
+  var wet = S.ensemble ? 0.5 : 0, dry = S.ensemble ? 0.8 : 1;
+  nodes.ensWetL.gain.setTargetAtTime(wet, t, 0.05);
+  nodes.ensWetR.gain.setTargetAtTime(wet, t, 0.05);
+  nodes.ensDry.gain.setTargetAtTime(dry, t, 0.05);
+}
+function applyBalance(){
+  if (!ctx) return;
+  var t = ctx.currentTime, b = S.balance;
+  nodes.directGain.gain.setTargetAtTime(Math.cos(b * Math.PI/2) * 0.9, t, 0.03);
+  nodes.vocGain.gain.setTargetAtTime(Math.sin(b * Math.PI/2) * 1.5, t, 0.03);
+}
+
+/* ================= control loop: envelopes -> carrier gains + meters ================= */
+var meterEls = [], micFill, outFill, micMeterEl, outMeterEl;
+function rmsOf(ch){
+  ch.analyser.getFloatTimeDomainData(ch.buf);
+  var s=0; for (var i=0;i<ch.buf.length;i+=2){ var v=ch.buf[i]; s += v*v; }
+  return Math.sqrt(s / (ch.buf.length/2));
+}
+function controlLoop(){
+  requestAnimationFrame(controlLoop);
+  if (!ctx || ctx.state !== "running") return;
+  var t = ctx.currentTime;
+  var i, ch, target;
+  if (!S.hold){
+    for (i=0;i<N_BANDS;i++){
+      ch = bands[i];
+      target = Math.min(rmsOf(ch) * 3.4, 1.6);
+      ch.env += (target - ch.env) * (target > ch.env ? 0.55 : 0.22);
+      ch.carGain.gain.setTargetAtTime(Math.min(ch.env * charGain[i] * 1.35, 2.2), t, 0.028);
+      if (meterEls[i]) meterEls[i].style.height = Math.min(ch.env * charGain[i] * 100, 100) + "%";
+    }
+    // Consonant channel: raw linear envelope, same follower as the bands.
+    target = Math.min(rmsOf(cons) * 5.8, 1.8);
+    cons.env += (target - cons.env) * (target > cons.env ? 0.88 : 0.38);
+    var consDrive = cons.env;
+    cons.carGain.gain.setTargetAtTime(Math.min(consDrive * charGain[10] * 1.85, 2.8), t, 0.006);
+    if (meterEls[10]) meterEls[10].style.height = Math.min(cons.env * charGain[10] * 100, 100) + "%";
+  }
+  /* mic + output level meters */
+  var buf = new Float32Array(512), pk = 0;
+  nodes.micAnalyser.getFloatTimeDomainData(buf);
+  for (i=0;i<buf.length;i++){ var a=Math.abs(buf[i]); if (a>pk) pk=a; }
+  micFill.style.width = Math.min(pk*100,100) + "%";
+  micMeterEl.classList.toggle("hot", pk > 0.9);
+  pk = 0;
+  nodes.outAnalyser.getFloatTimeDomainData(buf);
+  for (i=0;i<buf.length;i++){ var a2=Math.abs(buf[i]); if (a2>pk) pk=a2; }
+  outFill.style.width = Math.min(pk*100,100) + "%";
+  outMeterEl.classList.toggle("hot", pk > 0.92);
+}
+
+/* ================= carrier synth ================= */
+function midiHz(m){ return 440 * Math.pow(2, (m-69)/12); }
+function noteOn(midi){
+  if (!ctx || activeNotes[midi]) return;
+  var t = ctx.currentTime;
+  var g = ctx.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.24, t + 0.006);   // fast attack, full sustain
+  g.connect(nodes.synthBus);
+  var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = midiHz(midi);
+  var pul = ctx.createOscillator(); pul.type = "square";   pul.frequency.value = midiHz(midi);
+  var sg = ctx.createGain(); sg.gain.value = 1 - S.waveMix;
+  var pg = ctx.createGain(); pg.gain.value = S.waveMix * 0.8;
+  saw.connect(sg); sg.connect(g);
+  pul.connect(pg); pg.connect(g);
+  saw.start(); pul.start();
+  activeNotes[midi] = { saw:saw, pul:pul, gain:g, sg:sg, pg:pg };
+  markKey(midi, true);
+}
+function noteOff(midi){
+  var n = activeNotes[midi]; if (!n) return;
+  delete activeNotes[midi];
+  var t = ctx.currentTime;
+  n.gain.gain.cancelScheduledValues(t);
+  n.gain.gain.setValueAtTime(n.gain.gain.value, t);
+  n.gain.gain.linearRampToValueAtTime(0, t + 0.09);
+  var saw=n.saw, pul=n.pul, g=n.gain;
+  setTimeout(function(){ try{saw.stop();}catch(e){} try{pul.stop();}catch(e){} try{g.disconnect();}catch(e){} }, 200);
+  markKey(midi, false);
+}
+function allNotesOff(){ for (var m in activeNotes) noteOff(parseInt(m,10)); }
+
+/* ================= UI refs ================= */
+var $ = function(id){ return document.getElementById(id); };
+var statusLine = $("statusLine");
+function setStatus(html){ statusLine.innerHTML = html; }
+
+/* ================= knobs ================= */
+function fmtKnob(name, v){
+  switch(name){
+    case "micLevel": return Math.round(v*100) + "%";
+    case "waveMix":  return v < 0.5 ? "SAW " + Math.round((1-v)*100) : "PLS " + Math.round(v*100);
+    case "harmonics":return Math.round(harmFreq(v)) + " Hz";
+    case "balance":  return v < 0.45 ? "MIC" : (v > 0.6 ? "VOC" : "BLEND");
+    case "volume":   return Math.round(v*100) + "%";
+  }
+  return "";
+}
+function bindKnobs(){
+  var wraps = document.querySelectorAll(".knob-wrap");
+  wraps.forEach(function(wrap){
+    var name = wrap.getAttribute("data-knob");
+    var knob = wrap.querySelector(".knob");
+    var val = wrap.querySelector(".knob-val");
+    function render(){
+      knob.style.setProperty("--rot", (-135 + S[name]*270) + "deg");
+      val.textContent = fmtKnob(name, S[name]);
+      knob.setAttribute("aria-valuenow", Math.round(S[name]*100));
+    }
+    function apply(){
+      if (!ctx) return;
+      var t = ctx.currentTime;
+      if (name==="micLevel") nodes.micGain.gain.setTargetAtTime(S.micLevel*1.6, t, 0.03);
+      if (name==="harmonics") nodes.harmonics.frequency.setTargetAtTime(harmFreq(S.harmonics), t, 0.03);
+      if (name==="balance") applyBalance();
+      if (name==="volume") nodes.master.gain.setTargetAtTime(Math.pow(S.volume,2)*1.15, t, 0.03);
+      if (name==="waveMix"){ for (var m in activeNotes){ var n=activeNotes[m]; n.sg.gain.value = 1-S.waveMix; n.pg.gain.value = S.waveMix*0.8; } }
+    }
+    var startY=0, startV=0;
+    knob.addEventListener("pointerdown", function(e){
+      startY = e.clientY; startV = S[name];
+      knob.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    knob.addEventListener("pointermove", function(e){
+      if (startY===null) return;
+      if (e.buttons!==1) return;
+      S[name] = Math.min(1, Math.max(0, startV + (startY - e.clientY)/160));
+      render(); apply();
+    });
+    knob.addEventListener("pointerup", function(){ startY=null; });
+    knob.addEventListener("keydown", function(e){
+      var step = (e.key==="ArrowUp"||e.key==="ArrowRight") ? 0.05 : (e.key==="ArrowDown"||e.key==="ArrowLeft") ? -0.05 : 0;
+      if (step){ S[name] = Math.min(1, Math.max(0, S[name]+step)); render(); apply(); e.preventDefault(); }
+    });
+    render();
+  });
+}
+
+/* ================= slider bank ================= */
+function buildBank(){
+  var host = $("channels"), scale = $("scaleRow");
+  var names = BAND_LABELS.concat(["SIBILANCE"]);
+  var subs  = ["HZ","HZ","HZ","HZ","HZ","HZ","HZ","HZ","HZ","HZ","6.2k+"];
+  for (var i=0;i<11;i++){
+    (function(idx){
+      var d = document.createElement("div");
+      d.className = "chan" + (idx===10 ? " cons" : "");
+      var m = document.createElement("div"); m.className="band-meter";
+      var fill = document.createElement("i"); m.appendChild(fill);
+      meterEls.push(fill);
+      var r = document.createElement("input");
+      r.type="range"; r.className="vfader"; r.min="0"; r.max="2"; r.step="0.01"; r.value=String(charGain[idx]);
+      r.setAttribute("aria-label", "Voice character band " + names[idx]);
+      var initDb = (20*Math.log10(charGain[idx])).toFixed(1);
+      var db = document.createElement("div"); db.className="dbval"; db.textContent=(charGain[idx]>1?"+":"") + initDb + " dB";
+      r.addEventListener("input", function(){
+        charGain[idx] = parseFloat(r.value);
+        var dbv = charGain[idx]<=0.001 ? "-inf" : (20*Math.log10(charGain[idx])).toFixed(1);
+        db.textContent = (charGain[idx]<=0.001 ? "-∞" : (dbv>0?"+":"") + dbv) + (charGain[idx]<=0.001 ? "" : " dB");
+      });
+      var f = document.createElement("div"); f.className="freq";
+      f.innerHTML = names[idx] + "<small>" + subs[idx] + "</small>";
+      d.appendChild(m); d.appendChild(r); d.appendChild(db); d.appendChild(f);
+      host.appendChild(d);
+      var s = document.createElement("div"); s.textContent = "";
+      scale.appendChild(s);
+      d._slider = r; d._db = db;
+    })(i);
+  }
+}
+function setChar(idx, v){
+  charGain[idx] = v;
+  var chan = $("channels").children[idx];
+  chan._slider.value = v;
+  chan._db.textContent = v<=0.001 ? "-∞" : ((v>1?"+":"") + (20*Math.log10(v)).toFixed(1) + " dB");
+}
+var PRESETS = {
+  flat:  [1,1,1,1,1,1,1,1,1,1,1],
+  bright:[0.55,0.65,0.8,0.95,1.1,1.3,1.5,1.7,1.85,2,1.9],
+  dark:  [1.8,1.7,1.5,1.3,1.1,0.9,0.75,0.6,0.5,0.4,0.55],
+  robot: [1.9,0.25,1.8,0.3,1.7,0.35,1.8,0.3,1.9,0.4,1.5]
+};
+document.querySelectorAll("[data-preset]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var p = PRESETS[b.getAttribute("data-preset")];
+    for (var i=0;i<11;i++) setChar(i, p[i]);
+    setStatus("Voice Character shape: <b>" + b.textContent + "</b>");
+  });
+});
+
+/* ================= keyboard ================= */
+var NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+var keyEls = {};
+function markKey(midi, on){
+  var el = keyEls[midi]; if (el) el.classList.toggle("active", on);
+}
+function buildKeyboard(){
+  var kb = $("keyboard"); kb.innerHTML = ""; keyEls = {};
+  var whites = [];
+  for (var m=S.baseMidi; m<=S.baseMidi+24; m++){ if (NOTE_NAMES[m%12].indexOf("#")<0) whites.push(m); }
+  var wW = 100 / whites.length;
+  whites.forEach(function(m, idx){
+    var k = document.createElement("div");
+    k.className="key-w"; k.style.left = (idx*wW)+"%"; k.style.width = wW+"%";
+    if (NOTE_NAMES[m%12]==="C"){
+      var nm = document.createElement("div"); nm.className="key-name";
+      nm.textContent = "C" + (Math.floor(m/12)-1); k.appendChild(nm);
+    }
+    bindKey(k, m); kb.appendChild(k); keyEls[m]=k;
+  });
+  for (var m2=S.baseMidi; m2<=S.baseMidi+24; m2++){
+    if (NOTE_NAMES[m2%12].indexOf("#")<0) continue;
+    var prevWhiteIdx = whites.indexOf(m2-1);
+    var b = document.createElement("div");
+    b.className="key-b";
+    b.style.left = "calc(" + ((prevWhiteIdx+1)*wW) + "% - " + (wW*0.31) + "%)";
+    b.style.width = (wW*0.62)+"%";
+    bindKey(b, m2); kb.appendChild(b); keyEls[m2]=b;
+  }
+  $("octRead").textContent = "C" + (Math.floor(S.baseMidi/12)-1) + " – C" + (Math.floor((S.baseMidi+24)/12)-1);
+  for (var mm in activeNotes) markKey(parseInt(mm,10), true);
+}
+function bindKey(el, midi){
+  el.addEventListener("pointerdown", function(e){
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    if (!S.powered){ setStatus("Press <b>POWER</b> first — the carrier synth needs the audio engine running."); return; }
+    if (ctx && ctx.state==="suspended") ctx.resume();
+    noteOn(midi);
+  });
+  var off = function(){ noteOff(midi); };
+  el.addEventListener("pointerup", off);
+  el.addEventListener("pointercancel", off);
+  el.addEventListener("lostpointercapture", off);
+}
+$("octDown").addEventListener("click", function(){ if (S.baseMidi>36){ allNotesOff(); clearChord(); S.baseMidi-=12; buildKeyboard(); } });
+$("octUp").addEventListener("click", function(){ if (S.baseMidi<60){ allNotesOff(); clearChord(); S.baseMidi+=12; buildKeyboard(); } });
+
+/* chords */
+var CHORDS = { maj:[0,4,7,12], min:[0,3,7,12], dom7:[0,4,7,10], power:[0,7,12,19], dim:[0,3,6,9,12] };
+function clearChord(){
+  if (S.activeChord){ CHORDS[S.activeChord].forEach(function(iv){ noteOff(S.baseMidi+iv); }); S.activeChord=null; }
+  document.querySelectorAll(".chord-btn").forEach(function(b){ b.classList.remove("on"); });
+}
+document.querySelectorAll(".chord-btn").forEach(function(b){
+  b.addEventListener("click", function(){
+    var name = b.getAttribute("data-chord");
+    if (!S.powered){ setStatus("Press <b>POWER</b> first — the carrier synth needs the audio engine running."); return; }
+    if (ctx && ctx.state==="suspended") ctx.resume();
+    if (S.activeChord===name){ clearChord(); return; }
+    clearChord();
+    S.activeChord = name;
+    b.classList.add("on");
+    CHORDS[name].forEach(function(iv){ noteOn(S.baseMidi+iv); });
+  });
+});
+
+/* ================= power / mic / files ================= */
+$("powerBtn").addEventListener("click", function(){
+  if (!S.powered){
+    if (!AC){ setStatus("<b>Web Audio is not available in this browser.</b>"); return; }
+    buildGraph();
+    S.powered = true;
+    document.body.classList.add("powered");
+    this.innerHTML = '<span class="power-led"></span>POWER ON';
+    setStatus("Audio engine running. Turn <b>MIC ON</b>, hold a chord, and speak — or load voice + instrument files.");
+    if (ctx.state==="suspended") ctx.resume();
+  } else {
+    allNotesOff(); clearChord();
+    if (micStream){ micStream.getTracks().forEach(function(tr){ tr.stop(); }); micStream=null; }
+    stopFile(modFile); stopFile(carFile);
+    ctx.close(); ctx=null; S.powered=false; S.micOn=false;
+    document.body.classList.remove("powered");
+    $("micBtn").classList.remove("mic-on"); $("micBtn").innerHTML = '<span class="dot"></span>MIC ON';
+    this.innerHTML = '<span class="power-led"></span>POWER';
+    setStatus("Powered off. Press <b>POWER</b> to restart the audio engine.");
+  }
+});
+
+$("micBtn").addEventListener("click", function(){
+  var btn = this;
+  if (!S.powered){ setStatus("Press <b>POWER</b> first, then MIC ON."); return; }
+  if (S.micOn){
+    if (micSource){ try{micSource.disconnect();}catch(e){} micSource=null; }
+    if (micStream){ micStream.getTracks().forEach(function(tr){ tr.stop(); }); micStream=null; }
+    S.micOn=false; btn.classList.remove("mic-on"); btn.innerHTML='<span class="dot"></span>MIC ON';
+    setStatus("Microphone off.");
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    setStatus("<b>Microphone input is not available here.</b> Load a voice file as the modulator instead.");
+    return;
+  }
+  setStatus("Requesting microphone access…");
+  navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } })
+    .then(function(stream){
+      micStream = stream;
+      micSource = ctx.createMediaStreamSource(stream);
+      micSource.connect(nodes.comp);
+      S.micOn = true;
+      btn.classList.add("mic-on"); btn.innerHTML='<span class="dot"></span>MIC LIVE';
+      setStatus("<b>Microphone live.</b> Hold a chord on the carrier keyboard and speak. Watch the MIC LEVEL meter — mostly green, red only on peaks.");
+    })
+    .catch(function(err){
+      setStatus("<b>Microphone access was not granted</b> (" + (err && err.name ? err.name : "error") + "). You can still load a voice file as the modulator.");
+    });
+});
+
+function loadFileInto(input, fileObj, fnameEl, playBtn){
+  if (!S.powered){ setStatus("Press <b>POWER</b> first — files are decoded by the audio engine."); input.value=""; return; }
+  var file = input.files && input.files[0]; input.value="";
+  if (!file) return;
+  file.arrayBuffer().then(function(ab){
+    return ctx.decodeAudioData(ab);
+  }).then(function(buf){
+    stopFile(fileObj);
+    fileObj.buf = buf; fileObj.name = file.name;
+    fnameEl.textContent = file.name;
+    playBtn.disabled = false;
+    startFile(fileObj, playBtn);
+  }).catch(function(){
+    setStatus("<b>Could not decode that audio file.</b> Try a WAV, MP3, OGG or M4A file.");
+  });
+}
+function startFile(f, btn){
+  if (!f.buf || f.playing) return;
+  f.src = ctx.createBufferSource();
+  f.src.buffer = f.buf; f.src.loop = true;
+  f.src.connect(f.dest);
+  f.src.start(); f.playing = true;
+  btn.textContent = "STOP"; btn.classList.add("on");
+}
+function stopFile(f){
+  if (f.src){ try{f.src.stop();}catch(e){} try{f.src.disconnect();}catch(e){} f.src=null; }
+  f.playing = false;
+}
+$("modFileBtn").addEventListener("click", function(){ $("modFileInput").click(); });
+$("carFileBtn").addEventListener("click", function(){ $("carFileInput").click(); });
+$("modFileInput").addEventListener("change", function(){
+  if (ctx){ modFile.dest = nodes.comp; }
+  loadFileInto(this, modFile, $("modFname"), $("modPlayBtn"));
+});
+$("carFileInput").addEventListener("change", function(){
+  if (ctx){ carFile.dest = nodes.carFileGain; }
+  loadFileInto(this, carFile, $("carFname"), $("carPlayBtn"));
+});
+$("modPlayBtn").addEventListener("click", function(){
+  if (!S.powered) return;
+  modFile.dest = nodes.comp;
+  if (modFile.playing){ stopFile(modFile); this.textContent="PLAY"; this.classList.remove("on"); }
+  else startFile(modFile, this);
+});
+$("carPlayBtn").addEventListener("click", function(){
+  if (!S.powered) return;
+  carFile.dest = nodes.carFileGain;
+  if (carFile.playing){ stopFile(carFile); this.textContent="PLAY"; this.classList.remove("on"); }
+  else startFile(carFile, this);
+});
+
+/* dB selector */
+$("dbSwitch").querySelectorAll("button").forEach(function(b){
+  b.addEventListener("click", function(){
+    $("dbSwitch").querySelectorAll("button").forEach(function(x){ x.classList.remove("sel"); });
+    b.classList.add("sel");
+    S.carDb = parseInt(b.getAttribute("data-db"),10);
+    if (ctx) nodes.carFileGain.gain.setTargetAtTime(Math.pow(10, S.carDb/20), ctx.currentTime, 0.03);
+  });
+});
+
+/* hold / ensemble */
+$("holdBtn").addEventListener("click", function(){
+  S.hold = !S.hold;
+  this.classList.toggle("on", S.hold);
+  if (S.powered) setStatus(S.hold ? "<b>HOLD on</b> — the current vowel shape is frozen. Release HOLD to track your voice again." : "HOLD off — tracking your voice live.");
+});
+$("ensBtn").addEventListener("click", function(){
+  S.ensemble = !S.ensemble;
+  this.classList.toggle("on", S.ensemble);
+  applyEnsemble();
+});
+
+/* ================= init ================= */
+micFill = $("micMeterFill"); outFill = $("outMeterFill");
+micMeterEl = $("micMeter"); outMeterEl = $("outMeter");
+bindKnobs();
+buildBank();
+buildKeyboard();
+requestAnimationFrame(controlLoop);
+})();
+</script>
+</body>
+</html>
