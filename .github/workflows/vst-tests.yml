@@ -16,7 +16,7 @@ jobs:
           - { name: mini-mogumogu, dir: vst/mini-mogumogu, opt: MM_BUILD_TESTS, smoke: MiniMogumogu_SmokeTest, vst3: MiniMogumogu_VST3 }
           - { name: ym303,         dir: vst/ym303,         opt: YM_BUILD_TESTS, smoke: YM303_SmokeTest,        vst3: YM303_VST3 }
           - { name: ym2000,        dir: vst/ym2000,        opt: YM_BUILD_TESTS, smoke: YM2000_SmokeTest,       vst3: YM2000_VST3 }
-          - { name: yumy-bacteria, dir: vst/yumy-bacteria, opt: YB_BUILD_TESTS, smoke: YuMyBacteria_SmokeTest, vst3: YuMyBacteria_VST3 }
+          - { name: yumy-bacteria, dir: vst/yumy-bacteria, opt: YB_BUILD_TESTS, smoke: YuMyBacteria_SmokeTest, vst3: YuMyBacteria_VST3, strict: true }
     name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +35,9 @@ jobs:
           f=$(find build -type f -name "${{ matrix.smoke }}" | head -1)
           echo "running $f"
           xvfb-run -a "$f" | tee smoke.log
+          rc=${PIPESTATUS[0]}
           ! grep -q "^FAIL" smoke.log
+          if [ "${{ matrix.strict }}" = "true" ]; then test $rc -eq 0; grep -q "^ALL OK" smoke.log; fi
       - name: pluginval
         run: |
           curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip

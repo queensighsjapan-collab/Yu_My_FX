@@ -31,7 +31,12 @@ int main()
     auto on = [] (int n, int v) { juce::MidiBuffer m; m.addEvent (juce::MidiMessage::noteOn (1, n, (juce::uint8) v), 0); return m; };
     auto off = [] (int n) { juce::MidiBuffer m; m.addEvent (juce::MidiMessage::noteOff (1, n), 0); return m; };
     auto allOff = [] { juce::MidiBuffer m; m.addEvent (juce::MidiMessage::allNotesOff (1), 0); return m; };
-    auto setP = [&] (const char* id, float real) { auto* q = p.apvts.getParameter (id); q->setValueNotifyingHost (q->convertTo0to1 (real)); };
+    auto setP = [&] (const char* id, float real)
+    {
+        auto* q = p.apvts.getParameter (id);
+        if (! q) { std::printf ("FAIL  unknown parameter id %s\n", id); ++fails; return; }
+        q->setValueNotifyingHost (q->convertTo0to1 (real));
+    };
 
     float pk = 0;
     check (render (20, {}) < 1e-6f, "silence without notes");
@@ -89,7 +94,7 @@ int main()
         std::mt19937 g (12345); p.setPlayHead (&head);
         for (int round = 0; round < 6; ++round)
         {
-            setP ("hsync", (float) (g() & 1)); setP ("arp", (float) (g() & 1)); setP ("arpHold", (float) (g() & 1));
+            setP ("hsync", (float) (g() & 1)); setP ("arp", (float) (g() & 1)); setP ("ahold", (float) (g() & 1));
             p.setCurrentProgram ((int) (g() % (unsigned) p.getNumPrograms()));
             juce::AudioBuffer<float> buf (2, bs);
             for (int i = 0; i < 300; ++i)
@@ -108,7 +113,7 @@ int main()
             render (1, allOff()); render (1, {});
             juce::MidiBuffer pedalUp; pedalUp.addEvent (juce::MidiMessage::controllerEvent (1, 64, 0), 0); render (1, pedalUp);
             render (1, allOff());
-            setP ("arp", 0.0f); setP ("arpHold", 0.0f);
+            setP ("arp", 0.0f); setP ("ahold", 0.0f);
             const float tail = render (1500, {});
             char msg[96]; std::snprintf (msg, sizeof msg, "GUARD chaos round %d ends silent (tail rms %.6f)", round, tail);
             check (tail < 0.001f, msg);
@@ -119,7 +124,7 @@ int main()
     // ---- state round trip
     {
         p.setCurrentProgram (8);
-        setP ("Cutoff", 33); setP ("Unison", 4);
+        setP ("Cutoff", 33); setP ("uni", 4);
         juce::MemoryBlock mb; p.getStateInformation (mb);
         p.setCurrentProgram (3); setP ("Cutoff", 100);
         p.setStateInformation (mb.getData(), (int) mb.getSize());
