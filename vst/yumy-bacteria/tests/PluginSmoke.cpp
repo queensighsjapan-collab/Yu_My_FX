@@ -114,7 +114,8 @@ int main()
             juce::MidiBuffer pedalUp; pedalUp.addEvent (juce::MidiMessage::controllerEvent (1, 64, 0), 0); render (1, pedalUp);
             render (1, allOff());
             setP ("arp", 0.0f); setP ("ahold", 0.0f);
-            const float tail = render (1500, {});
+            render (700, {});                        // natural FX / release tails (reverb is bounded: < 3 s)
+            const float tail = render (900, {});
             char msg[96]; std::snprintf (msg, sizeof msg, "GUARD chaos round %d ends silent (tail rms %.6f)", round, tail);
             check (tail < 0.001f, msg);
         }
