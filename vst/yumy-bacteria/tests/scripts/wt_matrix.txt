@@ -1,0 +1,23 @@
+o osc1mode 2
+o osc2mode 1
+p Osc1_Shape 40
+p Osc2_Shape 90
+p Osc1_PW 80
+p Flt_Decay 70
+p Flt_Sustain 20
+p Filter_Env_Amt 100
+ld 0 12
+p LFO1_Amount 40
+p LFO1_Rate 80
+mx 0 7 4 60 11 25 0 0
+mx 1 6 12 30 0 0 0 0
+mx 2 9 3 20 16 -30 0 0
+mx 3 4 7 40 0 0 0 0
+wheels 0.3 0.6 0.4
+on 48 100
+render 9600
+on 60 60
+render 12800
+off 48
+off 60
+render 9600

@@ -1,0 +1,29 @@
+o arp 1
+p Arp_Tempo 90
+p Arp_Range 70
+p Arp_Swing 40
+p Amp_Decay 40
+p Amp_Sustain 30
+on 48 100
+on 55 100
+on 60 100
+render 25600
+o amode 1
+o apat 4
+render 19200
+o amode 2
+o ares 4
+o alen 0
+render 19200
+o amode 5
+render 12800
+o amode 4
+render 12800
+o amode 3
+o ahold 1
+off 48
+off 55
+off 60
+render 12800
+o ahold 0
+render 6400

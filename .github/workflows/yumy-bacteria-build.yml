@@ -1,0 +1,55 @@
+name: Build YuMy Bacteria (VST3/AU)
+on:
+  push:
+    paths: ['vst/yumy-bacteria/**', '.github/workflows/yumy-bacteria-build.yml']
+  pull_request:
+    paths: ['vst/yumy-bacteria/**', '.github/workflows/yumy-bacteria-build.yml']
+  workflow_dispatch:
+defaults:
+  run:
+    working-directory: vst/yumy-bacteria
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build VST3 (and AU on macOS)
+        shell: bash
+        run: |
+          cmake --build build --config Release --target YuMyBacteria_VST3 --parallel
+          if [ "$RUNNER_OS" = "macOS" ]; then cmake --build build --config Release --target YuMyBacteria_AU --parallel; fi
+      - name: Architectures (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          for b in build/YuMyBacteria_artefacts/Release/VST3/*.vst3/Contents/MacOS/*; do echo "$b"; lipo -archs "$b"; done
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -R "build/YuMyBacteria_artefacts/Release/VST3/YuMy Bacteria.vst3" dist/
+          if [ "$RUNNER_OS" = "macOS" ]; then cp -R "build/YuMyBacteria_artefacts/Release/AU/YuMy Bacteria.component" dist/; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YuMyBacteria-${{ runner.os }}
+          path: vst/yumy-bacteria/dist
+  parity:
+    name: engine parity vs HTML (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: pip install numpy
+      - name: Generated tables are up to date
+        run: |
+          node vst/yumy-bacteria/tools/gen_tables.js synthesizer/yumy-bacteria.html > /tmp/Tables.inc
+          diff /tmp/Tables.inc vst/yumy-bacteria/Source/Tables.inc
+      - name: C++ engine vs JavaScript original
+        run: vst/yumy-bacteria/tests/run_tests.sh synthesizer/yumy-bacteria.html

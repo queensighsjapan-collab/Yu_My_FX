@@ -1,0 +1,17 @@
+sus 1
+on 60 100
+on 64 100
+render 6400
+off 60
+off 64
+render 12800
+sus 0
+render 12800
+on 67 100
+sus 1
+off 67
+render 6400
+on 67 100
+render 6400
+sus 0
+render 12800

@@ -1,0 +1,14 @@
+o osc1mode 1
+o osc2mode 2
+o uni 3
+p Osc1_Shape 70
+p Osc2_Shape 50
+p Osc1_PW 90
+p Cutoff 90
+p Resonance 40
+on 55 110
+on 62 100
+render 19200
+off 55
+off 62
+render 9600

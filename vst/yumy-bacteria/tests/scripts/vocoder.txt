@@ -1,0 +1,17 @@
+mod 1
+p Vocoder_Mix 127
+p Voc_Release 25
+p Voc_Q 80
+p Voc_Noise 60
+p Voc_Tilt 80
+p Voc_Shift 70
+p Cutoff 127
+o uni 2
+on 48 100
+on 55 100
+on 60 100
+render 19200
+o vbands 0
+render 12800
+o vbands 2
+render 12800

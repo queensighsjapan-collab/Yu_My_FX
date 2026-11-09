@@ -1,0 +1,12 @@
+on 60 100
+render 12800
+off 60
+render 12800
+on 48 90
+on 64 80
+on 67 70
+render 9600
+off 48
+off 64
+off 67
+render 12800

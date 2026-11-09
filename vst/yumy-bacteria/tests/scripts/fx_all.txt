@@ -1,0 +1,24 @@
+p Distortion 60
+p Chorus_Mix 70
+p Delay_Send 60
+p Delay_Feedback 70
+p Reverb_Send 70
+p Phaser_Mix 80
+p Phaser_Rate 50
+p Ring_Mix 40
+p Ring_Freq 70
+p EQ_Low 100
+p EQ_Mid 30
+p EQ_High 110
+p Formant_Mix 80
+p Formant_Vowel 60
+on 57 100
+on 64 100
+render 12800
+o cmode 1
+o rsize 2
+o dsync 3
+render 12800
+off 57
+off 64
+render 25600

@@ -1,0 +1,11 @@
+p Osc2_Semi 76
+p FM_Amount 60
+p Osc_Balance 40
+o sync 1
+on 52 100
+render 9600
+o sync 0
+o ring 1
+render 9600
+off 52
+render 6400

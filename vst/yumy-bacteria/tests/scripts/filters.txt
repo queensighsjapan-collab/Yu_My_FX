@@ -1,0 +1,22 @@
+p Cutoff 60
+p Cutoff_2 90
+p Resonance 90
+p Filter_Balance 70
+p Sub_Osc_Vol 60
+p Noise_Vol 30
+o f1mode 0
+o f2mode 2
+o routing 0
+on 45 100
+render 6400
+o f1mode 1
+render 6400
+o f1mode 3
+o routing 1
+render 6400
+o routing 2
+render 6400
+ld 0 20
+p LFO2_Amount 0
+mx 0 4 20 80 0 0 0 0
+render 6400
