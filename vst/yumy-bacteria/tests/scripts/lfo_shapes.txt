@@ -1,0 +1,28 @@
+p LFO1_Rate 90
+p LFO2_Rate 70
+p LFO3_Rate 60
+p LFO1_Amount 50
+p LFO2_Amount 50
+p LFO3_Amount 40
+ld 0 12
+ld 1 1
+ld 2 16
+p LFO1_Shape 0
+p LFO2_Shape 40
+p LFO3_Shape 80
+p LFO1_Delay 40
+p LFO1_Fade 60
+o l2s 3
+o l3k 0
+p LFO3_Phase 30
+on 50 100
+render 12800
+p LFO1_Shape 100
+p LFO2_Shape 70
+p LFO3_Shape 127
+render 12800
+p LFO1_Shape 50
+p LFO2_Shape 20
+p LFO3_Shape 110
+on 53 100
+render 12800

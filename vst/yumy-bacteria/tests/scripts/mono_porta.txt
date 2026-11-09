@@ -1,0 +1,19 @@
+o mono 1
+p Portamento 60
+on 48 100
+render 6400
+on 55 90
+render 6400
+off 55
+render 6400
+off 48
+render 12800
+o mono 2
+o uni 2
+on 60 100
+render 6400
+on 62 100
+render 6400
+off 62
+off 60
+render 12800

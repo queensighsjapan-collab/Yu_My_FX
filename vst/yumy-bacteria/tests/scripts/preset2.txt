@@ -1,0 +1,10 @@
+load 2
+on 48 100
+on 55 90
+on 60 100
+wheels 0 0.2 0
+render 12800
+off 48
+off 55
+off 60
+render 9600
