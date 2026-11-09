@@ -5,6 +5,7 @@
 namespace yb
 {
 static const double PI2 = 6.283185307179586;
+static const double kPi = 3.141592653589793;
 
 const char* const kParamNames[NUM_P] = {
 #define X(id, name, def) name,
@@ -320,7 +321,7 @@ void Core::vocode (float* L, float* R, int N, const float* mod)
     for (int b = 0; b < nb; ++b)
     {
         V.f[b] = 110 * std::pow (8000.0 / 110, (double) b / (nb - 1));
-        const double gm = std::tan (M_PI * std::min (V.f[b] * G.vocSh, lim) / sr), gc = std::tan (M_PI * std::min (V.f[b], lim) / sr);
+        const double gm = std::tan (kPi * std::min (V.f[b] * G.vocSh, lim) / sr), gc = std::tan (kPi * std::min (V.f[b], lim) / sr);
         V.m1[b] = 1 / (1 + gm * (gm + k)); V.m2[b] = gm * V.m1[b]; V.m3[b] = gm * V.m2[b];
         V.c1[b] = 1 / (1 + gc * (gc + k)); V.c2[b] = gc * V.c1[b]; V.c3[b] = gc * V.c2[b];
         V.bg[b] = std::pow (10.0, G.vocTilt * ((double) b / (nb - 1) - 0.5) / 20);
@@ -408,7 +409,7 @@ void Core::fx (float* L, float* R, int N)
         for (int b = 0; b < 3; ++b)
         {
             const double fq = std::min (VOWELS[i0][b] * std::pow (VOWELS[i0 + 1][b] / VOWELS[i0][b], fr), 0.45 * sr);
-            const double g = std::tan (M_PI * fq / sr), k = f.fk, a1 = 1 / (1 + g * (g + k));
+            const double g = std::tan (kPi * fq / sr), k = f.fk, a1 = 1 / (1 + g * (g + k));
             f.fc[b][0] = a1; f.fc[b][1] = g * a1; f.fc[b][2] = g * g * a1;
         }
     }
@@ -436,7 +437,7 @@ void Core::fx (float* L, float* R, int N)
             for (int ch = 0; ch < 2; ++ch)
             {
                 double* z = f.ph[ch]; const double lf = std::sin (PI2 * (f.pph + ch * 0.25));
-                const double fq = 250 * std::pow (2.0, 3.5 * (0.5 + 0.5 * lf)), t = std::tan (M_PI * std::min (fq, 0.45 * sr) / sr), a = (t - 1) / (t + 1);
+                const double fq = 250 * std::pow (2.0, 3.5 * (0.5 + 0.5 * lf)), t = std::tan (kPi * std::min (fq, 0.45 * sr) / sr), a = (t - 1) / (t + 1);
                 double x = (ch ? r : l) + z[4] * 0.5;
                 for (int s = 0; s < 4; ++s) { const double y = a * x + z[s]; z[s] = x - a * y; x = y; }
                 z[4] = x;
@@ -638,8 +639,8 @@ void Core::block (Voice& v, float* L, float* R, int s0, int len)
     const double fc1 = clampd (G.cut1 * std::pow (2.0, eo + kfo + (M[10] + M[12]) * 6), 18, 0.46 * sr);
     const double fc2 = clampd (G.cut2 * std::pow (2.0, eo + kfo + (M[11] + M[12]) * 6), 18, 0.46 * sr);
     const double res = clampd (G.res + M[13], 0, 1), k = 2 - 1.95 * res;
-    const double g1 = std::tan (M_PI * fc1 / sr), a11 = 1 / (1 + g1 * (g1 + k)), a12 = g1 * a11, a13 = g1 * a12;
-    const double g2 = std::tan (M_PI * fc2 / sr), a21 = 1 / (1 + g2 * (g2 + k)), a22 = g2 * a21, a23 = g2 * a22;
+    const double g1 = std::tan (kPi * fc1 / sr), a11 = 1 / (1 + g1 * (g1 + k)), a12 = g1 * a11, a13 = g1 * a12;
+    const double g2 = std::tan (kPi * fc2 / sr), a21 = 1 / (1 + g2 * (g2 + k)), a22 = g2 * a21, a23 = g2 * a22;
     const double fb = clampd (G.fbal + M[14], 0, 1), sat = 1 + clampd (M[20], 0, 1) * 5;
     const int rt = O[O_routing], m1 = O[O_f1mode], m2 = O[O_f2mode]; const bool sync = O[O_sync] == 1, ring = O[O_ring] == 1;
     const double ca = std::cos (bal * 1.5707963), cb = std::sin (bal * 1.5707963);

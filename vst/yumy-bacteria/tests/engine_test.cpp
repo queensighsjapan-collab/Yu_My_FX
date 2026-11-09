@@ -53,7 +53,7 @@ int main (int argc, char** argv)
             for (int d = 0; d < frames; d += 128)
             {
                 float L[128] = {}, R[128] = {}, mod[128];
-                if (modOn) for (int i = 0; i < 128; ++i, ++gi) mod[i] = (float) (0.3 * std::sin (2 * M_PI * 150 * gi / sr) * (0.6 + 0.4 * std::sin (2 * M_PI * 3 * gi / sr)) + 0.1 * std::sin (2 * M_PI * 1900 * gi / sr));
+                if (modOn) for (int i = 0; i < 128; ++i, ++gi) mod[i] = (float) (0.3 * std::sin (2 * 3.141592653589793 * 150 * gi / sr) * (0.6 + 0.4 * std::sin (2 * 3.141592653589793 * 3 * gi / sr)) + 0.1 * std::sin (2 * 3.141592653589793 * 1900 * gi / sr));
                 K.render (L, R, 128, modOn ? mod : nullptr);
                 for (int i = 0; i < 128; ++i) { out.push_back (L[i]); out.push_back (R[i]); }
             }

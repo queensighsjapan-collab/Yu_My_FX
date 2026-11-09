@@ -49,7 +49,7 @@ jobs:
       - run: pip install numpy
       - name: Generated tables are up to date
         run: |
-          node vst/yumy-bacteria/tools/gen_tables.js synthesizer/yumy-bacteria.html > /tmp/Tables.inc
-          diff /tmp/Tables.inc vst/yumy-bacteria/Source/Tables.inc
+          node tools/gen_tables.js "$GITHUB_WORKSPACE/synthesizer/yumy-bacteria.html" > /tmp/Tables.inc
+          diff /tmp/Tables.inc Source/Tables.inc
       - name: C++ engine vs JavaScript original
-        run: vst/yumy-bacteria/tests/run_tests.sh synthesizer/yumy-bacteria.html
+        run: tests/run_tests.sh "$GITHUB_WORKSPACE/synthesizer/yumy-bacteria.html"
