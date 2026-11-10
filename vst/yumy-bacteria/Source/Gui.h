@@ -394,6 +394,7 @@ public:
     SelectField (String l, const StringArray& items, std::function<void (int)> onChange) : FieldBase (std::move (l))
     {
         box.addItemList (items, 1);
+        box.setSelectedItemIndex (0, dontSendNotification);
         box.onChange = [this, onChange] { if (! quiet) onChange (box.getSelectedItemIndex()); };
         addAndMakeVisible (box);
     }
@@ -424,7 +425,7 @@ public:
         slider.setRange (range.start, range.end, 1.0);
         slider.setDoubleClickReturnValue (true, p->convertFrom0to1 (p->getDefaultValue()));
         slider.setPopupDisplayEnabled (false, false, nullptr);
-        slider.onValueChange = [this, p] { update(); if (lcd) lcd->show (p->getName (40), valText(), (float) ((slider.getValue() - slider.getMinimum()) / (slider.getMaximum() - slider.getMinimum()))); };
+        slider.onValueChange = [this, p] { update(); if (lcd && slider.isMouseOverOrDragging()) lcd->show (p->getName (40), valText(), (float) ((slider.getValue() - slider.getMinimum()) / (slider.getMaximum() - slider.getMinimum()))); };
         att = std::make_unique<SliderParameterAttachment> (*p, slider);
         addAndMakeVisible (slider);
         addAndMakeVisible (value);

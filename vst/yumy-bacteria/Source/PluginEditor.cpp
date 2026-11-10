@@ -11,7 +11,7 @@ namespace
 {
 constexpr int KW = 52, KG = 6;
 constexpr int PX = 34, PW = 1412;      // metal panel inside the red rails
-constexpr int P1H = 522;
+constexpr int P1H = 534;
 constexpr int FOOT = 26;
 
 class Logo : public Component
@@ -151,7 +151,7 @@ void YumyBacteriaEditor::build()
     auto sec = [&] (const String& title, int x, int y, int w, int h) { return setB (add (new Sec (title)), x, y - 9, w, h + 9); };
     auto prm = [&] (const char* name) { return apvts.getParameter (pid (name)); };
     auto knob = [&] (int x, int y, const char* name, const String& label, bool red = false, bool big = false)
-    { return setB (add (new KnobCell (prm (name), label, &lcd, red, big)), x, y, big ? 64 : KW, big ? 96 : 72); };
+    { return setB (add (new KnobCell (prm (name), label, &lcd, red, big)), x, y, big ? 64 : KW, big ? 100 : 78); };
     auto sel = [&] (int x, int y, int w, const String& label, const char* id)
     { return setB (add (new SelectField (label, apvts, id, &lcd)), x, y, w, 40); };
     auto sld = [&] (int x, int y, int w, const String& label, const char* name, std::function<String (int)> f = nullptr, bool showLabel = true, int vw = 54)
@@ -165,7 +165,7 @@ void YumyBacteriaEditor::build()
     panel2 = add (new MetalPanel());
 
     // ================= panel 1 =================
-    const int r1 = 20, h1 = 155, r2 = r1 + h1 + 12, h2 = 152, r3 = r2 + h2 + 12, h3 = 152;
+    const int r1 = 20, h1 = 155, r2 = r1 + h1 + 12, h2 = 158, r3 = r2 + h2 + 12, h3 = 158;
     {
         const int x = PX + 18;
         setB (add (new Logo()), x, r1, 226, 50);
@@ -207,7 +207,7 @@ void YumyBacteriaEditor::build()
         const char* fl[] = { "CUTOFF", "CUTOFF 2", "RESONANCE", "ENV\nAMOUNT", "KEY\nFOLLOW", "FILTER\nBALANCE" };
         for (int i = 0; i < 6; ++i) knob (sx + 10 + i * (KW + KG), r2 + 20, fn[i], fl[i], i < 2);
         const char* fm[] = { "LP", "HP", "BP", "BS" };
-        for (int i = 0; i < 4; ++i) setB (add (new LedChoice (apvts.getParameter ("f1mode"), i, fm[i], &lcd)), sx + 10 + i * (KW + KG), r2 + 20 + 72 + 6, KW, 50);
+        for (int i = 0; i < 4; ++i) setB (add (new LedChoice (apvts.getParameter ("f1mode"), i, fm[i], &lcd)), sx + 10 + i * (KW + KG), r2 + 20 + 80, KW, 50);
         sx += secW (6) + 10;
 
         auto env = [&] (const char* title, const char* pre)
@@ -241,8 +241,8 @@ void YumyBacteriaEditor::build()
         knob (sx + 10, r3 + 20, "Arp Tempo", "TEMPO");
         knob (sx + 10 + KW + KG, r3 + 20, "Arp Range", "RANGE");
         knob (sx + 10 + 2 * (KW + KG), r3 + 20, "Arp Swing", "SWING");
-        setB (add (new LedToggle (apvts.getParameter ("arp"), "ARP ON", &lcd)), sx + 10, r3 + 20 + 72 + 6, KW, 50);
-        setB (add (new LedToggle (apvts.getParameter ("ahold"), "HOLD", &lcd)), sx + 10 + KW + KG, r3 + 20 + 72 + 6, KW, 50);
+        setB (add (new LedToggle (apvts.getParameter ("arp"), "ARP ON", &lcd)), sx + 10, r3 + 20 + 80, KW, 50);
+        setB (add (new LedToggle (apvts.getParameter ("ahold"), "HOLD", &lcd)), sx + 10 + KW + KG, r3 + 20 + 80, KW, 50);
         sx += secW (3) + 10;
         sec ("PERFORM", sx, r3, secW (2), h3);
         knob (sx + 10, r3 + 20, "Transpose", "TRANSPOSE");
