@@ -47,6 +47,10 @@ jobs:
           xvfb-run -a "$g" shots/folded.png 0 0 1480
           xvfb-run -a "$g" shots/open.png 0 1 1480
           xvfb-run -a "$g" shots/folded_small.png 5 0 1100
+      - name: Dump GUI screenshots to log (temporary, artifacts are not downloadable from the sandbox)
+        if: matrix.name == 'yumy-bacteria'
+        run: |
+          for f in shots/*.png; do echo "BEGIN64 $f"; base64 -w0 "$f"; echo; echo "END64 $f"; done
       - name: Upload GUI screenshots
         if: matrix.name == 'yumy-bacteria'
         uses: actions/upload-artifact@v4
