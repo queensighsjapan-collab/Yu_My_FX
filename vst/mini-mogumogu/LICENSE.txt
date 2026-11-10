@@ -1,19 +1,47 @@
-mini mogumogu — Freeware License / フリーウェア使用許諾
+﻿mini mogumogu — 使用許諾契約書 / End User License Agreement
 
 Copyright (c) 2026 Yu_My. All rights reserved.
 
 【日本語】
-1. mini mogumogu（以下「本ソフトウェア」）は無料で使用できます。個人・商用を問わず、音楽制作に使用して作った楽曲・音源は自由に公開・販売できます（使用料・クレジット表記は不要です）。
-2. 本ソフトウェアのバイナリ（インストーラー等）は、改変せず、無償で、かつ配布元（公式の配布ページ）へのリンクを添えるかぎり、再配布できます。有償での販売・配布、改変した版の再配布はできません。
-3. ソースコードの著作権は作者にあります。ソースコードの複製・改変・再配布には、作者の許可が必要です。
-4. 本ソフトウェアは現状のまま提供され、動作・特定目的への適合性・DAW との互換性を含め、いかなる保証もありません。使用によって生じた損害について、作者は責任を負いません。
-5. 本ソフトウェアには JUCE（https://juce.com）を使用しています。JUCE は JUCE Limited の著作物であり、同社のライセンス条件に従って使用しています。
-6. VST は Steinberg Media Technologies GmbH の登録商標です。Audio Units は Apple Inc. の商標です。Moog および Minimoog は Moog Music Inc. の商標です。本ソフトウェアはこれらの会社とは無関係で、承認・提携を受けていません。
+1. 許諾
+   本契約は、購入者（以下「あなた」）に対し、mini mogumogu（以下「本ソフトウェア」）を使用する非独占的な権利を許諾するものです。購入後、あなたが所有・管理する複数のコンピューターにインストールして使用できます（同時に使用するのは、あなた本人のみとします）。
 
-[English]
-1. mini mogumogu ("the Software") is free to use. You may use it for personal or commercial music production, and you may freely release or sell the music you make with it. No fee or credit is required.
-2. You may redistribute the unmodified binaries (installers) free of charge, provided you link to the official distribution page. Selling the Software, or redistributing modified versions, is not permitted.
-3. The copyright of the source code belongs to the author. Copying, modifying or redistributing the source code requires the author's permission.
-4. The Software is provided "as is", without warranty of any kind, including fitness for a particular purpose or compatibility with any host. The author is not liable for any damages arising from its use.
-5. The Software is built with JUCE (https://juce.com), the property of JUCE Limited, used under JUCE's licence terms.
-6. VST is a registered trademark of Steinberg Media Technologies GmbH. Audio Units is a trademark of Apple Inc. Moog and Minimoog are trademarks of Moog Music Inc. This Software is not affiliated with or endorsed by any of these companies.
+2. 商用利用
+   本ソフトウェアで作った楽曲・音源・映像などは、個人・商用を問わず、自由に公開・販売できます。使用料やクレジット表記は不要です。
+
+3. 禁止事項
+   (a) 本ソフトウェア、またはそのインストーラー・シリアルなどの複製物を、第三者に譲渡・貸与・配布・転売・共有すること（無償か有償かを問いません）
+   (b) 本ソフトウェアを改変すること、リバースエンジニアリング・逆コンパイル・逆アセンブルを行うこと（法律で認められる範囲を除く）
+   (c) 本ソフトウェアの音源部分を、サンプル集・ソフトウェア音源・ライブラリなどの形で再配布すること
+   (d) 本ソフトウェアの一部または全部を、他の製品・サービスの開発に利用すること
+
+4. 権利
+   本ソフトウェアの著作権その他の知的財産権は、作者に帰属します。本契約は、権利の譲渡ではなく、使用の許諾です。
+
+5. サポート・アップデート
+   不具合の修正版は、購入者に追加料金なしで提供します。ただし、すべての DAW・OS・環境での動作、および特定の機能追加を保証するものではありません。
+
+6. 免責
+   本ソフトウェアは現状のまま提供され、動作・特定目的への適合性・DAW との互換性を含め、いかなる保証もありません。法律で認められる範囲で、本ソフトウェアの使用または使用できないことによって生じたいかなる損害（作品・データの損失を含む）についても、作者の責任は、あなたが支払った購入代金を上限とします。
+   本ソフトウェアは Windows 用のコード署名および Mac 用の Apple 公証を受けていないため、インストール時に OS の警告が表示されます。手順は同梱の説明に従ってください。
+
+7. 解除
+   あなたが本契約に違反した場合、許諾は直ちに終了します。そのときは、本ソフトウェアのすべての複製を削除してください。
+
+8. 準拠法
+   本契約は日本法に準拠し、紛争は、作者の住所地を管轄する日本の裁判所を第一審の専属的合意管轄とします。
+
+9. 第三者の権利・商標
+   本ソフトウェアには JUCE（https://juce.com ／ JUCE Limited）を使用しています。また、Barlow Condensed（SIL Open Font License 1.1）、Share Tech Mono（SIL Open Font License 1.1）の各フォントを埋め込んでいます。フォントのライセンス文は同梱の Fonts フォルダーにあります。
+   VST は Steinberg Media Technologies GmbH の登録商標です。Audio Units は Apple Inc. の商標です。Moog および Minimoog は Moog Music Inc. の商標です。本ソフトウェアはこれらの会社とは無関係で、承認・提携を受けていません。
+
+【English】
+1. Grant - Yu_My grants you a non-exclusive licence to use mini mogumogu ("the Software"). After purchase you may install it on computers you own or control; only you may use it at any one time.
+2. Commercial use - Music, audio and video you create with the Software may be released and sold freely, commercially or not. No fee or credit is required.
+3. Restrictions - You may not (a) transfer, lend, share, redistribute or resell the Software or its installer / licence information, free or for payment; (b) modify, reverse engineer, decompile or disassemble it, except where law permits; (c) redistribute its sound engine as a sample pack, library or software instrument; (d) use any part of it to develop another product or service.
+4. Ownership - All rights remain with the author. This is a licence, not a sale of rights.
+5. Updates - Bug-fix versions are provided to purchasers at no extra charge. No guarantee is given for compatibility with every DAW / OS or for any particular new feature.
+6. Disclaimer - The Software is provided "as is" without warranty of any kind. To the extent permitted by law, the author's total liability for any damage arising from its use or inability to use (including loss of work or data) is limited to the price you paid. The Software is not Windows code-signed or Apple-notarised; your OS will show a warning at install time. Follow the included instructions.
+7. Termination - The licence ends immediately if you breach this agreement; delete all copies.
+8. Governing law - Japanese law; the courts of Japan having jurisdiction over the author's address have exclusive first-instance jurisdiction.
+9. Third-party rights and trademarks - Built with JUCE (JUCE Limited). Embeds Barlow Condensed and Share Tech Mono (SIL Open Font License 1.1). VST is a registered trademark of Steinberg Media Technologies GmbH. Audio Units is a trademark of Apple Inc. Moog and Minimoog are trademarks of Moog Music Inc. The Software is not affiliated with or endorsed by any of them.
