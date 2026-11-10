@@ -18,3 +18,11 @@
 ## テスト
 - `tests/run_tests.sh /path/to/yumy-bacteria.html` — C++ エンジンと HTML 版の波形比較（g++, node, python3+numpy）。
 - `YuMyBacteria_SmokeTest`（`-DYB_BUILD_TESTS=ON`）— プラグイン全体のスモークテスト。`vst/DESIGN_RULES.md` の「鳴りっぱなし」ガードを含みます。CI（`vst-tests.yml`）で毎回実行されます。
+
+## GUI (stage b)
+- HTML版パネルを再現したカスタムGUI(つまみ=縦ドラッグ / Shiftで微調整 / ダブルクリックでリセット / DAWオートメーション連動)。
+- 画面は拡大縮小可(縦横比固定)。「SHOW SOUND DESIGN」で VOCODER / EFFECTS EXTRA / MOD MATRIX / ARP SETTINGS / LFO SETUP / OSC EXTRA を開閉。
+- LCD: プログラム名(PREV/NEXT・PROGRAMセレクト)と、触ったパラメーター名・値。
+- RANDOMIZE / MUTATE / BACK / LOCK はHTML版と同じロジックをC++へ移植(`Source/Randomizer.h`)。
+- ヴォコーダーのモジュレーターはDAWのサイドチェイン入力。INPUT LEVELメーターで入力有無を確認。
+- GUIスクリーンショット: `YuMyBacteria_GuiShot <out.png> [program] [fold 0|1] [width]`(CIで生成)。

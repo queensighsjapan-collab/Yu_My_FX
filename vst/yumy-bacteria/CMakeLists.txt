@@ -46,6 +46,10 @@ juce_add_plugin(YuMyBacteria
   AU_MAIN_TYPE               kAudioUnitType_MusicDevice
   FORMATS                    ${YB_FORMATS})
 
+# logo (embedded into the plug-in binary)
+juce_add_binary_data(YuMyBacteriaAssets SOURCES Assets/logo.png)
+set_target_properties(YuMyBacteriaAssets PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 target_sources(YuMyBacteria PRIVATE ${YB_SOURCES})
 
 target_compile_definitions(YuMyBacteria PUBLIC
@@ -57,15 +61,22 @@ target_compile_definitions(YuMyBacteria PUBLIC
 target_compile_options(YuMyBacteria PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-float-equal>)
 
 target_link_libraries(YuMyBacteria
-  PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+  PRIVATE YuMyBacteriaAssets juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
   PUBLIC  juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 
 # ---- optional headless tests (smoke test of the whole plug-in)
 option(YB_BUILD_TESTS "Build the headless test tools" OFF)
 if(YB_BUILD_TESTS)
-  juce_add_console_app(YuMyBacteria_SmokeTest PRODUCT_NAME "YuMy Bacteria SmokeTest")
-  target_sources(YuMyBacteria_SmokeTest PRIVATE tests/PluginSmoke.cpp ${YB_SOURCES})
-  target_compile_definitions(YuMyBacteria_SmokeTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_STANDALONE_APPLICATION=1)
-  target_link_libraries(YuMyBacteria_SmokeTest PRIVATE juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
-                        juce::juce_recommended_config_flags)
+  foreach(T SmokeTest GuiShot)
+    if(T STREQUAL "SmokeTest")
+      set(SRC tests/PluginSmoke.cpp)
+    else()
+      set(SRC tests/GuiShot.cpp)
+    endif()
+    juce_add_console_app(YuMyBacteria_${T} PRODUCT_NAME "YuMy Bacteria ${T}")
+    target_sources(YuMyBacteria_${T} PRIVATE ${SRC} ${YB_SOURCES})
+    target_compile_definitions(YuMyBacteria_${T} PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_STANDALONE_APPLICATION=1)
+    target_link_libraries(YuMyBacteria_${T} PRIVATE YuMyBacteriaAssets juce::juce_audio_utils juce::juce_audio_processors juce::juce_audio_devices
+                          juce::juce_recommended_config_flags)
+  endforeach()
 endif()
