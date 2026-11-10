@@ -67,6 +67,7 @@ jobs:
             echo "$b architectures: $(lipo -archs "$b"/Contents/MacOS/"mini mogumogu")"
           done
           cp ../LICENSE.txt .
+          cp ../Fonts/OFL-*.txt .
           cat > "はじめにお読みください.txt" <<'TXT'
           mini mogumogu インストール方法（Mac）
 

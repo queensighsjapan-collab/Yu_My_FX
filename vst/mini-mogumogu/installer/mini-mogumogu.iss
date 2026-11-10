@@ -30,3 +30,4 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "..\dist\mini mogumogu.vst3\*"; DestDir: "{commoncf64}\VST3\mini mogumogu.vst3"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\LICENSE.txt"; DestDir: "{commoncf64}\VST3\mini mogumogu.vst3"; Flags: ignoreversion
+Source: "..\Fonts\OFL-*.txt"; DestDir: "{commoncf64}\VST3\mini mogumogu.vst3"; Flags: ignoreversion
