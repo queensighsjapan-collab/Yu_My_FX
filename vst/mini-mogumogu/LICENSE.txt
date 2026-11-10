@@ -32,7 +32,7 @@ Copyright (c) 2026 Yu_My. All rights reserved.
    本契約は日本法に準拠し、紛争は、作者の住所地を管轄する日本の裁判所を第一審の専属的合意管轄とします。
 
 9. 第三者の権利・商標
-   本ソフトウェアには JUCE（https://juce.com ／ JUCE Limited）を使用しています。また、Barlow Condensed（SIL Open Font License 1.1）、Share Tech Mono（SIL Open Font License 1.1）の各フォントを埋め込んでいます。フォントのライセンス文は同梱の Fonts フォルダーにあります。
+   本ソフトウェアには JUCE（https://juce.com ／ JUCE Limited）を使用しています。また、Barlow Condensed（SIL Open Font License 1.1）、Share Tech Mono（SIL Open Font License 1.1）の各フォントを埋め込んでいます。フォントのライセンス文は、同梱の OFL-*.txt にあります。
    VST は Steinberg Media Technologies GmbH の登録商標です。Audio Units は Apple Inc. の商標です。Moog および Minimoog は Moog Music Inc. の商標です。本ソフトウェアはこれらの会社とは無関係で、承認・提携を受けていません。
 
 【English】
@@ -44,4 +44,4 @@ Copyright (c) 2026 Yu_My. All rights reserved.
 6. Disclaimer - The Software is provided "as is" without warranty of any kind. To the extent permitted by law, the author's total liability for any damage arising from its use or inability to use (including loss of work or data) is limited to the price you paid. The Software is not Windows code-signed or Apple-notarised; your OS will show a warning at install time. Follow the included instructions.
 7. Termination - The licence ends immediately if you breach this agreement; delete all copies.
 8. Governing law - Japanese law; the courts of Japan having jurisdiction over the author's address have exclusive first-instance jurisdiction.
-9. Third-party rights and trademarks - Built with JUCE (JUCE Limited). Embeds Barlow Condensed and Share Tech Mono (SIL Open Font License 1.1). VST is a registered trademark of Steinberg Media Technologies GmbH. Audio Units is a trademark of Apple Inc. Moog and Minimoog are trademarks of Moog Music Inc. The Software is not affiliated with or endorsed by any of them.
+9. Third-party rights and trademarks - Built with JUCE (JUCE Limited). Embeds Barlow Condensed and Share Tech Mono (SIL Open Font License 1.1; licence texts are included as OFL-*.txt). VST is a registered trademark of Steinberg Media Technologies GmbH. Audio Units is a trademark of Apple Inc. Moog and Minimoog are trademarks of Moog Music Inc. The Software is not affiliated with or endorsed by any of them.
