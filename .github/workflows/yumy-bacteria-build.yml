@@ -5,6 +5,11 @@ on:
   pull_request:
     paths: ['vst/yumy-bacteria/**', '.github/workflows/yumy-bacteria-build.yml']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'If set (e.g. yumy-bacteria-v0.1.0), also create a DRAFT GitHub release with this tag from the build'
+        required: false
+        default: ''
 defaults:
   run:
     working-directory: vst/yumy-bacteria
@@ -29,16 +34,89 @@ jobs:
         shell: bash
         run: |
           for b in build/YuMyBacteria_artefacts/Release/VST3/*.vst3/Contents/MacOS/*; do echo "$b"; lipo -archs "$b"; done
+      - name: Version
+        id: ver
+        shell: bash
+        run: echo "v=$(grep -oE 'project\(YuMyBacteria VERSION [0-9.]+' CMakeLists.txt | grep -oE '[0-9.]+$')" >> "$GITHUB_OUTPUT"
       - name: Package
         shell: bash
         run: |
           mkdir -p dist
           cp -R "build/YuMyBacteria_artefacts/Release/VST3/YuMy Bacteria.vst3" dist/
           if [ "$RUNNER_OS" = "macOS" ]; then cp -R "build/YuMyBacteria_artefacts/Release/AU/YuMy Bacteria.component" dist/; fi
+
+      # ---------------- Windows: installer
+      - name: Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.v }}" installer\yumy-bacteria.iss
+          Get-ChildItem dist
+          Remove-Item -Recurse -Force "dist\YuMy Bacteria.vst3"
+
+      # ---------------- macOS: ad-hoc sign, check architectures, dmg (+ tar.gz)
+      # Apple Silicon refuses unsigned code, and a zip artifact drops the Unix permission bits,
+      # so the plug-ins are shipped inside a dmg / tar.gz.
+      - name: Sign and package (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd dist
+          for b in "YuMy Bacteria.vst3" "YuMy Bacteria.component"; do
+            chmod -R u+rwX,go+rX "$b"
+            chmod +x "$b"/Contents/MacOS/*
+            codesign --force --deep --sign - "$b"
+            codesign --verify --deep --strict --verbose=2 "$b"
+            echo "$b architectures: $(lipo -archs "$b/Contents/MacOS/YuMy Bacteria")"
+          done
+          cp ../LICENSE.txt .
+          cat > "はじめにお読みください.txt" <<'TXT'
+          YuMy Bacteria インストール方法（Mac）
+
+          1. "YuMy Bacteria.vst3" を ~/Library/Audio/Plug-Ins/VST3/ にコピー
+          2. "YuMy Bacteria.component" を ~/Library/Audio/Plug-Ins/Components/ にコピー（AU を使う場合）
+          3. ターミナルで次を実行（公証をしていないため必要です）
+               xattr -cr ~/Library/Audio/Plug-Ins/VST3/"YuMy Bacteria.vst3"
+               xattr -cr ~/Library/Audio/Plug-Ins/Components/"YuMy Bacteria.component"
+          4. DAW を再起動（または再スキャン）
+
+          ボーコーダーを使うときは、DAW でモジュレーター用トラックをこのプラグインのサイドチェインに送ってください。
+          TXT
+          sed -i '' 's/^          //' "はじめにお読みください.txt"
+          tar -czf ../YuMyBacteria-macOS.tar.gz "YuMy Bacteria.vst3" "YuMy Bacteria.component"
+          hdiutil create -volname "YuMy Bacteria" -srcfolder . -ov -format UDZO ../YuMyBacteria-macOS.dmg
+          cd ..
+          rm -rf dist && mkdir dist && mv YuMyBacteria-macOS.dmg YuMyBacteria-macOS.tar.gz dist/
+          ls -l dist
       - uses: actions/upload-artifact@v4
         with:
           name: YuMyBacteria-${{ runner.os }}
           path: vst/yumy-bacteria/dist
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          ls -lR artifacts
+          VER="${TAG#yumy-bacteria-v}"
+          sed "s/v0\.1\.0/v${VER}/; s/YuMyBacteria-Setup-0\.1\.0\.exe/YuMyBacteria-Setup-${VER}.exe/" vst/yumy-bacteria/RELEASE_NOTES.md > notes.md
+          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "YuMy Bacteria v${VER}" --notes-file notes.md \
+            artifacts/YuMyBacteria-Windows/YuMyBacteria-Setup-*.exe artifacts/YuMyBacteria-macOS/YuMyBacteria-macOS.dmg vst/yumy-bacteria/LICENSE.txt
+
   parity:
     name: engine parity vs HTML (Linux)
     runs-on: ubuntu-latest
