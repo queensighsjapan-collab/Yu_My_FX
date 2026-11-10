@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "Engine.h"
+#include "Randomizer.h"
 
 class YumyBacteriaProcessor : public juce::AudioProcessor
 {
@@ -35,6 +36,11 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+
+    // GUI helpers (message thread)
+    yb::PatchState capturePatch() const;
+    void applyPatch (const yb::PatchState& st);           // writes every parameter as one gesture each (host automation / undo friendly)
+    std::atomic<float> inPeak { 0.0f };                    // peak of the vocoder sidechain input of the last block (0 = nothing connected)
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();

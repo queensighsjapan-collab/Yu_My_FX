@@ -38,6 +38,21 @@ jobs:
           rc=${PIPESTATUS[0]}
           ! grep -q "^FAIL" smoke.log
           if [ "${{ matrix.strict }}" = "true" ]; then test $rc -eq 0; grep -q "^ALL OK" smoke.log; fi
+      - name: GUI screenshots (yumy-bacteria)
+        if: matrix.name == 'yumy-bacteria'
+        run: |
+          cmake --build build --target YuMyBacteria_GuiShot --parallel
+          g=$(find build -type f -name YuMyBacteria_GuiShot | head -1)
+          mkdir -p shots
+          xvfb-run -a "$g" shots/folded.png 0 0 1480
+          xvfb-run -a "$g" shots/open.png 0 1 1480
+          xvfb-run -a "$g" shots/folded_small.png 5 0 1100
+      - name: Upload GUI screenshots
+        if: matrix.name == 'yumy-bacteria'
+        uses: actions/upload-artifact@v4
+        with:
+          name: yumy-bacteria-gui
+          path: shots/*.png
       - name: pluginval
         run: |
           curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip

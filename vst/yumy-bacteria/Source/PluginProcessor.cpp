@@ -146,6 +146,7 @@ void YumyBacteriaProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 
     // vocoder modulator: sidechain input (mono mix)
     haveMod = false;
+    inPeak.store (0.0f);
     if (auto* inBus = getBus (true, 0); inBus != nullptr && inBus->isEnabled())
     {
         auto in = getBusBuffer (buffer, true, 0);
@@ -158,6 +159,9 @@ void YumyBacteriaProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
             for (int c = 1; c < nc; ++c) { const float* cc = in.getReadPointer (c); for (int i = 0; i < N; ++i) modBuf[(size_t) i] += cc[i]; }
             if (nc > 1) { const float g = 1.0f / (float) nc; for (int i = 0; i < N; ++i) modBuf[(size_t) i] *= g; }
             haveMod = true;
+            float pk = 0.0f;
+            for (int i = 0; i < N; ++i) pk = std::max (pk, std::abs (modBuf[(size_t) i]));
+            inPeak.store (pk);
         }
     }
 
@@ -210,6 +214,42 @@ void YumyBacteriaProcessor::setCurrentProgram (int index)
             setP ("mxd" + String (s + 1) + "_" + String (j + 1), (float) p.mx[s][1 + j]);
             setP ("mxa" + String (s + 1) + "_" + String (j + 1), (float) p.mx[s][4 + j]);
         }
+    }
+}
+
+yb::PatchState YumyBacteriaProcessor::capturePatch() const
+{
+    yb::PatchState s;
+    auto get = [this] (const String& id) { return (int) std::lround (apvts.getRawParameterValue (id)->load()); };
+    for (int i = 0; i < yb::NUM_P; ++i) s.k[i] = get (String (yb::kParamNames[i]).replaceCharacter (' ', '_'));
+    for (int i = 0; i < yb::NUM_O; ++i) s.o[i] = get (yb::kOptNames[i]);
+    for (int i = 0; i < 3; ++i) s.ld[i] = get ("ld" + String (i + 1));
+    for (int m = 0; m < 6; ++m)
+    {
+        s.msrc[m] = get ("mxs" + String (m + 1));
+        for (int j = 0; j < 3; ++j) { s.md[m][j] = get ("mxd" + String (m + 1) + "_" + String (j + 1)); s.ma[m][j] = get ("mxa" + String (m + 1) + "_" + String (j + 1)); }
+    }
+    return s;
+}
+
+void YumyBacteriaProcessor::applyPatch (const yb::PatchState& p)
+{
+    auto setP = [this] (const String& id, int real)
+    {
+        if (auto* q = apvts.getParameter (id))
+        {
+            q->beginChangeGesture();
+            q->setValueNotifyingHost (q->convertTo0to1 ((float) real));
+            q->endChangeGesture();
+        }
+    };
+    for (int i = 0; i < yb::NUM_P; ++i) setP (String (yb::kParamNames[i]).replaceCharacter (' ', '_'), p.k[i]);
+    for (int i = 0; i < yb::NUM_O; ++i) setP (yb::kOptNames[i], p.o[i]);
+    for (int i = 0; i < 3; ++i) setP ("ld" + String (i + 1), p.ld[i]);
+    for (int m = 0; m < 6; ++m)
+    {
+        setP ("mxs" + String (m + 1), p.msrc[m]);
+        for (int j = 0; j < 3; ++j) { setP ("mxd" + String (m + 1) + "_" + String (j + 1), p.md[m][j]); setP ("mxa" + String (m + 1) + "_" + String (j + 1), p.ma[m][j]); }
     }
 }
 
