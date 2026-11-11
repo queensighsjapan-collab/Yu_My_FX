@@ -13,6 +13,7 @@ public:
     int designHeight() const { return designH; }
 
     static constexpr int designW = 1480;
+    static constexpr int scrollW = 10;           // vertical scroll bar width (only reserved while SOUND DESIGN is open)
 
 private:
     void timerCallback() override;
@@ -22,7 +23,8 @@ private:
 
     YumyBacteriaProcessor& proc;
     ybgui::YbLaf laf;
-    juce::Component content;
+    juce::Viewport vp;
+    juce::Component holder, content;
     juce::OwnedArray<juce::Component> owned;
     juce::ComponentBoundsConstrainer constrainer;
 
@@ -37,6 +39,7 @@ private:
     std::vector<juce::Component*> rails;
     juce::Component *foot = nullptr, *panel2 = nullptr;
     int baseH = 0, sdH = 0, designH = 0;
+    float scale = 1400.0f / (float) designW;
     bool sdOpen = false;
 
     // randomizer state

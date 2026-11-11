@@ -13,7 +13,8 @@ int main (int argc, char** argv)
     const int width = argc > 4 ? std::atoi (argv[4]) : YumyBacteriaEditor::designW;
     std::unique_ptr<YumyBacteriaEditor> ed (static_cast<YumyBacteriaEditor*> (p.createEditor()));
     ed->setFold (open, true);
-    const int h = (int) std::lround ((double) ed->designHeight() * width / YumyBacteriaEditor::designW);
+    const int sbw = open ? YumyBacteriaEditor::scrollW : 0;
+    const int h = (int) std::lround ((double) ed->designHeight() * (width - sbw) / YumyBacteriaEditor::designW);
     ed->setSize (width, h);
     juce::Time::waitForMillisecondCounter (juce::Time::getMillisecondCounter() + 50);
     auto img = ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f);

@@ -52,7 +52,11 @@ YumyBacteriaEditor::YumyBacteriaEditor (YumyBacteriaProcessor& p) : AudioProcess
 {
     setLookAndFeel (&laf);
     content.setLookAndFeel (&laf);
-    addAndMakeVisible (content);
+    addAndMakeVisible (vp);
+    vp.setViewedComponent (&holder, false);
+    vp.setScrollBarsShown (true, false);
+    vp.setScrollBarThickness (scrollW);
+    holder.addAndMakeVisible (content);
     build();
     sdOpen = (bool) proc.apvts.state.getProperty ("sdOpen", false);
 
@@ -77,8 +81,11 @@ void YumyBacteriaEditor::paint (Graphics& g) { g.fillAll (Colour (0xff111111)); 
 
 void YumyBacteriaEditor::resized()
 {
-    const float s = (float) getWidth() / (float) designW;
-    content.setTransform (AffineTransform::scale (s));
+    vp.setBounds (getLocalBounds());
+    const int sbw = sdOpen ? scrollW : 0;
+    scale = (float) (getWidth() - sbw) / (float) designW;
+    holder.setSize (roundToInt ((float) designW * scale), roundToInt ((float) designH * scale));
+    content.setTransform (AffineTransform::scale (scale));
     content.setBounds (0, 0, designW, designH);
 }
 
@@ -132,14 +139,17 @@ void YumyBacteriaEditor::setFold (bool open, bool fromUser)
     rails[1]->setTopLeftPosition (designW - PX, 0);
     if (fromUser) proc.apvts.state.setProperty ("sdOpen", open, nullptr);
 
-    // window size: keep the current scale, but never taller than the screen
-    const auto area = Desktop::getInstance().getDisplays().getPrimaryDisplay() != nullptr
-                          ? Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea : Rectangle<int> (0, 0, 1920, 1080);
-    float scale = getWidth() > 0 ? (float) getWidth() / (float) designW : 1400.0f / (float) designW;
-    scale = std::min (scale, (float) area.getHeight() * 0.92f / (float) designH);
-    constrainer.setFixedAspectRatio ((double) designW / (double) designH);
-    content.setBounds (0, 0, designW, designH);
-    setSize (roundToInt ((float) designW * scale), roundToInt ((float) designH * scale));
+    // window size: keep the current text scale (width based). When open and taller than the screen, the panel scrolls instead of shrinking.
+    const auto* disp = Desktop::getInstance().getDisplays().getPrimaryDisplay();
+    const auto area = disp != nullptr ? disp->userArea : Rectangle<int> (0, 0, 1920, 1080);
+    float s = getWidth() > 0 ? scale : std::min (1400.0f, (float) area.getWidth() * 0.95f) / (float) designW;
+    const int sbw = open ? scrollW : 0;
+    const int w = roundToInt ((float) designW * s) + sbw;
+    int h = roundToInt ((float) designH * s);
+    if (open) h = std::min (h, roundToInt ((float) area.getHeight() * 0.92f));
+    constrainer.setFixedAspectRatio (open ? 0.0 : (double) w / (double) h);   // folded: whole panel is shown, keep its shape; open: free height
+    setSize (w, h);
+    resized();
 }
 
 // ======================================================================= layout
