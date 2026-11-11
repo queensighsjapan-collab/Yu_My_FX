@@ -85,55 +85,89 @@ jobs:
 
       - name: Assemble universal app, sign and zip
         run: |
-          ARM_APP=$(find slices -type d -name "YM-Kithara.app" -path "*arm64*" | head -1)
-          X64_APP=$(find slices -type d -name "YM-Kithara.app" -path "*x86_64*" | head -1)
+          # upload-artifact stores a directory's CONTENTS, so each slice
+          # arrived as a bare Contents/ tree; locate the app roots via
+          # their main binaries.
+          ARM_BIN=$(find slices -type f -path "*arm64*/Contents/MacOS/YM-Kithara" | head -1)
+          X64_BIN=$(find slices -type f -path "*x86_64*/Contents/MacOS/YM-Kithara" | head -1)
+          test -n "$ARM_BIN" && test -n "$X64_BIN"
+          ARM_APP=$(dirname "$(dirname "$(dirname "$ARM_BIN")")")
+          X64_APP=$(dirname "$(dirname "$(dirname "$X64_BIN")")")
           echo "arm64 slice:  $ARM_APP"
           echo "x86_64 slice: $X64_APP"
-          test -d "$ARM_APP" && test -d "$X64_APP"
+
+          # Each slice must be self-contained: every @executable_path
+          # reference from its binaries must exist in its Frameworks.
+          for SLICE in "$ARM_APP" "$X64_APP"; do
+            refs=$( { otool -L "$SLICE/Contents/MacOS/YM-Kithara";
+                      otool -L "$SLICE/Contents/Frameworks"/*; } \
+                    | grep -o "@executable_path/../Frameworks/[^ ]*" | sort -u )
+            for ref in $refs; do
+              name=$(basename "$ref")
+              if [ ! -f "$SLICE/Contents/Frameworks/$name" ]; then
+                echo "ERROR: $SLICE references missing dylib $name"; exit 1
+              fi
+            done
+            echo "$SLICE: all Frameworks references resolve"
+          done
 
           rm -rf "YM-Kithara.app"
-          cp -R "$ARM_APP" "YM-Kithara.app"
+          mkdir "YM-Kithara.app"
+          cp -R "$ARM_APP/Contents" "YM-Kithara.app/Contents"
 
-          # Fat versions of the two executables.
+          # Fat versions of the two executables (mandatory).
           for bin in "Contents/MacOS/YM-Kithara" "Contents/MacOS/KitharaVstScanner"; do
             lipo -create "$ARM_APP/$bin" "$X64_APP/$bin" -output "YM-Kithara.app/$bin.fat"
             mv "YM-Kithara.app/$bin.fat" "YM-Kithara.app/$bin"
             chmod +x "YM-Kithara.app/$bin"
-            echo "$bin: $(lipo -archs "YM-Kithara.app/$bin")"
-          done
-
-          # Fat versions of every bundled dylib; warn on single-arch leftovers.
-          mkdir -p fatfw
-          for f in "YM-Kithara.app/Contents/Frameworks"/*; do
-            name=$(basename "$f")
-            if [ -f "$X64_APP/Contents/Frameworks/$name" ]; then
-              lipo -create "$f" "$X64_APP/Contents/Frameworks/$name" -output "fatfw/$name"
-              mv "fatfw/$name" "$f"
-            else
-              echo "WARNING: $name exists only in the arm64 slice"
-            fi
-          done
-          for f in "$X64_APP/Contents/Frameworks"/*; do
-            name=$(basename "$f")
-            if [ ! -f "YM-Kithara.app/Contents/Frameworks/$name" ]; then
-              echo "WARNING: $name exists only in the x86_64 slice — copying as-is"
-              cp "$f" "YM-Kithara.app/Contents/Frameworks/$name"
-            fi
-          done
-
-          # Every shipped binary must now be universal.
-          fail=0
-          for bin in "YM-Kithara.app/Contents/MacOS/YM-Kithara" \
-                     "YM-Kithara.app/Contents/MacOS/KitharaVstScanner" \
-                     "YM-Kithara.app/Contents/Frameworks"/*; do
-            archs=$(lipo -archs "$bin")
+            archs=$(lipo -archs "YM-Kithara.app/$bin")
             echo "$bin: $archs"
             case "$archs" in
-              *arm64*x86_64*|*x86_64*arm64*) ;;
-              *) echo "ERROR: not universal: $bin"; fail=1 ;;
+              *arm64*x86_64*) ;;
+              *) echo "ERROR: not universal: $bin"; exit 1 ;;
             esac
           done
-          [ "$fail" = 0 ]
+
+          # Frameworks: the two runner images carry slightly different
+          # Homebrew snapshots (e.g. libavcodec .102 vs .101, OpenSSL 4
+          # vs 3), so the dylib sets are not identical. Same-named files
+          # are the same version for both arches -> lipo them. Files
+          # whose names differ are arch-specific versions: ship BOTH —
+          # each slice of the fat binaries references exactly the names
+          # its own slice's dylibbundler wrote, so the union is complete
+          # and every reference still resolves.
+          mkdir -p fatfw
+          for f in "$X64_APP/Contents/Frameworks"/*; do
+            name=$(basename "$f")
+            if [ -f "YM-Kithara.app/Contents/Frameworks/$name" ]; then
+              lipo -create "YM-Kithara.app/Contents/Frameworks/$name" "$f" \
+                   -output "fatfw/$name"
+              mv "fatfw/$name" "YM-Kithara.app/Contents/Frameworks/$name"
+              echo "fat: $name"
+            else
+              cp "$f" "YM-Kithara.app/Contents/Frameworks/$name"
+              echo "x86_64-only (version skew): $name"
+            fi
+          done
+          for f in "YM-Kithara.app/Contents/Frameworks"/*; do
+            echo "$(basename "$f"): $(lipo -archs "$f")"
+          done
+
+          # The merged app must still satisfy both slices' references.
+          for arch in arm64 x86_64; do
+            refs=$( { otool -arch $arch -L "YM-Kithara.app/Contents/MacOS/YM-Kithara";
+                      for d in "$ARM_APP/Contents/Frameworks"/* "$X64_APP/Contents/Frameworks"/*; do
+                        otool -arch $arch -L "$d" 2>/dev/null;
+                      done; } \
+                    | grep -o "@executable_path/../Frameworks/[^ ]*" | sort -u )
+            for ref in $refs; do
+              name=$(basename "$ref")
+              if [ ! -f "YM-Kithara.app/Contents/Frameworks/$name" ]; then
+                echo "ERROR: merged app misses $name (needed by $arch)"; exit 1
+              fi
+            done
+            echo "$arch: merged references resolve"
+          done
 
           # No dependency may point into Homebrew any more (app + dylibs).
           if otool -L "YM-Kithara.app/Contents/MacOS/YM-Kithara" \
