@@ -1,0 +1,45 @@
+name: Build YM Echo (macOS VST3)
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['vst/ym-echo/**', '.github/workflows/build-ym-echo.yml']
+
+defaults:
+  run:
+    working-directory: vst/ym-echo
+    shell: bash
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target YMEcho_VST3 --parallel
+
+      # Ad-hoc signed (not notarized): the tester must clear the quarantine
+      # flag after installing — see TESTER-MAC.md, which ships inside the zip.
+      - name: Sign and package
+        run: |
+          BUNDLE="build/YMEcho_artefacts/Release/VST3/YM Echo.vst3"
+          test -d "$BUNDLE"
+          chmod -R u+rwX,go+rX "$BUNDLE"
+          chmod +x "$BUNDLE/Contents/MacOS/YM Echo"
+          codesign --force --deep --sign - "$BUNDLE"
+          codesign --verify --deep --strict --verbose=2 "$BUNDLE"
+          echo "architectures: $(lipo -archs "$BUNDLE/Contents/MacOS/YM Echo")"
+          mkdir -p dist package
+          cp -R "$BUNDLE" package/
+          cp TESTER-MAC.md package/
+          (cd package && ditto -c -k . "../dist/YM-Echo-0.1.0-macOS.zip")
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM-Echo-0.1.0-macOS
+          path: vst/ym-echo/dist/YM-Echo-0.1.0-macOS.zip
