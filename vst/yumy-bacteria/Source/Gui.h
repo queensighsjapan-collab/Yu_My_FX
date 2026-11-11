@@ -235,8 +235,9 @@ public:
     }
     void mouseUp (const MouseEvent&) override { att->endGesture(); }
     void mouseDoubleClick (const MouseEvent&) override { att->beginGesture(); setValue (def); att->endGesture(); }
-    void mouseWheelMove (const MouseEvent&, const MouseWheelDetails& w) override
+    void mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& w) override
     {
+        if (! e.mods.isCommandDown() && ! e.mods.isCtrlDown()) { Component::mouseWheelMove (e, w); return; }   // plain wheel scrolls the panel
         att->beginGesture(); setValue (v + (w.deltaY > 0 ? 1.0f : -1.0f)); att->endGesture();
     }
 private:
@@ -379,6 +380,12 @@ protected:
     String label;
 };
 
+class NoWheelCombo : public ComboBox
+{
+public:
+    void mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& w) override { Component::mouseWheelMove (e, w); }
+};
+
 class SelectField : public FieldBase
 {
 public:
@@ -407,7 +414,7 @@ private:
             box.onChange = [this, lcdPtr, nm] { lcdPtr->show (nm, box.getText(), 0.5f); };
         addAndMakeVisible (box);
     }
-    ComboBox box; std::unique_ptr<ComboBoxParameterAttachment> att; bool quiet = false;
+    NoWheelCombo box; std::unique_ptr<ComboBoxParameterAttachment> att; bool quiet = false;
 };
 
 class SliderField : public FieldBase
@@ -424,6 +431,7 @@ public:
         slider.setTextBoxStyle (Slider::NoTextBox, true, 0, 0);
         slider.setRange (range.start, range.end, 1.0);
         slider.setDoubleClickReturnValue (true, p->convertFrom0to1 (p->getDefaultValue()));
+        slider.setScrollWheelEnabled (false);
         slider.setPopupDisplayEnabled (false, false, nullptr);
         slider.onValueChange = [this, p] { update(); if (lcd && slider.isMouseOverOrDragging()) lcd->show (p->getName (40), valText(), (float) ((slider.getValue() - slider.getMinimum()) / (slider.getMaximum() - slider.getMinimum()))); };
         att = std::make_unique<SliderParameterAttachment> (*p, slider);
@@ -466,6 +474,7 @@ public:
         slider.setRange (0.0, 100.0, 1.0);
         slider.setValue (init, dontSendNotification);
         slider.setDoubleClickReturnValue (true, init);
+        slider.setScrollWheelEnabled (false);
         slider.onValueChange = [this] { value.setText (format ((int) slider.getValue()), pal::ink); };
         addAndMakeVisible (slider); addAndMakeVisible (value);
         value.setText (format (init), pal::ink);
