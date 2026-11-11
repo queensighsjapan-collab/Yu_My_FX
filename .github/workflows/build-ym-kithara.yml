@@ -1,0 +1,153 @@
+name: Build YM-Kithara (macOS app)
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['daw/ym-kithara/**', '.github/workflows/build-ym-kithara.yml']
+
+defaults:
+  run:
+    working-directory: daw/ym-kithara
+    shell: bash
+
+# FFmpeg comes from Homebrew, whose bottles are single-arch, so each slice
+# is built on a runner of its own architecture (with that runner's native
+# Homebrew FFmpeg) and the universal .app is assembled with lipo in the
+# package job. JUCE itself is compiled from source for both slices, as in
+# the vst/ym-* workflows.
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   arch: arm64  }
+          - { os: macos-15-intel, arch: x86_64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg and tools
+        run: |
+          brew update
+          brew install ffmpeg pkg-config dylibbundler
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+
+      - name: Build app and scanner
+        run: cmake --build build --config Release --parallel
+
+      # The FFmpeg dylibs (and their Homebrew dependencies) are copied into
+      # Contents/Frameworks with @executable_path-relative install names,
+      # so the .app runs on machines without Homebrew. The scanner binary
+      # is already inside Contents/MacOS (CMake copies it next to the app
+      # executable, which is where PluginManager looks for it).
+      - name: Bundle FFmpeg libraries into the app
+        run: |
+          APP="build/YMKithara_artefacts/Release/YM-Kithara.app"
+          test -d "$APP"
+          test -f "$APP/Contents/MacOS/YM-Kithara"
+          test -f "$APP/Contents/MacOS/KitharaVstScanner"
+          echo "scanner: $(lipo -archs "$APP/Contents/MacOS/KitharaVstScanner")"
+          dylibbundler -of -b -x "$APP/Contents/MacOS/YM-Kithara" \
+                       -d "$APP/Contents/Frameworks" \
+                       -p @executable_path/../Frameworks/
+          echo "--- main binary dependencies ---"
+          otool -L "$APP/Contents/MacOS/YM-Kithara"
+          if otool -L "$APP/Contents/MacOS/YM-Kithara" | grep -E "/opt/homebrew|/usr/local/"; then
+            echo "ERROR: Homebrew paths remain in the app binary"; exit 1
+          fi
+          echo "--- bundled frameworks ---"
+          ls -1 "$APP/Contents/Frameworks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM-Kithara-app-${{ matrix.arch }}
+          path: daw/ym-kithara/build/YMKithara_artefacts/Release/YM-Kithara.app
+
+  package:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: daw/ym-kithara/slices
+
+      - name: Assemble universal app, sign and zip
+        run: |
+          ARM_APP=$(find slices -type d -name "YM-Kithara.app" -path "*arm64*" | head -1)
+          X64_APP=$(find slices -type d -name "YM-Kithara.app" -path "*x86_64*" | head -1)
+          echo "arm64 slice:  $ARM_APP"
+          echo "x86_64 slice: $X64_APP"
+          test -d "$ARM_APP" && test -d "$X64_APP"
+
+          rm -rf "YM-Kithara.app"
+          cp -R "$ARM_APP" "YM-Kithara.app"
+
+          # Fat versions of the two executables.
+          for bin in "Contents/MacOS/YM-Kithara" "Contents/MacOS/KitharaVstScanner"; do
+            lipo -create "$ARM_APP/$bin" "$X64_APP/$bin" -output "YM-Kithara.app/$bin.fat"
+            mv "YM-Kithara.app/$bin.fat" "YM-Kithara.app/$bin"
+            chmod +x "YM-Kithara.app/$bin"
+            echo "$bin: $(lipo -archs "YM-Kithara.app/$bin")"
+          done
+
+          # Fat versions of every bundled dylib; warn on single-arch leftovers.
+          mkdir -p fatfw
+          for f in "YM-Kithara.app/Contents/Frameworks"/*; do
+            name=$(basename "$f")
+            if [ -f "$X64_APP/Contents/Frameworks/$name" ]; then
+              lipo -create "$f" "$X64_APP/Contents/Frameworks/$name" -output "fatfw/$name"
+              mv "fatfw/$name" "$f"
+            else
+              echo "WARNING: $name exists only in the arm64 slice"
+            fi
+          done
+          for f in "$X64_APP/Contents/Frameworks"/*; do
+            name=$(basename "$f")
+            if [ ! -f "YM-Kithara.app/Contents/Frameworks/$name" ]; then
+              echo "WARNING: $name exists only in the x86_64 slice — copying as-is"
+              cp "$f" "YM-Kithara.app/Contents/Frameworks/$name"
+            fi
+          done
+
+          # Every shipped binary must now be universal.
+          fail=0
+          for bin in "YM-Kithara.app/Contents/MacOS/YM-Kithara" \
+                     "YM-Kithara.app/Contents/MacOS/KitharaVstScanner" \
+                     "YM-Kithara.app/Contents/Frameworks"/*; do
+            archs=$(lipo -archs "$bin")
+            echo "$bin: $archs"
+            case "$archs" in
+              *arm64*x86_64*|*x86_64*arm64*) ;;
+              *) echo "ERROR: not universal: $bin"; fail=1 ;;
+            esac
+          done
+          [ "$fail" = 0 ]
+
+          # No dependency may point into Homebrew any more (app + dylibs).
+          if otool -L "YM-Kithara.app/Contents/MacOS/YM-Kithara" \
+               "YM-Kithara.app/Contents/Frameworks"/* \
+               | grep -E "/opt/homebrew|/usr/local/"; then
+            echo "ERROR: Homebrew paths remain"; exit 1
+          fi
+
+          # Ad-hoc signed (not notarized): the tester must clear the
+          # quarantine flag after unzipping — see TESTER-MAC.md.
+          chmod -R u+rwX,go+rX "YM-Kithara.app"
+          codesign --force --deep --sign - "YM-Kithara.app"
+          codesign --verify --deep --strict --verbose=2 "YM-Kithara.app"
+
+          mkdir -p package dist
+          cp -R "YM-Kithara.app" package/
+          cp TESTER-MAC.md package/
+          (cd package && ditto -c -k . "../dist/YM-Kithara-M6.10-macOS.zip")
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM-Kithara-M6.10-macOS
+          path: daw/ym-kithara/dist/YM-Kithara-M6.10-macOS.zip

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YM-Kithara – AV Workstation 取扱説明書（M6.10対応）</title>
+<style>
+  :root{
+    --ink:#24272c; --dim:#5b6068; --line:#d9dce1; --accent:#8a6d1f;
+    --bg:#fbfaf7; --card:#ffffff; --note:#eef4fb; --noteline:#7aa5d8;
+    --warn:#fdf0ec; --warnline:#d88a7a; --tip:#f0f7ee; --tipline:#8ab87e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,"Noto Sans JP",sans-serif;
+    line-height:1.75;font-size:15.5px}
+  header.site{background:#14161f;color:#f2ead2;padding:34px 20px 26px;text-align:center;
+    border-bottom:4px solid #c9a227}
+  header.site .logo{font-size:15px;letter-spacing:.35em;color:#c9a227;margin:0 0 4px}
+  header.site h1{margin:0;font-size:30px;font-weight:700;letter-spacing:.04em}
+  header.site h1 .sub{display:block;font-size:15px;letter-spacing:.28em;color:#b9bdd0;margin-top:4px;font-weight:400}
+  header.site p.doc{margin:12px 0 0;font-size:15px;color:#e8e2cd}
+  main{max-width:880px;margin:0 auto;padding:24px 20px 60px}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:16px 22px;margin:6px 0 34px}
+  nav.toc h2{margin:0 0 8px;font-size:16px}
+  nav.toc ol{margin:0;padding-left:22px}
+  nav.toc li{margin:3px 0}
+  a{color:#205da8;text-decoration:none}
+  a:hover{text-decoration:underline}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:22px 26px;margin:0 0 28px}
+  section>h2{margin:0 0 6px;font-size:23px;border-bottom:2px solid #c9a227;padding-bottom:8px}
+  h3{font-size:17.5px;margin:22px 0 6px}
+  h3:first-of-type{margin-top:12px}
+  p{margin:8px 0}
+  ol.steps,ul{margin:8px 0 8px;padding-left:24px}
+  ol.steps li,ul li{margin:4px 0}
+  .btn{display:inline-block;background:#eceef2;border:1px solid #c6cad2;border-radius:5px;
+    padding:0 7px;font-size:.92em;font-weight:600;white-space:nowrap}
+  .key{display:inline-block;background:#f4f4f6;border:1px solid #bbb;border-bottom-width:2px;
+    border-radius:4px;padding:0 6px;font-size:.9em;white-space:nowrap}
+  .note,.warn,.tip{border-radius:8px;padding:10px 14px;margin:12px 0;font-size:14.8px}
+  .note{background:var(--note);border-left:4px solid var(--noteline)}
+  .warn{background:var(--warn);border-left:4px solid var(--warnline)}
+  .tip{background:var(--tip);border-left:4px solid var(--tipline)}
+  .note p,.warn p,.tip p{margin:2px 0}
+  .boxlabel{font-weight:700}
+  table{border-collapse:collapse;margin:10px 0;width:100%;font-size:14.8px}
+  th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+  th{background:#f1eee3}
+  dl.faq dt{font-weight:700;margin:16px 0 2px}
+  dl.faq dd{margin:0 0 6px}
+  footer.site{text-align:center;color:var(--dim);font-size:13px;padding:0 20px 36px}
+  code{background:#f0f0f2;border-radius:4px;padding:0 4px;font-size:.92em}
+  @media print{
+    body{background:#fff;font-size:12.5pt}
+    header.site{background:#fff;color:#000;border-bottom:2px solid #000}
+    header.site h1 .sub,header.site .logo{color:#444}
+    header.site p.doc{color:#333}
+    main{max-width:none;padding:0}
+    section{border:none;border-radius:0;padding:10px 0;page-break-inside:avoid}
+    nav.toc{page-break-inside:avoid}
+    a{color:#000}
+  }
+</style>
+</head>
+<body>
+<header class="site">
+  <p class="logo">♪ ♪ ♪</p>
+  <h1>YM-Kithara<span class="sub">AV WORKSTATION</span></h1>
+  <p class="doc">取扱説明書（M6.10対応）</p>
+</header>
+<main>
+
+<nav class="toc">
+  <h2>もくじ</h2>
+  <ol>
+    <li><a href="#intro">はじめに</a></li>
+    <li><a href="#audio">音声編</a></li>
+    <li><a href="#video">動画（静止画）編</a></li>
+    <li><a href="#midi">MIDI編</a></li>
+    <li><a href="#srt">SRT編（歌詞テロップ）</a></li>
+    <li><a href="#vst">VST編（プラグイン）</a></li>
+    <li><a href="#trouble">困ったとき</a></li>
+  </ol>
+</nav>
+
+<section id="intro">
+  <h2>はじめに</h2>
+  <p>YM-Kithara（ワイエム・キターラ）は、曲の編集からミュージックビデオの仕上げまでを1本でまかなう、Windows用デスクトップDAW「AV Workstation」です。Suno AIなどで作った曲やステムをタイムラインで編集し、VST3エフェクトやVST楽器を足し、動画と歌詞テロップを合わせて、最後は1本のmp4に書き出す――という使い方を想定しています。</p>
+
+  <h3>動作環境とファイルの置き場所</h3>
+  <ul>
+    <li>対応OS：Windows（64bit）</li>
+    <li>プログラムは2つ1組です。<strong>YM-Kithara.exe</strong> と <strong>KitharaVstScanner.exe</strong> は、必ず<strong>同じフォルダ</strong>に置いてください。スキャナはプラグイン探し専用の小さいプログラムで、普段は触らなくて大丈夫です。</li>
+    <li>同じフォルダには、動画再生に使うFFmpegのDLL（<code>avformat-*.dll</code>、<code>avcodec-*.dll</code>、<code>avutil-*.dll</code>、<code>swscale-*.dll</code>、<code>swresample-*.dll</code>）も並んでいます。<strong>これらのDLLが無いとアプリが起動しません</strong>。消したり別のフォルダへ移したりしないでください。</li>
+  </ul>
+  <div class="note"><p><span class="boxlabel">メモ：</span>KitharaVstScanner.exe が無い場合でもアプリ本体は起動しますが、「Scan for Plugins...」（プラグイン探し）が使えなくなります。</p></div>
+
+  <h3>初回起動：音の出る装置を選ぶ</h3>
+  <ol class="steps">
+    <li>YM-Kithara.exe を起動します。</li>
+    <li>画面上部の <span class="btn">Audio Settings...</span> を押すと、オーディオ装置の選択画面が開きます。</li>
+    <li>使いたい出力装置（スピーカー／ヘッドホン／オーディオインターフェース）を選びます。ドライバの種類は、通常は <strong>WASAPI</strong> のままで大丈夫です。ASIO対応の環境でビルドした場合は ASIO も選べます（ASIOのほうが遅延が小さくなります）。</li>
+    <li>画面は <span class="key">Space</span> キーでも再生／一時停止できます（文字入力中はそちらが優先されます）。</li>
+  </ol>
+
+  <h3>プロジェクトの新規作成・開く・保存</h3>
+  <ul>
+    <li><span class="btn">New</span>：新しいプロジェクトを作ります。</li>
+    <li><span class="btn">Open Project...</span>：保存済みプロジェクトの<strong>フォルダ</strong>を選びます。</li>
+    <li><span class="btn">Save Project...</span>：保存先フォルダを選ぶと、そのフォルダに <code>project.xml</code> と <code>audio/</code> フォルダが作られます。</li>
+  </ul>
+  <p>オーディオ素材は、保存時にプロジェクトフォルダ内の <code>audio/</code> へ<strong>コピー</strong>されます。一方、<strong>動画ファイルはコピーされず、元の場所（絶対パス）への参照だけが記録されます</strong>。元の動画ファイルを移動・削除すると、その動画クリップは開けなくなります（詳しくは「<a href="#video">動画（静止画）編</a>」と「<a href="#trouble">困ったとき</a>」）。</p>
+  <div class="note"><p><span class="boxlabel">メモ：</span>素材ファイルが見つからない状態でプロジェクトを開くと、警告が出て、そのクリップだけを落として読み込みます（プロジェクト全体が開けなくなることはありません）。</p></div>
+
+  <h3>画面の構成</h3>
+  <table>
+    <tr><th style="width:26%">場所</th><th>内容</th></tr>
+    <tr><td>ヘッダー行（一番上）</td><td>製品名「YM-Kithara」とバージョンタグ、その横に New / Open Project... / Save Project... / Import File... / Add Video... / Add MIDI Track / Export WAV... / Export MP4... / Audio Settings... のボタン類</td></tr>
+    <tr><td>トランスポート行</td><td>Play / Stop / <span class="btn">|&lt;</span>（先頭へ戻る）/ REC（録音）/ Video（プレビュー表示）/ 再生位置の表示 / タイムコード表示とフレームレート選択 / Tempo（テンポ）欄 / MIDI IN の状態表示 / MASTERメーター / Volume（マスター音量）</td></tr>
+    <tr><td>ステータス行</td><td>直前の操作の結果や、読み込み・書き出しのメッセージ</td></tr>
+    <tr><td>タイムライン</td><td>左端にトラックヘッダー列（トラック名・各種ボタン・音量・メーター。<strong>横スクロールしても固定</strong>されて残ります）、その右にルーラー（目盛り）と各トラックのレーン。ルーラーをクリック／ドラッグすると再生位置が移動します</td></tr>
+    <tr><td>下部バー</td><td>選択中のクリップのトラックを対象にしたFX行（プラグイン関連）と、インスペクター行（クリップのフェード／ゲイン、Split at Playhead、Delete Clip、Zoom / V Zoom スライダー）</td></tr>
+  </table>
+  <div class="note"><p><span class="boxlabel">メモ：</span>現行版（M6.9）に「元に戻す（Undo）」機能はありません。編集はすべて非破壊（元の素材ファイルは変更されません）なので、困ったらクリップを置き直してください。</p></div>
+</section>
+
+<section id="audio">
+  <h2>音声編</h2>
+
+  <h3>オーディオファイルを取り込む</h3>
+  <ol class="steps">
+    <li><span class="btn">Import File...</span> を押してファイルを選ぶか、ファイルを<strong>ウィンドウのどこへでもドラッグ＆ドロップ</strong>します。</li>
+    <li>ファイル1つにつき新しいオーディオトラックが1本でき、先頭にクリップが置かれます（ステムを並べる作業向けの仕様です）。</li>
+  </ol>
+  <p>読み込める形式は、WAV / AIFF / FLAC / Ogg / MP3 などです。取り込んだ音声はデバイスのサンプルレートに合わせて内部保持されます。</p>
+
+  <h3>クリップの編集</h3>
+  <p>クリップの編集はすべて<strong>非破壊</strong>です。元の音声データは一切変更されません。</p>
+  <table>
+    <tr><th style="width:26%">操作</th><th>やり方</th></tr>
+    <tr><td>選択</td><td>クリップをクリック</td></tr>
+    <tr><td>移動</td><td>クリップをドラッグ。上下にドラッグすると別のオーディオトラックへも移せます</td></tr>
+    <tr><td>トリム（伸ばし縮み）</td><td>クリップの左右の端（約6pxの範囲）をドラッグ。素材の範囲内まで伸縮できます</td></tr>
+    <tr><td>分割</td><td>再生ヘッドをクリップの中に入れて、下部バーの <span class="btn">Split at Playhead</span> を押す</td></tr>
+    <tr><td>削除</td><td>クリップを選んで <span class="key">Delete</span> キー、または <span class="btn">Delete Clip</span></td></tr>
+    <tr><td>フェードと音量</td><td>クリップを選ぶと下部バー（インスペクター）に Fade In / Fade Out（各0〜5秒）とクリップの Gain が出ます。フェードを付けると音の入り・終わりがなめらかになります</td></tr>
+  </table>
+
+  <h3>トラックの操作</h3>
+  <ul>
+    <li><strong>名前</strong>：トラック名をダブルクリックで編集できます。</li>
+    <li><span class="btn">M</span>（ミュート）：そのトラックを無音にします。<span class="btn">S</span>（ソロ）：ソロが1つでもONのときは、ソロのトラックだけが鳴ります。</li>
+    <li><strong>音量</strong>：ヘッダーの小さいスライダーでトラック音量を調整します。</li>
+    <li><strong>削除</strong>：ヘッダーの <span class="btn">×</span> でトラックごと削除します。</li>
+    <li><strong>メーター</strong>：ヘッダー右端にステレオのピークメーターがあります。音が割れる大きさ（フルスケール）に達すると赤いランプ（クリップLED）が点いたままになります。音量を下げて調整し、ランプはクリックで消えます。トランスポート行の <strong>MASTER</strong> メーターは最終出力用で、こちらにもクリップLEDがあります。</li>
+    <li><strong>表示の拡大</strong>：右下の Zoom スライダーで横方向、V Zoom スライダーでトラックの高さ（40〜160px）が変わります。タイムライン上で <span class="key">Ctrl</span>＋マウスホイールでも縦ズームできます。再生中は再生ヘッドが画面端まで行くと自動でスクロールして追いかけます。</li>
+  </ul>
+  <p>各トラックにはVST3エフェクトを挿せます。挿し方は「<a href="#vst">VST編</a>」を見てください。挿したエフェクト名は、トラック名の下にも「FX: 名前 &gt; 名前」の形で小さく表示されます（バイパス中は名前に <code>(off)</code> が付きます。トラックの高さが小さいときは表示されません）。</p>
+
+  <h3>WAVに書き出す（ミックスダウン）</h3>
+  <ol class="steps">
+    <li>上部の <span class="btn">Export WAV...</span> を押します。</li>
+    <li>保存先とファイル名を選びます（初期名は <code>mixdown.wav</code>）。</li>
+    <li>しばらく待つと書き出しが終わり、ステータス行に「Exported: ...」と出ます。</li>
+  </ol>
+  <ul>
+    <li>書き出し範囲は<strong>セッション全体＋終わりに2秒の余韻</strong>です。</li>
+    <li>形式は16bit PCM WAV（エンジンのサンプルレート）。楽器・FX・プラグイン遅延補償（PDC）・マスター音量まで含めて、再生時と同じ音で書き出されます。</li>
+    <li>書き出し中はプログレス表示が出て、再生は自動で止まります。</li>
+  </ul>
+</section>
+
+<section id="video">
+  <h2>動画（静止画）編</h2>
+
+  <h3>動画トラックと読み込み</h3>
+  <p>動画トラックは<strong>1本だけ</strong>です。</p>
+  <ol class="steps">
+    <li><span class="btn">Add Video...</span> を押して動画ファイルを選ぶか、動画ファイルをウィンドウへドラッグ＆ドロップします。対応形式は mp4 / mov / mkv / m4v です。</li>
+    <li>動画トラックが（無ければ）作られ、クリップが末尾へ追加されます。もう1本読み込むと、後ろにつながります。</li>
+    <li>レーンには、元動画の<strong>1秒ごとのサムネイル</strong>（フィルムストリップ）が並びます。サムネイルは裏側で順次作られるので、最初は単色で表示され、少し待つと絵に置き換わります。</li>
+  </ol>
+  <div class="warn"><p><span class="boxlabel">注意：</span>動画ファイルはプロジェクトフォルダへ<strong>コピーされません</strong>。プロジェクトには動画ファイルの場所（絶対パス）だけが記録されます。<strong>元の動画ファイルを移動・名前変更・削除すると、そのクリップは開けなくなります</strong>（警告が出て、そのクリップだけ落ちます）。プロジェクトを別のPCへ持っていくときは、この点に注意してください。</p></div>
+  <p>なお、動画トラック自体は音を出しません。動画ファイル自身の音を使いたいときは、後述の「動画の音声を取り込む（Extract Audio）」を使ってください。動画トラックにFX・楽器・音量・メーターはありません。</p>
+
+  <h3>プレビューで映像を見る</h3>
+  <ol class="steps">
+    <li>トランスポート行の <span class="btn">Video</span> ボタンを押すと、プレビューウィンドウ（別ウィンドウ）が開きます。もう一度押すか、ウィンドウを閉じると消えます。</li>
+    <li>再生・停止にフレーム単位で追従します。止めたままルーラーをクリック／ドラッグ（スクラブ）しても、その位置の絵に切り替わります。</li>
+    <li>絵はアスペクト比を保って表示され（レターボックス）、クリップの無い位置では黒画面になります。</li>
+  </ol>
+
+  <h3>クリップの編集</h3>
+  <p>基本操作はオーディオクリップと同じです：ドラッグで移動、両端のドラッグでトリム（元動画の範囲内まで）、<span class="btn">Split at Playhead</span> で分割、<span class="key">Delete</span> で削除。</p>
+  <h3>重なり＝クロスディゾルブ</h3>
+  <p>動画トラックだけは、<strong>クリップ同士を重ねて置けます</strong>。重なった区間では、前の映像から次の映像へ自動で<strong>クロスディゾルブ</strong>します（後から始まるクリップが上になり、重なりの進み具合で徐々に切り替わります）。3本以上の重なりでも同じ規則で合成されます。プレビューとmp4書き出しで、同じ見え方になります。</p>
+  <h3>フェード（黒から／黒へ）</h3>
+  <ul>
+    <li>クリップの<strong>左上の角を右へドラッグ</strong>するとフェードイン、<strong>右上の角を左へドラッグ</strong>するとフェードアウトが付きます。フェードの範囲には三角の陰影と対角線が描かれます。</li>
+    <li>下に映像が無いところでは、黒からのフェードイン／黒へのフェードアウトになります。下に映像があるところでは、そのクリップ自身の不透明度として効きます。</li>
+    <li>フェード範囲は0〜クリップ長で、トリムや移動をしても長さに合わせて自動で締められます。クリップを分割すると、左の片はフェードインを、右の片はフェードアウトを引き継ぎます（新しい切り口のフェードは0です）。</li>
+  </ul>
+
+  <h3>静止画（jpg / png / bmp）を置く</h3>
+  <ul>
+    <li>読み込み方は動画と同じです（<span class="btn">Add Video...</span> かドラッグ＆ドロップ）。タイトルカードやジャケット絵に使えます。</li>
+    <li>置いた直後は<strong>5秒</strong>のクリップになります。絵が変わらないので、<strong>右端を引っ張れば何秒にでも伸ばせます</strong>（左端は開始位置の移動だけです）。</li>
+    <li>動画との重なり（ディゾルブ）、黒フェード、テロップの合成、mp4書き出しも、そのまま静止画に効きます。分割すると両方とも静止画クリップになります。</li>
+  </ul>
+
+  <h3>動画の音声を取り込む（Extract Audio）</h3>
+  <p>動画ファイルに入っている音（スマホ動画の環境音など）を、普通のオーディオトラックとして取り込めます。</p>
+  <ol class="steps">
+    <li>上部の <span class="btn">Extract Audio</span> ボタンを押します（少し待ちます）。</li>
+    <li>元ファイルごとに「<strong>（動画の名前） Audio</strong>」というトラックができ、そのファイルの動画クリップと<strong>開始位置・長さがぴったり同じ</strong>音声クリップが並びます。</li>
+    <li>あとは通常のオーディオトラックと同じです。ミュートすればその音だけ消せますし、フェードや書き出しの対象にもなります。</li>
+  </ol>
+  <ul>
+    <li>音声は動画ファイルの隣に「（動画の名前）_audio.wav」というファイルで保存されます。プロジェクト保存時は、他の取り込み素材と同じくプロジェクト内にもコピーされます。</li>
+    <li>もう一度押してもトラックは増えません（「取り込み済み」としてスキップされ、その旨が表示されます）。</li>
+    <li>音声の入っていない動画は、<strong>ファイル名を表示して</strong>スキップされます。静止画クリップは対象外として黙ってスキップされます。</li>
+  </ul>
+  <div class="note"><p><span class="boxlabel">メモ：</span>モノラル素材の動画から取り込んだ音声は、ステレオ化の都合で<strong>約3dB小さく</strong>なります。気になる場合は、そのトラックの音量やクリップのGainで調整してください。</p></div>
+
+  <h3>タイムコード表示</h3>
+  <p>トランスポート行にタイムコード（<code>HH:MM:SS:FF</code> の形）が大きく表示されます。</p>
+  <ul>
+    <li><strong>最初の動画を読み込んだとき</strong>、その動画のフレームレートがセッションのタイムコードレートとして自動で採用されます（自分で固定したことがある場合はそちらが優先されます）。</li>
+    <li>タイムコードの右隣のプルダウン（23.976 / 24 / 25 / 29.97 DF / 30 / 50 / 59.94 DF / 60）で選ぶと、そのレートに固定されます。動画が無く未固定の場合は30 fpsです。</li>
+    <li>29.97と59.94は<strong>ドロップフレーム</strong>で、区切りが <code>;</code> になります（例：<code>01:00:00;00</code>）。ドロップフレームでは、実時間ちょうど60.0秒が <code>00:00:59;28</code> と表示されますが、これはドロップフレームの正しい数え方です（故障ではありません）。</li>
+    <li>動画クリップの長さもセッションの長さに含まれます。<strong>動画だけのプロジェクトでも再生できます</strong>し、音声より長い動画が書き出しで途中で切れることもありません。</li>
+  </ul>
+
+  <h3>mp4に書き出す</h3>
+  <ol class="steps">
+    <li>上部の <span class="btn">Export MP4...</span> を押します（動画トラックが無い場合は、その旨の案内が出て止まります）。</li>
+    <li>設定の小窓で、サイズと画質を選びます（最初はそのままで大丈夫です）。
+      <ul>
+        <li><strong>Picture size</strong>：Original（先頭クリップの大きさ）／ 1920×1080 ／ 1280×720 ／ <strong>1080×1920（縦9:16、Shorts／TikTok用）</strong></li>
+        <li><strong>Quality</strong>：High（CRF 18）／ Standard（CRF 23）／ Light（CRF 28）。Highはきれいですがファイルが大きく、Lightは軽い代わりに少し粗くなります</li>
+      </ul>
+    </li>
+    <li>保存先とファイル名を決めると書き出しが始まり、進み具合のバーが出ます。途中で<strong>キャンセル</strong>もできます（その場合、書きかけのファイルは残りません）。</li>
+  </ol>
+  <ul>
+    <li>書き出しの長さは<strong>WAV書き出しとまったく同じ</strong>（セッションの長さ＋2秒の余韻）です。映像の無い区間は黒画面で、音だけが流れます。テロップもそのまま焼き込まれます。</li>
+    <li>音声はAAC 192 kbps（48 kHz）で、映像はH.264です。普通の動画プレイヤーやスマホでそのまま再生できます。</li>
+    <li>元動画はアスペクト比を保ったまま画面に収められ、余りは<strong>黒帯</strong>で埋まります（引き伸ばし・切り抜きはしません）。縦動画サイズに横動画を入れると上下に黒帯が付きます。</li>
+    <li>フレームレートはセッションのタイムコードレートです。元動画のfpsと違う場合は、フレームの複製／間引きが起きます（音に同期するのが正で、映像は一番近い瞬間の絵が選ばれます）。</li>
+    <li>書き出し前に全クリップの元ファイルをチェックし、<strong>見つからないものがあればファイル名を表示して中止</strong>します。</li>
+  </ul>
+</section>
+
+<section id="midi">
+  <h2>MIDI編</h2>
+
+  <h3>MIDIトラックと楽器</h3>
+  <ol class="steps">
+    <li>上部の <span class="btn">Add MIDI Track</span> を押すと、MIDIトラックが増えます。MIDIトラックはオーディオクリップの代わりに、<strong>楽器スロット（1つ）</strong>と<strong>MIDIクリップ</strong>を持ちます。</li>
+    <li>MIDIクリップをクリックして選ぶと、下部バーの左側に「Inst: (none)」と出るので、<span class="btn">Add Instrument...</span> を押して楽器（シンセ）を選びます（一覧に出るのは楽器だけです。一覧が空の場合は、先に「<a href="#vst">VST編</a>」のスキャンを1回行ってください）。</li>
+    <li>楽器の画面は <span class="btn">Open Inst</span> で開けます。外すときは <span class="btn">Remove Inst</span> です。</li>
+    <li>MIDIトラックにも <span class="btn">Add FX...</span> でエフェクトを挿せます（楽器の後段にかかります）。</li>
+  </ol>
+  <p>トラックヘッダーの要約行は、MIDIトラックでは「Inst: 名前 | FX: ...」の形になります。楽器が入っていない／見つからないトラックは無音です（見つからない場合は名前と設定が保持されたまま残ります）。</p>
+
+  <h3>MIDIクリップを作る</h3>
+  <ul>
+    <li>MIDIトラックのレーンの<strong>何もない所をダブルクリック</strong>すると、その小節の頭に<strong>1小節長（4拍）</strong>のMIDIクリップができます。</li>
+    <li>クリップはクリックで選択、横ドラッグで移動、<span class="key">Delete</span> で削除できます（別のトラックへの移動はできません）。</li>
+    <li>クリップの位置と長さは秒で保持され、セッションの長さにも数えられます。</li>
+  </ul>
+
+  <h3>ピアノロールで音符を書く</h3>
+  <p>MIDIクリップを<strong>ダブルクリック</strong>すると、ピアノロールが別ウィンドウで開きます。左端が鍵盤（Cの行に音名表示）、横軸はクリップ内の拍です（4拍ごとに小節線）。</p>
+  <table>
+    <tr><th style="width:26%">操作</th><th>やり方</th></tr>
+    <tr><td>音符を置く</td><td>空いているマスをクリック。置く位置は<strong>0.25拍スナップ</strong>、長さは「最後に使った長さ」（初期値0.5拍）、ベロシティは100固定です</td></tr>
+    <tr><td>移動</td><td>音符をドラッグ（上下＝音程、左右＝タイミング。スナップあり）</td></tr>
+    <tr><td>長さ変更</td><td>音符の右端（約4px）をドラッグ（最小0.1拍）</td></tr>
+    <tr><td>削除</td><td>音符を選んで <span class="key">Delete</span> / <span class="key">Backspace</span>、または右クリック</td></tr>
+  </table>
+  <p>変更はその場で反映されます。現行版のピアノロールでできないこと：ベロシティの編集、複数選択、ピアノロール内の再生ヘッド表示。</p>
+
+  <div class="warn"><p><span class="boxlabel">大事：先にテンポ（BPM）を合わせてください。</span>音符はクリップの中で「拍」で覚えられています。<strong>音符を置いたあとでテンポを変えると、音符どうしの間隔が伸び縮みしてしまいます</strong>（クリップ自体の位置と長さは変わりません）。曲のBPMは、トランスポート行の Tempo 欄で<strong>先に</strong>合わせてから、音符を置いてください。録音のときも同じ約束です。</p></div>
+
+  <h3>MIDIクリップを伸ばす・縮める（トリム）</h3>
+  <ul>
+    <li>クリップの左右の端（約6px）をドラッグすると、他のクリップと同じようにトリム／延長できます（最小長は0.25拍ぶんです）。</li>
+    <li><strong>右端を伸ばす</strong>と空の拍が増え、ピアノロールもその分広がります。1小節のクリップを伸ばして続きを書き足せます。</li>
+    <li><strong>縮める</strong>と、範囲の外に出た音符は鳴らなくなり、ピアノロールにも出なくなります。ただし<strong>音符のデータは消えません</strong>。再び伸ばせば元どおり現れます。トリムしたクリップをピアノロールで編集しても、隠れた音符が消えることはありません。</li>
+    <li><strong>左端を引っ張る</strong>と、残った音符のタイミングはずらさずに、頭の部分だけを切り取れます（開始位置より前に始まる音符は鳴りません）。</li>
+  </ul>
+
+  <h3>MIDIファイル（.mid）を読み込む</h3>
+  <ol class="steps">
+    <li><span class="btn">Import File...</span> で <code>.mid</code> ファイルを選ぶか、ウィンドウへドラッグ＆ドロップします（音声ファイルと混ぜて選んでも大丈夫です）。</li>
+    <li>ファイル内の<strong>音符のあるトラックごとに、MIDIトラックが1本ずつ</strong>できます。音符は各トラックの先頭のクリップにまとめて入ります。音符の無いトラック（コンダクタートラック等）は読み飛ばされます。</li>
+    <li>楽器は付いていないので、各トラックに「Add Instrument...」でシンセを挿してください。音符はピアノロールでそのまま直せます。</li>
+  </ol>
+  <ul>
+    <li>テンポは、ファイル内の<strong>最初のテンポイベント</strong>がセッションのテンポに設定されます。曲の途中からのテンポ変更には追随しません。テンポイベントが無いファイルでは、現在のセッションのBPMがそのまま使われます。</li>
+    <li>1つのトラック内に複数チャンネルが入っているファイルは、チャンネルを1本の音符列にまとめて読み込みます。ファイル内のCC（コントロールチェンジ）は取り込まれません。</li>
+    <li>SMPTE形式のタイムディビジョンを持つファイルは読み込めません（エラーが表示されます）。</li>
+  </ul>
+
+  <h3>MIDIキーボードで録音する</h3>
+  <h4>準備</h4>
+  <ol class="steps">
+    <li>MIDIキーボードをPCに繋いでから、YM-Kitharaを起動します（起動時にMIDI入力デバイスが開かれます）。トランスポート行に「MIDI IN: 1 device: （名前）」と出れば認識しています。「MIDI IN: none」の場合は繋がっていません。</li>
+    <li><span class="btn">Add MIDI Track</span> でMIDIトラックを作り、いつもの手順で楽器を入れてください。</li>
+    <li>曲に合わせる場合は、先に<strong>テンポ（BPM）を曲に合わせて</strong>ください。</li>
+  </ol>
+  <h4>録音のしかた</h4>
+  <ol class="steps">
+    <li>そのMIDIトラックのヘッダーにある <strong>●ボタン（アーム）</strong> を押します（M/Sボタンの右隣）。赤くなれば準備OKです。<strong>この時点で、止まったままキーボードを弾いても音が出ます</strong>（モニタリング。音色の確認にどうぞ）。</li>
+    <li>トランスポートの <span class="btn">REC</span> ボタンを押すと、現在位置から再生が始まって録音されます（RECではなく <strong>Playを押しても、アーム中のトラックがあれば録音されます</strong>）。録音中はRECボタンが赤く点きます。</li>
+    <li>弾き終わったら <span class="btn">Stop</span> を押します。弾いた通りのクリップ（テイク）がトラックに出来上がります。そのままPlayを押せば、録った演奏が再生されます。</li>
+    <li>録ったクリップはダブルクリックでピアノロールが開き、いつも通り直せます。端ドラッグのトリムも効きます。</li>
+  </ol>
+  <ul>
+    <li><strong>何も弾かずにStopすると、クリップは出来ません</strong>（空のテイクは残らない仕様です）。</li>
+    <li>音符を<strong>押さえたままStop</strong>しても大丈夫です。その音符は止めた位置までの長さで記録され、音も残りません。</li>
+    <li>●は<strong>複数のトラックに同時</strong>に付けられます（同じ演奏がそれぞれのトラックに録音されます）。録音中に●を外すと、そのトラックの録音はその場で終わります。</li>
+    <li><strong>アームの状態はプロジェクトに保存されません</strong>。プロジェクトを開き直すと全部外れているので、録音のたびに付け直してください（仕様です）。</li>
+    <li>何も入っていないまっさらなプロジェクトでも、●を付ければそのまま録音できます。録音開始位置より先に何も無い場合は、セッションの終わりで止まらずに録音が続きます。</li>
+    <li>音符のタイミングは、弾いた瞬間の時刻そのままで記録されます（機械側のポーリング時刻ではありません）。</li>
+  </ul>
+  <div class="note"><p><span class="boxlabel">現行版（v1）の録音の範囲：</span>録音されるのは<strong>音符（ノートON/OFF）だけ</strong>です。ペダルやホイールなどのCCは録音されません（CCでエフェクトを動かす「M→FX」は従来どおり使えます。「<a href="#vst">VST編</a>」参照）。メトロノーム／カウントイン／クオンタイズ（タイミングの自動補正）／パンチイン・アウト／ループ録音も現行版にはありません。録ったままのタイミングで記録されます。</p></div>
+
+  <h3>音が鳴りっぱなしになる心配について</h3>
+  <p>停止・シーク（位置の移動）・曲の終わりのタイミングで、楽器へ「全音オフ」の信号が自動で送られます。弾いた音や再生中の音が鳴りっぱなしになることはありません。特別な操作（パニックボタン等）は不要です。</p>
+</section>
+
+<section id="srt">
+  <h2>SRT編（歌詞テロップ）</h2>
+
+  <h3>SRTファイルを読み込む</h3>
+  <ol class="steps">
+    <li>上部の <span class="btn">Import SRT...</span> を押して <code>.srt</code> ファイルを選ぶか、ファイルをウィンドウへドラッグ＆ドロップします。</li>
+    <li><strong>テキストトラック</strong>（最大1本、無ければ自動で作られます）に、字幕のタイミング通りに<strong>テロップクリップ</strong>が並びます。すでにクリップがある場合は末尾に追加されます（表示が重なった場合は、後から始まるテロップが勝ちます）。</li>
+    <li>読み込み結果は<strong>「○本追加、○本スキップ」と必ず表示</strong>されます。壊れたエントリ（時刻が読めない／終わりが開始以下／文字が空）はスキップされます。</li>
+    <li><span class="btn">Video</span> ボタンのプレビューで、テロップが出るか確認してください。<strong>映像の無い区間でも、黒画面の上にテロップだけは表示されます</strong>（歌詞だけの間奏など）。</li>
+  </ol>
+  <p>読み込みは寛容に作られています：UTF-8 BOM、改行コードの違い、番号行の欠落、時刻の <code>.</code> 区切りやミリ秒の桁不足は吸収されます。<code>&lt;...&gt;</code> タグや <code>{\...}</code> の上書きブロックは取り除かれます。</p>
+
+  <h3>テロップクリップの編集</h3>
+  <ul>
+    <li>テロップクリップは、他のクリップと同じように<strong>移動・トリム（端を伸ばし縮み）・分割・削除</strong>ができます。レーンには文字の1行目が表示されます。</li>
+    <li>文字を直したいときは、クリップを<strong>ダブルクリック</strong>するとテキスト編集ダイアログが開きます（複数行OK）。改行はそのまま表示され、行の自動折り返しはしません（SRTの行がそのまま行になります）。</li>
+  </ul>
+
+  <h3>見た目（スタイル）を変える</h3>
+  <p>スタイルは<strong>セッション全体に1つ</strong>の設定で、プロジェクトに保存され、プレビューとmp4書き出しの両方に同じ見た目で反映されます。</p>
+  <ol class="steps">
+    <li>テキストトラックのヘッダーにある <span class="btn">Style...</span> ボタンを押すと、設定ダイアログが開きます。</li>
+    <li>変更は<strong>その場でセッションに反映</strong>されるので、後ろのプレビュー画面がリアルタイムに追随します。ダイアログ下部にはサンプルテロップのプレビュー帯もあります。</li>
+    <li>やっぱり戻したいときは <span class="btn">Cancel</span>（またはウィンドウを閉じる）で、開く前の状態に戻ります。<span class="btn">OK</span> で確定します。</li>
+  </ol>
+  <table>
+    <tr><th style="width:22%">項目</th><th>内容</th></tr>
+    <tr><td>フォント</td><td>「Choose...」から、PCにインストールされたフォントを<strong>名前で</strong>選択。一覧は名前だけを読み込むので、フォントが何百個あっても重くなりません。<strong>検索欄</strong>で絞り込め、選んだフォントでの見本（<code>Aa Bb 123 あ ア 亜 歌</code>）が表示されます。フォント未指定の場合は標準のサンセリフ太字です</td></tr>
+    <tr><td>サイズ</td><td>スライダーで <strong>40〜250%</strong>。ヘッダーの Telop S / M / L（72% / 100% / 138% の目安）と連動しています</td></tr>
+    <tr><td>位置</td><td>下部（標準）／中央／上部</td></tr>
+    <tr><td>揃え</td><td>左／中央／右（行ごと。左・右のときは画面幅の4%の余白が付きます）</td></tr>
+    <tr><td>色</td><td>プリセット7色（白・黄・シアン・緑・赤・マゼンタ・黒）＋「Custom...」で自由な色。<strong>縁取りは自動</strong>で、明るい文字には黒縁、暗い文字には白縁が付きます</td></tr>
+  </table>
+  <div class="note"><p><span class="boxlabel">メモ：</span>選んだフォントがそのPCに無い場合（別のPCで作ったプロジェクトを開いた場合など）は、標準のフォントに置き換えて表示され、ピッカーやダイアログで「このPCには無い」旨が表示されます。プロジェクトが壊れることはありません。そのフォントをインストールすれば、本来の見た目に戻ります。</p></div>
+
+  <h3>書き出しへの反映</h3>
+  <p>テロップは <span class="btn">Export MP4...</span> で書き出したmp4にも、そのままのタイミング・見た目で焼き込まれます（映像の無い区間でも、黒画面の上にテロップだけが出ます）。</p>
+</section>
+
+<section id="vst">
+  <h2>VST編（プラグイン）</h2>
+  <p>YM-Kitharaが扱えるプラグインは<strong>VST3形式だけ</strong>です。エフェクトはオーディオ／MIDI両方のトラックに、楽器はMIDIトラックに入ります。</p>
+
+  <h3>最初に1回だけ：プラグイン探し（スキャン）</h3>
+  <ol class="steps">
+    <li>画面下部の <span class="btn">Scan for Plugins...</span> を押します。</li>
+    <li>別プログラム <strong>KitharaVstScanner.exe</strong> が起動して、PC内のVST3プラグイン（標準のインストール先 <code>C:\Program Files\Common Files\VST3</code>）を探します。終わると「〜 plugin(s) found.」と出ます。</li>
+    <li>結果はPC内に保存されるので、次回からは不要です（プラグインを新しく入れたら、もう一度スキャンしてください）。</li>
+  </ol>
+  <ul>
+    <li>スキャンはアプリの外（別プロセス）で走るので、壊れたプラグインがいてもDAW本体は落ちません。問題のあったプラグインファイルは、次回スキャンで先に飛ばされる仕組みになっています。</li>
+    <li>KitharaVstScanner.exe は YM-Kithara.exe と<strong>同じフォルダ</strong>に必要です。無いとスキャンが始まらず、その旨のメッセージが出ます（本体の動作には影響しません）。</li>
+  </ul>
+  <div class="note"><p><span class="boxlabel">メモ：</span>Windows自体にはVST3プラグインは付属していません。プラグインを何も入れていないPCでは、スキャンが終わっても一覧は空です（それで正常です）。Cakewalk Sonar付属のエフェクトなど、標準フォルダに入っているVST3は検出されます。</p></div>
+
+  <h3>エフェクトの挿し方（FXチェーン）</h3>
+  <ol class="steps">
+    <li>クリップをクリックして選ぶと、そのトラックが下部バーFX行の対象になります。</li>
+    <li><span class="btn">Add FX...</span> を押すと、スキャン済みプラグインの一覧（メーカー順）が出るので、選んで追加します。</li>
+    <li>音は<strong>挿した順</strong>に処理されます。各スロットには次のボタンがあります。
+      <ul>
+        <li><span class="btn">Open</span>：プラグインの画面を別ウィンドウで開く</li>
+        <li><span class="btn">Bypass</span>：そのエフェクトだけを一時的に無効化する</li>
+        <li><span class="btn">Remove</span>：スロットを外す</li>
+      </ul>
+    </li>
+    <li>プロジェクトを保存すると、エフェクトの並び・バイパス状態・プラグイン内部の設定（ステート）も一緒に保存されます。</li>
+  </ol>
+  <p>挿したエフェクト名は各トラックヘッダーにも「FX: 名前 &gt; 名前」の形で表示されます（バイパス中は <code>(off)</code>、見つからない場合は <code>(missing)</code> の仮の行として残り、名前とステートは保持されます）。</p>
+
+  <h3>楽器とエフェクトの違い</h3>
+  <ul>
+    <li><strong>楽器（シンセ）</strong>はMIDIトラックの楽器スロットに1つだけ入ります（入れ方は「<a href="#midi">MIDI編</a>」）。楽器の後段には、通常のFXチェーンもそのまま挿せます。</li>
+    <li><strong>エフェクト</strong>は全トラック共通のFXチェーンに入ります。オーディオトラックには楽器は入りません。</li>
+  </ul>
+
+  <h3>遅延の自動調整（PDC）</h3>
+  <p>プラグインが報告する遅延をトラックごとに合計し、一番遅いトラックに合わせて他のトラックを遅らせることで、トラック同士のタイミングを自動で揃えます（プラグイン遅延補償＝PDC）。楽器の遅延もこの対象に含まれます。<strong>設定は不要</strong>で、プラグインの画面を閉じたタイミングでも再計算されます。</p>
+
+  <h3>エフェクトをMIDIで操作する（M→FX）</h3>
+  <p>MIDI対応エフェクト（モジュレーションホイールやペダルでパラメーターが動くタイプ）を、キーボード／コントローラーからリアルタイムで操作できます。</p>
+  <ol class="steps">
+    <li>MIDIキーボードやコントローラーをPCに繋いでから、YM-Kitharaを起動します（トランスポート行に「MIDI IN: 1 device: ...」と出れば認識しています）。</li>
+    <li>対象トラックのヘッダーにある <span class="btn">M→FX</span> ボタンをONにします。そのトラックのFXチェーンの<strong>全スロット</strong>へ、ライブのMIDI（CCなど）が届くようになります。</li>
+    <li>再生しながらコントローラーを動かします。</li>
+  </ol>
+  <p>例：YM Mirage（v1.1）の場合、最初から次のように効きます。</p>
+  <table>
+    <tr><th style="width:38%">操作</th><th>効き方</th></tr>
+    <tr><td>モジュレーションホイール（CC1）</td><td>PITCHが変わる</td></tr>
+    <tr><td>サスティンペダル（CC64）</td><td>踏んでいる間 FREEZE</td></tr>
+    <tr><td>CC65</td><td>64以上でエフェクトON、未満でOFF（バイパス）</td></tr>
+  </table>
+  <ul>
+    <li>「M→FX」はトラックごとの設定で、プロジェクトに保存されます。OFFのトラックのエフェクトには届きません。</li>
+    <li>MIDIトラックでは、クリップの音符などのMIDIも後段のエフェクトに届きます。</li>
+    <li><strong>WAV書き出しのときは、コントローラーのライブ操作は入りません</strong>（オフライン処理のため。仕様です）。MIDIトラックのクリップMIDIは書き出しでもエフェクトへ渡ります。</li>
+  </ul>
+
+  <h3>対応していない形式</h3>
+  <div class="warn"><p><span class="boxlabel">注意：</span>次の形式は使えません：<strong>VST2、AU、DirectXプラグイン（Sonitus等）、CakewalkのProChannelモジュール</strong>。標準フォルダ（<code>C:\Program Files\Common Files\VST3</code>）に入っている<strong>通常のVST3</strong>だけが対象です。</p></div>
+</section>
+
+<section id="trouble">
+  <h2>困ったとき</h2>
+  <dl class="faq">
+    <dt>音が出ない</dt>
+    <dd>
+      <ul>
+        <li><span class="btn">Audio Settings...</span> で、出力装置が正しく選ばれているか確認してください。</li>
+        <li>トラックの <span class="btn">M</span>（ミュート）が押されていないか、<span class="btn">S</span>（ソロ）の付き方で他のトラックが消えていないか、トラック音量とトランスポート行の Volume（マスター音量）が下がりきっていないかを確認してください。</li>
+        <li>MIDIトラックは、楽器が入っていないと無音です。「Inst: (none)」のままになっていないか確認してください。</li>
+        <li>動画トラック自体は音を出しません。動画の音を使いたいときは「Extract Audio」で取り込んでください（「<a href="#video">動画（静止画）編</a>」）。</li>
+      </ul>
+    </dd>
+
+    <dt>プラグインが一覧に出てこない</dt>
+    <dd>
+      <ul>
+        <li>まず <span class="btn">Scan for Plugins...</span> を1回押してください。プラグインを新しく入れたあとも、再スキャンが必要です。</li>
+        <li>KitharaVstScanner.exe が YM-Kithara.exe と同じフォルダにあるか確認してください（無いとスキャンできません）。</li>
+        <li>そのプラグインが標準フォルダ <code>C:\Program Files\Common Files\VST3</code> に入っているか確認してください。VST2 / AU / DirectX形式のものは対象外です（「<a href="#vst">VST編</a>」）。</li>
+        <li>PCにVST3が1つも入っていなければ、一覧が空なのが正常です。</li>
+      </ul>
+    </dd>
+
+    <dt>プラグインが読み込めない／プロジェクトに「(missing)」と出る</dt>
+    <dd>
+      <ul>
+        <li>そのプラグインがこのPCにインストールされているか確認し、<span class="btn">Scan for Plugins...</span> をやり直してください。</li>
+        <li>「(missing)」は、そのプラグインが見つからない環境でプロジェクトを開いたときの仮の行です。名前と設定（ステート）は保持されているので、プラグインのある環境で開き直せば復帰します。</li>
+        <li>スキャン中に固まったプラグインは、次回のスキャンで先に飛ばされるようになります。スキャン自体が終わらない場合は、そのプラグインを標準フォルダから一時的に外して再スキャンしてください。</li>
+        <li>プラグインが大量にあるPCでは、スキャンに時間がかかることがあります（M6.10以降、進み具合はいま調べているプラグイン名で表示され、結果は1件ごとに保存されます）。途中で止まっても、見つかっていた分は一覧に入り、もう一度スキャンすれば続きから再開します。</li>
+        <li>それでもスキャンが完走しない場合は、手動スキャンもできます：YM-Kitharaを終了し、コマンドプロンプトで <code>KitharaVstScanner.exe "&lt;アプリデータ&gt;\YM ORPHEUS\plugin-list.xml"</code> を実行して <code>Done</code> と出るまで待ち、その後YM-Kitharaを起動し直してください。</li>
+      </ul>
+    </dd>
+
+    <dt>動画が読み込めない／プロジェクトを開くと動画クリップが消える</dt>
+    <dd>
+      <ul>
+        <li>対応形式は mp4 / mov / mkv / m4v（静止画は jpg / jpeg / png / bmp）です。</li>
+        <li>動画ファイルはプロジェクトに<strong>コピーされず、元の場所への参照だけ</strong>が記録されます。元のファイルを移動・名前変更・削除すると、開くときに警告が出て、そのクリップだけ落ちます。ファイルを元の場所に戻すか、動画を読み込み直してください。</li>
+        <li>アプリ自体が起動しない場合は、exeと同じフォルダにFFmpegのDLL（<code>avformat-*.dll</code> など）が揃っているか確認してください（DLLが無いと起動しません）。</li>
+      </ul>
+    </dd>
+
+    <dt>mp4書き出しが途中で止まる</dt>
+    <dd>書き出し前に全クリップの元ファイルをチェックします。<strong>見つからないファイルがあると、そのファイル名を表示して中止</strong>します。元の動画ファイルの場所を戻してから、もう一度書き出してください。</dd>
+
+    <dt>フォントが「このPCに無い」と出る</dt>
+    <dd>
+      <ul>
+        <li>M6.7より前の版では、実際には入っているフォント（名前が日本語／英語の両方で登録されているもの等）が「無い」と判定されることがありました。<strong>最新版（M6.9）に更新</strong>してください。</li>
+        <li>別のPCで作ったプロジェクトの場合、そのフォントが本当にこのPCへ入っていないことがあります。その場合は標準フォントで表示されます（壊れはしません）。フォントをインストールすれば本来の見た目に戻ります。</li>
+      </ul>
+    </dd>
+
+    <dt>録音・打ち込みした音符の間隔がおかしい</dt>
+    <dd>音符は「拍」で記録されているため、<strong>音符を置いたあとでテンポ（BPM）を変えると、音符どうしの間隔が伸び縮みします</strong>。曲のBPMは Tempo 欄で<strong>先に</strong>合わせてから、音符を置く／録音するのが約束です（「<a href="#midi">MIDI編</a>」）。すでに置いてしまった場合は、正しいBPMに戻すと間隔も元に戻ります。</dd>
+
+    <dt>キーボードを弾いても録音できない／「MIDI IN: none」と出る</dt>
+    <dd>
+      <ul>
+        <li>MIDI入力デバイスは<strong>起動時に</strong>開かれます。キーボードを繋いでから、YM-Kitharaを起動し直してください。</li>
+        <li>録音したいトラックの ●（アーム）が赤くなっているか確認してください。アームの状態は保存されないので、プロジェクトを開き直したら付け直しが必要です。</li>
+        <li>何も弾かずにStopするとクリップは出来ません（空のテイクは残らない仕様です）。</li>
+      </ul>
+    </dd>
+
+    <dt>ピアノロールで1小節より先が書けない</dt>
+    <dd>ピアノロールはクリップの長さぶんだけ表示されます。タイムライン上で、そのMIDIクリップの<strong>右端を右へドラッグ</strong>して伸ばすと、ピアノロールも広がります（「<a href="#midi">MIDI編</a>」のトリムの項）。</dd>
+  </dl>
+</section>
+
+</main>
+<footer class="site">YM-Kithara – AV Workstation　取扱説明書（M6.10対応）</footer>
+</body>
+</html>
