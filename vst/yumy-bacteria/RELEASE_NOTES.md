@@ -1,6 +1,6 @@
 # YuMy Bacteria v0.1.0
 
-Access Virus TI 風のバーチャルアナログ・シンセサイザー **YuMy Bacteria**（VST3 / AU）の最初の公開版です。無料で使えます。
+Access Virus TI 風のバーチャルアナログ・シンセサイザー **YuMy Bacteria**（VST3 / AU）の最初の公開版です。
 
 ## ダウンロード
 - **Windows**：`YuMyBacteria-Setup-0.1.0.exe`（VST3 を `C:\Program Files\Common Files\VST3\` に入れます）
@@ -35,4 +35,4 @@ Access Virus TI 風のバーチャルアナログ・シンセサイザー **YuMy
 - 実際の DAW での動作確認はまだ十分ではありません（特にサイドチェイン・ヴォコーダーの実音、AU 版）。不具合があれば、DAW の名前とバージョン、OS、操作手順を添えて連絡してください。
 
 ## ライセンス
-フリーウェアです。詳細は `LICENSE.txt` を参照してください。
+使用許諾契約書（`LICENSE.txt`）を参照してください。
