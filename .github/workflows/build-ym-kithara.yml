@@ -10,81 +10,85 @@ defaults:
     working-directory: daw/ym-kithara
     shell: bash
 
-# FFmpeg comes from Homebrew, whose bottles are single-arch. Both slices
-# are built on one Apple Silicon runner: the arm64 slice against the
-# native /opt/homebrew FFmpeg, the x86_64 slice against an Intel
-# Homebrew installed under Rosetta in /usr/local (bottles pour quickly;
-# the macos-15-intel runner's own brew install proved far too slow).
-# Each slice gets its FFmpeg dylibs bundled into Contents/Frameworks,
-# then the universal .app is assembled with lipo.
+env:
+  # Both slices must resolve the SAME FFmpeg version (their dylibs are
+  # lipo-merged), so neither leg updates Homebrew: each runner installs
+  # from its image's bundled homebrew-core snapshot instead. A fresh
+  # Homebrew install under Rosetta is not an alternative — current
+  # Homebrew refuses to install on Intel/Rosetta outright.
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   arch: arm64  }
+          - { os: macos-15-intel, arch: x86_64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg and tools
+        run: |
+          brew install ffmpeg pkg-config dylibbundler
+          brew list --versions ffmpeg
+          pkg-config --modversion libavformat libavcodec libavutil libswscale libswresample
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+
+      - name: Build app and scanner
+        run: cmake --build build --config Release --parallel
+
+      # The FFmpeg dylibs (and their Homebrew dependencies) are copied into
+      # Contents/Frameworks with @executable_path-relative install names,
+      # so the .app runs on machines without Homebrew. The scanner binary
+      # is already inside Contents/MacOS (CMake copies it next to the app
+      # executable, which is where PluginManager looks for it).
+      - name: Bundle FFmpeg libraries into the app
+        run: |
+          APP="build/YMKithara_artefacts/Release/YM-Kithara.app"
+          test -d "$APP"
+          test -f "$APP/Contents/MacOS/YM-Kithara"
+          test -f "$APP/Contents/MacOS/KitharaVstScanner"
+          echo "scanner: $(lipo -archs "$APP/Contents/MacOS/KitharaVstScanner")"
+          mkdir -p "$APP/Contents/Frameworks"
+          dylibbundler -cd -of -b -x "$APP/Contents/MacOS/YM-Kithara" \
+                       -d "$APP/Contents/Frameworks" \
+                       -p @executable_path/../Frameworks/
+          echo "--- main binary dependencies ---"
+          otool -L "$APP/Contents/MacOS/YM-Kithara"
+          if otool -L "$APP/Contents/MacOS/YM-Kithara" | grep -E "/opt/homebrew|/usr/local/"; then
+            echo "ERROR: Homebrew paths remain in the app binary"; exit 1
+          fi
+          echo "--- bundled frameworks ---"
+          ls -1 "$APP/Contents/Frameworks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM-Kithara-app-${{ matrix.arch }}
+          path: daw/ym-kithara/build/YMKithara_artefacts/Release/YM-Kithara.app
+
+  package:
+    needs: build
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install FFmpeg and tools (Apple Silicon)
-        run: brew install ffmpeg pkg-config dylibbundler
+      - uses: actions/download-artifact@v4
+        with:
+          path: daw/ym-kithara/slices
 
-      - name: Build arm64 slice
-        run: |
-          cmake -S . -B build-arm64 -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_OSX_ARCHITECTURES="arm64"
-          cmake --build build-arm64 --config Release --parallel
-          APP="build-arm64/YMKithara_artefacts/Release/YM-Kithara.app"
-          test -d "$APP"
-          test -f "$APP/Contents/MacOS/KitharaVstScanner"
-          echo "scanner: $(lipo -archs "$APP/Contents/MacOS/KitharaVstScanner")"
-          mkdir -p "$APP/Contents/Frameworks"
-          dylibbundler -cd -of -b -x "$APP/Contents/MacOS/YM-Kithara" \
-                       -d "$APP/Contents/Frameworks" \
-                       -p @executable_path/../Frameworks/
-          if otool -L "$APP/Contents/MacOS/YM-Kithara" | grep -E "/opt/homebrew|/usr/local/"; then
-            echo "ERROR: Homebrew paths remain in the arm64 binary"; exit 1
-          fi
-          mkdir -p slices
-          cp -R "$APP" "slices/YM-Kithara-arm64.app"
-          ls -1 "slices/YM-Kithara-arm64.app/Contents/Frameworks"
-
-      - name: Install Intel Homebrew and FFmpeg (Rosetta)
-        run: |
-          if ! arch -x86_64 /usr/bin/true 2>/dev/null; then
-            softwareupdate --install-rosetta --agree-to-license
-          fi
-          if [ ! -x /usr/local/bin/brew ]; then
-            NONINTERACTIVE=1 arch -x86_64 /bin/bash -c \
-              "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          fi
-          arch -x86_64 /usr/local/bin/brew install ffmpeg
-          /usr/local/bin/pkg-config --modversion libavformat
-
-      - name: Build x86_64 slice
-        run: |
-          PKG_CONFIG_PATH="/usr/local/lib/pkgconfig" \
-          cmake -S . -B build-x86_64 -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_OSX_ARCHITECTURES="x86_64" \
-                -DPKG_CONFIG_EXECUTABLE=/usr/local/bin/pkg-config
-          cmake --build build-x86_64 --config Release --parallel
-          APP="build-x86_64/YMKithara_artefacts/Release/YM-Kithara.app"
-          test -d "$APP"
-          test -f "$APP/Contents/MacOS/KitharaVstScanner"
-          echo "scanner: $(lipo -archs "$APP/Contents/MacOS/KitharaVstScanner")"
-          mkdir -p "$APP/Contents/Frameworks"
-          dylibbundler -cd -of -b -x "$APP/Contents/MacOS/YM-Kithara" \
-                       -d "$APP/Contents/Frameworks" \
-                       -p @executable_path/../Frameworks/
-          if otool -L "$APP/Contents/MacOS/YM-Kithara" | grep -E "/opt/homebrew|/usr/local/"; then
-            echo "ERROR: Homebrew paths remain in the x86_64 binary"; exit 1
-          fi
-          cp -R "$APP" "slices/YM-Kithara-x86_64.app"
-          ls -1 "slices/YM-Kithara-x86_64.app/Contents/Frameworks"
-
-      # The scanner binary sits inside Contents/MacOS (CMake copies it
-      # next to the app executable, which is where PluginManager looks).
       - name: Assemble universal app, sign and zip
         run: |
-          ARM_APP="slices/YM-Kithara-arm64.app"
-          X64_APP="slices/YM-Kithara-x86_64.app"
+          ARM_APP=$(find slices -type d -name "YM-Kithara.app" -path "*arm64*" | head -1)
+          X64_APP=$(find slices -type d -name "YM-Kithara.app" -path "*x86_64*" | head -1)
+          echo "arm64 slice:  $ARM_APP"
+          echo "x86_64 slice: $X64_APP"
           test -d "$ARM_APP" && test -d "$X64_APP"
 
           rm -rf "YM-Kithara.app"
