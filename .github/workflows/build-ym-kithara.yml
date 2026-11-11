@@ -123,7 +123,7 @@ jobs:
             archs=$(lipo -archs "YM-Kithara.app/$bin")
             echo "$bin: $archs"
             case "$archs" in
-              *arm64*x86_64*) ;;
+              *arm64*x86_64*|*x86_64*arm64*) ;;
               *) echo "ERROR: not universal: $bin"; exit 1 ;;
             esac
           done
