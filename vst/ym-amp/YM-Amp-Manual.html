@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YM Amp 取扱説明書（v1.1.0）</title>
+<style>
+  :root{
+    --ink:#24272c; --dim:#5b6068; --line:#d9dce1; --accent:#8a6d1f;
+    --bg:#fbfaf7; --card:#ffffff; --note:#eef4fb; --noteline:#7aa5d8;
+    --warn:#fdf0ec; --warnline:#d88a7a; --tip:#f0f7ee; --tipline:#8ab87e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,"Noto Sans JP",sans-serif;
+    line-height:1.75;font-size:15.5px}
+  header.site{background:#14161f;color:#f2ead2;padding:34px 20px 26px;text-align:center;
+    border-bottom:4px solid #c9a227}
+  header.site .logo{font-size:15px;letter-spacing:.35em;color:#c9a227;margin:0 0 4px}
+  header.site h1{margin:0;font-size:30px;font-weight:700;letter-spacing:.04em}
+  header.site h1 .sub{display:block;font-size:15px;letter-spacing:.28em;color:#b9bdd0;margin-top:4px;font-weight:400}
+  header.site p.doc{margin:12px 0 0;font-size:15px;color:#e8e2cd}
+  main{max-width:880px;margin:0 auto;padding:24px 20px 60px}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:16px 22px;margin:6px 0 34px}
+  nav.toc h2{margin:0 0 8px;font-size:16px}
+  nav.toc ol{margin:0;padding-left:22px}
+  nav.toc li{margin:3px 0}
+  a{color:#205da8;text-decoration:none}
+  a:hover{text-decoration:underline}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:22px 26px;margin:0 0 28px}
+  section>h2{margin:0 0 6px;font-size:23px;border-bottom:2px solid #c9a227;padding-bottom:8px}
+  h3{font-size:17.5px;margin:22px 0 6px}
+  h3:first-of-type{margin-top:12px}
+  p{margin:8px 0}
+  ol.steps,ul{margin:8px 0 8px;padding-left:24px}
+  ol.steps li,ul li{margin:4px 0}
+  .btn{display:inline-block;background:#eceef2;border:1px solid #c6cad2;border-radius:5px;
+    padding:0 7px;font-size:.92em;font-weight:600;white-space:nowrap}
+  .key{display:inline-block;background:#f4f4f6;border:1px solid #bbb;border-bottom-width:2px;
+    border-radius:4px;padding:0 6px;font-size:.9em;white-space:nowrap}
+  .note,.warn,.tip{border-radius:8px;padding:10px 14px;margin:12px 0;font-size:14.8px}
+  .note{background:var(--note);border-left:4px solid var(--noteline)}
+  .warn{background:var(--warn);border-left:4px solid var(--warnline)}
+  .tip{background:var(--tip);border-left:4px solid var(--tipline)}
+  .note p,.warn p,.tip p{margin:2px 0}
+  .boxlabel{font-weight:700}
+  table{border-collapse:collapse;margin:10px 0;width:100%;font-size:14.8px}
+  th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+  th{background:#f1eee3}
+  dl.faq dt{font-weight:700;margin:16px 0 2px}
+  dl.faq dd{margin:0 0 6px}
+  footer.site{text-align:center;color:var(--dim);font-size:13px;padding:0 20px 36px}
+  code{background:#f0f0f2;border-radius:4px;padding:0 4px;font-size:.92em}
+  @media print{
+    body{background:#fff;font-size:12.5pt}
+    header.site{background:#fff;color:#000;border-bottom:2px solid #000}
+    header.site h1 .sub,header.site .logo{color:#444}
+    header.site p.doc{color:#333}
+    main{max-width:none;padding:0}
+    section{border:none;border-radius:0;padding:10px 0;page-break-inside:avoid}
+    nav.toc{page-break-inside:avoid}
+    a{color:#000}
+  }
+</style>
+</head>
+<body>
+<header class="site">
+  <p class="logo">♪ ♪ ♪</p>
+  <h1>YM Amp<span class="sub">NEURAL AMP PLAYER</span></h1>
+  <p class="doc">取扱説明書（v1.1.0／VST3版・単体版 共通）</p>
+</header>
+<main>
+
+<nav class="toc">
+  <h2>もくじ</h2>
+  <ol>
+    <li><a href="#intro">はじめに</a></li>
+    <li><a href="#signal">信号の流れ</a></li>
+    <li><a href="#basic">基本の使い方</a></li>
+    <li><a href="#params">パラメータ表</a></li>
+    <li><a href="#fx">内蔵エフェクター</a></li>
+    <li><a href="#midi">MIDI</a></li>
+    <li><a href="#license">同梱モデルとライセンス</a></li>
+    <li><a href="#trouble">音が出ない・遅延が大きいとき</a></li>
+    <li><a href="#env">動作環境</a></li>
+  </ol>
+</nav>
+
+<section id="intro">
+  <h2>はじめに</h2>
+  <p>YM Amp（ワイエム・アンプ）は、Neural Amp Modeler（NAM）のキャプチャデータ（<code>.nam</code> ファイル）を読み込んで再生する、<strong>再生専用のアンプシミュレーター</strong>です。実機アンプを手元で取り込む（プロファイリング）機能はありません。その代わり、無料の NAM ライブラリ <a href="https://www.tone3000.com/">TONE3000</a> などで配布されているキャプチャを読み込むと、そのアンプの音がそのまま再現されます。対応形式は NAM の <strong>A1 / A2 の両形式</strong>（SlimmableContainer 形式も再生できます）。</p>
+  <p>再配布が許可されたモデルが2つ同梱されているので、<strong>最初から音は出ます</strong>。起動すると初期プリセット「01 BRIT STACK」が選ばれ、同梱のプリキ風モデルが読み込まれた状態になっています。パネル（画面）の表記はすべて英語です。画面サイズは固定（1240×430）で、大きさは変わりません。</p>
+
+  <h3>VST3版と単体版の違い</h3>
+  <p>YM Amp には2つの形がありますが、<strong>中身（音の処理・画面・プリセット）はまったく同じ</strong>です。違うのは「誰がオーディオ機器を管理するか」と「状態の保存先」だけです。</p>
+  <table>
+    <tr><th style="width:22%">項目</th><th style="width:39%">VST3版</th><th>単体版（YM Amp.exe）</th></tr>
+    <tr><td>使い方</td><td>DAW（YM-Kithara、Cakewalk Sonar など）のトラックに挿して使う</td><td>アプリ単独で起動する。<strong>DAWは要らない</strong></td></tr>
+    <tr><td>入出力デバイス</td><td>ホスト（DAW）側の設定に従う</td><td>アプリのオーディオ設定で、自分で入力・出力・バッファサイズを選ぶ</td></tr>
+    <tr><td>状態の保存先</td><td>ホストのプロジェクトファイルに一緒に保存される</td><td>アプリ自身が終了時の状態を覚えていて、次回起動時に復元する</td></tr>
+    <tr><td>向いている用途</td><td>録音、他のプラグインとの併用、ステムへの一括処理</td><td>手軽にギターを鳴らす、DAWを持っていない人への配布</td></tr>
+  </table>
+
+  <h3>インストール</h3>
+  <ol class="steps">
+    <li><strong>VST3版</strong>：<code>YM Amp.vst3</code> の<strong>フォルダーごと</strong>、<code>C:\Program Files\Common Files\VST3</code> にコピーします（中身だけを取り出さないでください）。DAW を起動し直すか、プラグインの再スキャンを実行します。</li>
+    <li><strong>単体版</strong>：<code>YM Amp.exe</code> を好きな場所に置いて実行するだけです。初回起動時は、画面のオプション（歯車／Audio Settings）から使いたいオーディオインターフェース（またはPCのマイク入力／ヘッドホン出力）を選んでください。</li>
+  </ol>
+  <div class="note"><p><span class="boxlabel">メモ：</span>初回起動時に、同梱モデルはユーザーフォルダーの <code>YM Amp\Factory</code> へ自動で展開されます。自分で保存したプリセットは <code>YM Amp\Presets</code> フォルダーに XML ファイルとして置かれます。</p></div>
+</section>
+
+<section id="signal">
+  <h2>信号の流れ</h2>
+  <p>音は下の順番で処理されます。アンプ本体にあたるのは NAM モデルで、それ以外は「アンプの前段・後段」として働きます。</p>
+  <table>
+    <tr><th style="width:22%">段</th><th>内容</th></tr>
+    <tr><td>入力（GUITAR / FILE）</td><td><span class="btn">GUITAR</span>＝ライブ入力、<span class="btn">FILE</span>＝内蔵ファイルプレイヤー。どちらもモノラルにまとめられてアンプ段へ入ります</td></tr>
+    <tr><td>INPUT（入力ゲイン）</td><td>チェーン先頭のレベル調整（±24 dB）</td></tr>
+    <tr><td>GATE</td><td>ノイズゲート。しきい値より小さい音を消します</td></tr>
+    <tr><td>BOOST</td><td>トレブルブースター（モデル前段）。詳しくは「<a href="#fx">内蔵エフェクター</a>」</td></tr>
+    <tr><td>GAIN</td><td>モデル前段のドライブ。パネルでは TONE 段に並んでいますが、効く場所はモデルの<strong>前</strong>です。モデルの歪み量はまずここで調整します</td></tr>
+    <tr><td>NAM モデル</td><td><code>.nam</code> キャプチャの再生。モデルに音量（loudness）情報がある場合は、基準 −18 dB に自動で揃えてモデル間の音量差を吸収します</td></tr>
+    <tr><td>CAB（キャビ IR）</td><td>キャビネットのインパルス応答（IR）で「箱鳴り」を付けます</td></tr>
+    <tr><td>EQ / PRESENCE</td><td>BASS / MID / TREBLE / PRESENCE の4バンドで最終的な音色を整えます</td></tr>
+    <tr><td>CHORUS → DELAY → REVERB</td><td>空間系の内蔵エフェクター（アンプの後段、いわゆるエフェクトループ的な位置）</td></tr>
+    <tr><td>MASTER</td><td>最終出力レベル（−24〜+12 dB）</td></tr>
+  </table>
+  <div class="note"><p><span class="boxlabel">メモ：</span>モデルを何も読み込んでいなくても信号は素通りし、EQ とエフェクターは効きます（BOOST＋EQ だけのプリアンプ風の使い方もできます）。</p></div>
+</section>
+
+<section id="basic">
+  <h2>基本の使い方</h2>
+
+  <h3>モデル（.nam）を読み込む</h3>
+  <ol class="steps">
+    <li>TONE3000 などで好きなアンプの NAM キャプチャ（<code>.nam</code> ファイル）をダウンロードします。</li>
+    <li>パネルの <span class="btn">LOAD MODEL</span> を押し、ファイル選びます。</li>
+    <li>読み込まれると、アンバー色の LCD にモデル名と、その下に形式（例：<code>WAVENET - 48 kHz</code>）が表示されます。何も読み込まれていないときは <code>NO MODEL LOADED</code> と表示されます。</li>
+  </ol>
+
+  <h3>プリセット（◀ ▶）</h3>
+  <p>プリセット表示の横の <span class="btn">◀</span> <span class="btn">▶</span> で切り替えます。プリセットは「設定＋モデル参照」のセットです。工場プリセットは4つあります。</p>
+  <table>
+    <tr><th style="width:8%">#</th><th style="width:20%">名前</th><th>内容と用途</th></tr>
+    <tr><td>01</td><td>BRIT STACK</td><td>同梱の「1968 KT66 Marshall Plexi style amp v2.0」（ezlemoen）を読み込んだ、マーシャル系の基本音。GAIN +8 dB、ゲート −55 dB、薄くリバーブ。起動時の初期状態です</td></tr>
+    <tr><td>02</td><td>EVH 5150</td><td>同梱の「EVH 5150 III 6L6 (Amp Only). Moderate Boost.」（braindeadtx）＋タイトなゲート（−38 dB）＋薄いディレイ（320 ms）とリバーブ。ハイゲインのリフ向け</td></tr>
+    <tr><td>03</td><td>MAY CHIME</td><td>ブライアン・メイ風の作り（BOOST ON、AMOUNT 0.8）ですが、<strong>AC30系モデルは同梱されていません</strong>（理由は「<a href="#license">同梱モデルとライセンス</a>」）。LCD が <code>LOAD AN AC30-STYLE MODEL</code> と案内するので、各自で入手した AC30 系モデルを <span class="btn">LOAD MODEL</span> で読み込んでください（それまでは今のモデルがそのまま残ります）</td></tr>
+    <tr><td>04</td><td>CLEAN CHORUS</td><td>ジャズコーラス風のクリーン＋コーラス（CHORUS ON）。こちらも JC 系モデルは同梱されていないので、クリーンなモデルを読み込むのがおすすめです（LCD に <code>LOAD A CLEAN JC-STYLE MODEL</code> と出ます）</td></tr>
+  </table>
+  <ul>
+    <li><span class="btn">SAVE</span> を押すと、現在の状態を名前を付けてユーザープリセットとして保存できます。保存したプリセットは、工場プリセットの後ろに <span class="btn">◀</span> <span class="btn">▶</span> の巡回に追加されます。</li>
+  </ul>
+
+  <h3>内蔵ファイルプレイヤー（Stem のリアンプ）</h3>
+  <p>ギター入力の代わりに、音声ファイルをそのままアンプチェーンに通せます。Suno などで作ったギターステムを「リアンプ」する用途です。</p>
+  <ol class="steps">
+    <li>入力ソースの <span class="btn">FILE</span> を押します（<span class="btn">GUITAR</span> がライブ入力側です）。</li>
+    <li>ファイル表示の下の <span class="btn">LOAD</span> でファイル選びます。対応形式は WAV / MP3 / FLAC / AIF / AIFF（読み込みは最大15分まで）。</li>
+    <li><span class="btn">PLAY</span> で再生、もう一度押すと <span class="btn">STOP</span> になります。最後まで再生し終わった後に PLAY を押すと、先頭から再生し直します。</li>
+    <li><span class="btn">LOOP</span> を点けておくと、終わりで先頭に戻って繰り返し再生します。</li>
+  </ol>
+  <div class="tip"><p><span class="boxlabel">ヒント：</span>ステムは既に音作り（歪みや空間処理）が済んでいることが多いので、アンプに通すと「二重に加工された」音に聞こえる場合があります。音の良し悪しの最終判断は、できればドライなギター素材か実際のギター入力でどうぞ。</p></div>
+
+  <h3>キャビ IR を読み込む（LOAD IR）と CAB の ON/OFF</h3>
+  <ol class="steps">
+    <li><span class="btn">LOAD IR</span> を押して、キャビネット IR の WAV ファイル選びます（標準では内蔵 IR「YM CAB 4x12」が使われます）。選んだ IR 名は LCD に表示されます。</li>
+    <li><span class="btn">CAB ON / CAB OFF</span> ボタンで、キャビ IR の有効・無効を切り替えます。</li>
+  </ol>
+  <div class="warn"><p><span class="boxlabel">注意：</span>読み込んだモデルが<strong>キャブ込みのキャプチャ（Full Rig）</strong>のときは、<span class="btn">CAB OFF</span> にしてください。キャビが二重に掛かると、こもった不自然な音になります。逆に<strong>アンプのみのキャプチャ</strong>では CAB を ON にして、内蔵 IR や読み込んだ IR と組み合わせます。</p></div>
+  <ul>
+    <li>ユーザー IR は自動で音量を揃える処理をしません（ファイルの録音レベルそのまま）。音量差は <span class="btn">MASTER</span> で調整してください。</li>
+  </ul>
+</section>
+
+<section id="params">
+  <h2>パラメータ表</h2>
+  <p>パネル上の全パラメーターです（表示名はパネルの英語表記のまま）。ツマミはドラッグで回します。値はホストのオートメーションにも対応しています。</p>
+
+  <h3>Input</h3>
+  <table>
+    <tr><th style="width:18%">名前</th><th style="width:20%">範囲</th><th style="width:12%">初期値</th><th>内容</th></tr>
+    <tr><td>INPUT SOURCE</td><td>GUITAR / FILE</td><td>GUITAR</td><td>入力の切り替え。<span class="btn">GUITAR</span> はライブ入力、<span class="btn">FILE</span> は内蔵ファイルプレイヤー</td></tr>
+    <tr><td>INPUT</td><td>−24–+24 dB</td><td>0 dB</td><td>入力ゲイン。チェーンの先頭でレベルを整えます</td></tr>
+    <tr><td>GATE</td><td>−80–−10 dB</td><td>−50 dB</td><td>ノイズゲートのしきい値。値を大きく（0に近く）するほど強く効きます。ハイゲインで無音時のノイズが気になるときは −38 dB くらいまで上げるとタイトになります</td></tr>
+  </table>
+
+  <h3>Amp（モデル前段ドライブ＋EQ）</h3>
+  <table>
+    <tr><th style="width:18%">名前</th><th style="width:20%">範囲</th><th style="width:12%">初期値</th><th>内容</th></tr>
+    <tr><td>GAIN</td><td>−12–+24 dB</td><td>+6 dB</td><td>モデル前段のドライブ。モデルの歪み量はまずここで調整します（パネルでは TONE 段に並んでいますが、効くのはモデルの前です）</td></tr>
+    <tr><td>BASS</td><td>−15–+15 dB</td><td>0 dB</td><td>低域（150 Hz ローシェルフ）</td></tr>
+    <tr><td>MID</td><td>−15–+15 dB</td><td>0 dB</td><td>中域（750 Hz ピーク）</td></tr>
+    <tr><td>TREBLE</td><td>−15–+15 dB</td><td>0 dB</td><td>高域（3.2 kHz ハイシェルフ）</td></tr>
+    <tr><td>PRESENCE</td><td>−15–+15 dB</td><td>0 dB</td><td>さらに上の高域（5.5 kHz ハイシェルフ）。音の張り・抜けの調整に</td></tr>
+  </table>
+
+  <h3>Cab</h3>
+  <table>
+    <tr><th style="width:18%">名前</th><th style="width:20%">範囲</th><th style="width:12%">初期値</th><th>内容</th></tr>
+    <tr><td>CAB</td><td>ON / OFF</td><td>ON</td><td>キャビネット IR の有効・無効。使用する IR は <span class="btn">LOAD IR</span> で選べます（初期状態は内蔵「YM CAB 4x12」）。フルリグのキャプチャでは OFF にします</td></tr>
+  </table>
+
+  <h3>FX（内蔵エフェクター）</h3>
+  <table>
+    <tr><th style="width:18%">名前</th><th style="width:20%">範囲</th><th style="width:12%">初期値</th><th>内容</th></tr>
+    <tr><td>BOOST</td><td>ON / OFF</td><td>OFF</td><td>トレブルブースターの入／切（モデル前段）</td></tr>
+    <tr><td>AMOUNT（BOOST）</td><td>0–1</td><td>0.5</td><td>ブースト量。1.8 kHz のハイシェルフ（最大 +12 dB）と全体の押し上げ（最大 +10 dB）が連動します</td></tr>
+    <tr><td>CHORUS</td><td>ON / OFF</td><td>OFF</td><td>コーラスの入／切</td></tr>
+    <tr><td>RATE（CHORUS）</td><td>0.1–8 Hz</td><td>1.2 Hz</td><td>うねりの速さ</td></tr>
+    <tr><td>DEPTH（CHORUS）</td><td>0–1</td><td>0.35</td><td>うねりの深さ</td></tr>
+    <tr><td>DELAY</td><td>ON / OFF</td><td>OFF</td><td>ディレイの入／切</td></tr>
+    <tr><td>TIME（DELAY）</td><td>30–1000 ms</td><td>375 ms</td><td>反響の間隔</td></tr>
+    <tr><td>FEEDBACK（DELAY）</td><td>0–0.85</td><td>0.35</td><td>反響の繰り返し回数。DELAY ブロックの FEEDBACK ツマミで調整します（ツマミの表示は 0–85）</td></tr>
+    <tr><td>MIX（DELAY）</td><td>0–1</td><td>0.25</td><td>ディレイ音の混ぜ具合</td></tr>
+    <tr><td>REVERB</td><td>ON / OFF</td><td>OFF</td><td>リバーブの入／切</td></tr>
+    <tr><td>MIX（REVERB）</td><td>0–1</td><td>0.3</td><td>リバーブ音の混ぜ具合</td></tr>
+  </table>
+
+  <h3>Output</h3>
+  <table>
+    <tr><th style="width:18%">名前</th><th style="width:20%">範囲</th><th style="width:12%">初期値</th><th>内容</th></tr>
+    <tr><td>MASTER</td><td>−24–+12 dB</td><td>0 dB</td><td>最終出力レベル。右端の OUT メーターで確認できます</td></tr>
+    <tr><td>BYPASS</td><td>ON / OFF</td><td>OFF（＝音が掛かる）</td><td>エフェクト全体の ON/OFF。画面左下の POWER スイッチ、ホストのバイパスボタン、MIDI CC と連動します</td></tr>
+    <tr><td>BYPASS CC</td><td>0–127</td><td>65</td><td>バイパスを操作する MIDI CC 番号。0 = 無効。詳しくは「<a href="#midi">MIDI</a>」</td></tr>
+  </table>
+</section>
+
+<section id="fx">
+  <h2>内蔵エフェクター</h2>
+  <p>エフェクトは4つ内蔵しています。各ブロックの名前ボタン（LED 付き）で ON/OFF、ツマミで量を調整します。設定はプリセットにも保存されます。フェイザーのような凝ったエフェクトは、YM Vortex など他の YM エフェクトを後段に挿して使う想定です。</p>
+
+  <h3>BOOST ― トレブルブースター</h3>
+  <p>モデル前段に掛かるブースターです。高域（1.8 kHz のハイシェルフ、最大 +12 dB）を持ち上げながら、全体も最大 +10 dB 押し上げてモデルを強くドライブします。VOX AC30 系のモデルと組み合わせると、ブライアン・メイ風の「粘るサステイン」の土台になります（MAY CHIME プリセットがこの使い方です）。AMOUNT は1つのツマミで両方が連動します。</p>
+
+  <h3>CHORUS</h3>
+  <p>遅延変調によるコーラスです。RATE でうねりの速さ、DEPTH で深さを調整します。ジャズコーラス系のクリーンサウンドには欠かせない要素で、CLEAN CHORUS プリセットでは ON になっています（RATE 1.4 Hz / DEPTH 0.45）。</p>
+
+  <h3>DELAY</h3>
+  <p>ステレオのフィードバック・ディレイです。TIME（30–1000 ms）で間隔、FEEDBACK（0–0.85）で反響の繰り返し回数、MIX で混ぜ具合を調整します。EVH 5150 プリセットでは 320 ms の薄いディレイが空間作りに使われています。</p>
+
+  <h3>REVERB</h3>
+  <p>アルゴリズミック・リバーブ（Freeverb 系）です。部屋鳴りを薄く足すことで、アンプシミュレーター特有の「ペラペラ感」を消します。調整は MIX のみで、部屋の大きさなどは固定です。</p>
+</section>
+
+<section id="midi">
+  <h2>MIDI</h2>
+  <p>YM の家訓どおり、エフェクトの ON/OFF（バイパス）は MIDI CC で操作できます。</p>
+  <ul>
+    <li><strong>BYPASS CC（初期値 CC 65）</strong>：値が <strong>64 以上でエフェクト ON、64 未満でバイパス</strong>（ペダル式）です。切り替えは約15 ms のクロスフェードで、クリック音はしません。</li>
+    <li>画面左下の <strong>POWER</strong> スイッチ（手動の ON/OFF）および<strong>ホストのバイパスボタン</strong>とも連動します。</li>
+    <li><strong>割り当ての変更（LEARN）</strong>：画面下の <span class="btn">LEARN</span> を押してからコントローラーを動かすと、その CC 番号に割り当て直されます（LEARN は自動で終わります）。</li>
+    <li><span class="btn">LEARN</span> を<strong>右クリック</strong>すると割り当てが無効（Off）になります（BYPASS CC = 0）。</li>
+    <li>MIDI は<strong>チャンネルを問わず</strong>受け付けます（オムニ受信）。</li>
+  </ul>
+  <div class="note"><p><span class="boxlabel">メモ：</span>VST3版で CC を使うには、ホスト側で「エフェクトへ MIDI を送る」設定が必要です。Cakewalk Sonar ではエフェクトの MIDI 入力を有効にしてください。YM-Kithara ではトラックの <span class="btn">M→FX</span> を有効にします。単体版では、アプリのオーディオ／MIDI設定で使う MIDI 入力デバイスを選んでください。</p></div>
+</section>
+
+<section id="license">
+  <h2>同梱モデルとライセンス</h2>
+  <p>工場プリセット用に、<strong>再配布が明示的に許可された CC BY 4.0 のキャプチャを2つ同梱</strong>しています（初回起動時に <code>YM Amp\Factory</code> フォルダーへ自動展開されます）。作者クレジットは以下の通りです（同梱の <code>CREDITS.txt</code> にも同じ内容が記載されています）。</p>
+  <table>
+    <tr><th style="width:34%">モデル</th><th>作者と出典</th></tr>
+    <tr><td>EVH 5150 III 6L6 (Amp Only). Moderate Boost.</td><td>by <strong>braindeadtx</strong> ― <a href="https://www.tone3000.com/tones/evh-5150-iii-6l6-amp-only-moderate-boost-205">TONE3000 の配布ページ</a>／ CC BY 4.0</td></tr>
+    <tr><td>1968 KT66 Marshall Plexi style amp v2.0</td><td>by <strong>ezlemoen</strong> ― <a href="https://www.tone3000.com/tones/1968-kt66-marshall-plexi-style-amp-v20-6806">TONE3000 の配布ページ</a>／ CC BY 4.0</td></tr>
+  </table>
+  <ul>
+    <li>内蔵キャビ IR「YM CAB 4x12」は、第三者の IR ではなく本プロジェクトで合成したものです。</li>
+    <li>モデルの再生エンジンは NeuralAmpModelerCore（MIT ライセンス）です。本体は JUCE で作られています。</li>
+    <li>VOX AC30 系（ブライアン・メイ風）や Roland JC-120 系のキャプチャは、再配布可能なライセンスのものが見つからなかったため、同梱していません。</li>
+  </ul>
+  <div class="warn"><p><span class="boxlabel">注意：</span>TONE3000 から<strong>自分でダウンロードしたモデルは、個人で使う分には問題ありません</strong>（YM Amp に読み込んで演奏・録音に使えます）。ただし、TONE3000 のモデルの多くは「使うのは自由でも、<strong>データファイルの再配布は作者の許可が必要</strong>」というライセンス（T3K）です。<strong>他人のモデルファイルを他人に渡したり、別の製品に同梱したりしないでください。</strong>YM Amp に同梱できている2つは、再配布を明示的に許可した CC BY のものだけです。</p></div>
+</section>
+
+<section id="trouble">
+  <h2>音が出ない・遅延が大きいとき</h2>
+  <dl class="faq">
+    <dt>音が出ない（単体版）</dt>
+    <dd>まずアプリのオーディオ設定（オプション／Audio Settings）で、入力と出力のデバイスが正しく選ばれているか確認してください。入力にオーディオインターフェース（またはPCのマイク入力）、出力にヘッドホンなどを選びます。デバイスを選んだだけでは鳴らず、YM Amp 側の POWER が ON（バイパスされていない）ことも確認してください。</dd>
+
+    <dt>音が出ない・途切れて聞こえる（共通）</dt>
+    <dd>次の順で確認してください。①入力ソース（<span class="btn">GUITAR</span> / <span class="btn">FILE</span>）が今の使い方と合っているか。② <span class="btn">GATE</span> を上げすぎると、小さい音が全部消えて「音が出ない」ように聞こえます（初期値 −50 dB に戻してみてください）。③ <span class="btn">INPUT</span> と <span class="btn">MASTER</span> が下がりすぎていないか。④ VST3版では、ホスト側のトラック入力・モニター設定も確認してください。</dd>
+
+    <dt>FILE（ステム）が再生されない</dt>
+    <dd>ファイル形式が WAV / MP3 / FLAC / AIF / AIFF のいずれか確認してください（読み込み上限は15分です）。<span class="btn">LOAD</span> で読み込んでから <span class="btn">PLAY</span> を押します。入力ソースが <span class="btn">FILE</span> 側になっていないと、再生しても音は出ません。</dd>
+
+    <dt>音がこもる・不自然に重い</dt>
+    <dd>モデルがキャブ込み（Full Rig）のキャプチャなのに <span class="btn">CAB</span> が ON になっていて、キャビが二重に掛かっている可能性が高いです。<span class="btn">CAB OFF</span> にしてみてください。逆にアンプのみのキャプチャで CAB が OFF だと、耳障りな「生」の音になります。</dd>
+
+    <dt>遅延（レイテンシー）が大きい</dt>
+    <dd>バッファサイズを小さくすると遅延は減りますが、その分 CPU の負担が増え、音が途切れる場合があります（単体版はアプリのオーディオ設定、VST3版はホストの設定で変更します）。なお、NAM のモデルは 48 kHz を基準に作られているため、ホストが 44.1 kHz などのときはプラグインの内部で自動リサンプルします。このとき数サンプル分の遅延が増えますが、ホストへ申告しているので、並んだトラックとのズレはホスト側で補正されます。</dd>
+
+    <dt>PCのマイク入力にギターをつないだら音がこもる</dt>
+    <dd>これは故障ではなく、インピーダンス（電気的な相性）の違いによるものです。マイク入力はマイク用に設計されているため、ギターを直挿しすると高域が落ちてこもった音になります。また、Windows のマイクの「オーディオ拡張（エンハンス）」や自動ゲイン（AGC）が効いていると、演奏の強弱に音量が勝手に追従して不自然になります。サウンド設定でマイクの拡張機能を切り、入力レベルは音が割れない（クリップしない）範囲で調整してください。<strong>本来の使い方としては、Hi-Z（楽器用）入力のあるオーディオインターフェース経由が正解</strong>です。マイク入力でも「使えなくはない」範囲では鳴りますが、音質と遅延の両面でインターフェースが勝ります。</dd>
+  </dl>
+</section>
+
+<section id="env">
+  <h2>動作環境</h2>
+  <ul>
+    <li>対応OS：Windows（64bit）</li>
+    <li>VST3版：VST3（64bit）対応ホスト（YM-Kithara、Cakewalk Sonar など）</li>
+    <li>単体版：<code>YM Amp.exe</code> 単体で動作（DAW不要）。入出力には Windows で使えるオーディオデバイスが必要です</li>
+    <li>対応ファイル形式：モデル＝ <code>.nam</code>（NAM A1 / A2、SlimmableContainer 含む）／ キャビ IR ＝ WAV ／ ファイルプレイヤー ＝ WAV・MP3・FLAC・AIF・AIFF（最大15分）</li>
+    <li>開発フレームワーク：JUCE（モデル再生エンジン：NeuralAmpModelerCore、MIT）</li>
+  </ul>
+  <div class="note"><p><span class="boxlabel">メモ：</span>NAM は「キャプチャした瞬間の音」の再現です。実機のアンプのツマミを後から回すことはできないので、「誰々っぽい音」の大半はモデル選びで決まり、残りを BOOST と EQ で詰める作りになっています。</p></div>
+</section>
+
+</main>
+<footer class="site">YM Amp ― NAM プレイヤー（VST3 / 単体版）取扱説明書 v1.1.0</footer>
+</body>
+</html>

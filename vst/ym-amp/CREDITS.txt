@@ -1,0 +1,40 @@
+YM Amp - credits and licenses
+=============================
+
+Bundled NAM model captures (factory content)
+--------------------------------------------
+The following .nam model files are embedded in YM Amp and extracted
+to the "YM Amp/Factory" user folder on first run. Both are licensed
+under CC BY 4.0 (Creative Commons Attribution 4.0 International),
+which permits redistribution with attribution:
+
+1. "EVH 5150 III 6L6 (Amp Only). Moderate Boost." by braindeadtx
+   Capture name in file: EVH 5150 III (Amp Only) Boosted
+   Source: https://www.tone3000.com/tones/evh-5150-iii-6l6-amp-only-moderate-boost-205
+   Licensed under CC BY 4.0.
+
+2. "1968 KT66 Marshall Plexi style amp v2.0" by ezlemoen
+   Capture name in file: KT66-Plexi-std-mod-0.0063ESR
+   Source: https://www.tone3000.com/tones/1968-kt66-marshall-plexi-style-amp-v20-6806
+   Licensed under CC BY 4.0.
+
+Cabinet impulse response
+------------------------
+"YMCab_4x12.wav" (the built-in "YM CAB 4x12" IR) was synthesised
+in-house for this project (frequency-shaped, exponentially decaying
+noise). No third-party impulse response is bundled.
+
+NeuralAmpModelerCore
+--------------------
+Model playback uses NeuralAmpModelerCore by Steven Atkinson et al.,
+MIT License, vendored under ThirdParty/NeuralAmpModelerCore
+(commit 0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842).
+Source: https://github.com/sdatkinson/NeuralAmpModelerCore
+Its dependencies Eigen (MPL-2.0) and nlohmann/json (MIT) are vendored
+alongside it under ThirdParty/NeuralAmpModelerCore/Dependencies.
+
+JUCE
+----
+YM Amp is built with JUCE 8.0.15 (JUCE license terms apply to the
+framework portions). VST3 is a trademark of Steinberg Media
+Technologies GmbH.

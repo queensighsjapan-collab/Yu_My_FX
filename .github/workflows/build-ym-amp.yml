@@ -1,0 +1,56 @@
+name: Build YM Amp (macOS VST3 + Standalone)
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['vst/ym-amp/**', '.github/workflows/build-ym-amp.yml']
+
+defaults:
+  run:
+    working-directory: vst/ym-amp
+    shell: bash
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build VST3 and Standalone
+        run: cmake --build build --config Release --target YMAmp_VST3 YMAmp_Standalone --parallel
+
+      # Ad-hoc signed (not notarized): the tester must clear the quarantine
+      # flag after installing — see TESTER-MAC.md, which ships inside the zip.
+      - name: Sign and package
+        run: |
+          VST3="build/YMAmp_artefacts/Release/VST3/YM Amp.vst3"
+          APP="build/YMAmp_artefacts/Release/Standalone/YM Amp.app"
+          test -d "$VST3"
+          test -d "$APP"
+          for BUNDLE in "$VST3" "$APP"; do
+            chmod -R u+rwX,go+rX "$BUNDLE"
+            chmod +x "$BUNDLE/Contents/MacOS/YM Amp"
+            codesign --force --deep --sign - "$BUNDLE"
+            codesign --verify --deep --strict --verbose=2 "$BUNDLE"
+            archs=$(lipo -archs "$BUNDLE/Contents/MacOS/YM Amp")
+            echo "$BUNDLE: $archs"
+            case "$archs" in
+              *arm64*x86_64*|*x86_64*arm64*) ;;
+              *) echo "ERROR: not universal: $BUNDLE"; exit 1 ;;
+            esac
+          done
+          mkdir -p dist package
+          cp -R "$VST3" package/
+          cp -R "$APP" package/
+          cp TESTER-MAC.md package/
+          (cd package && ditto -c -k . "../dist/YM-Amp-1.1.0-macOS.zip")
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YM-Amp-1.1.0-macOS
+          path: vst/ym-amp/dist/YM-Amp-1.1.0-macOS.zip
