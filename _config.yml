@@ -1,0 +1,6 @@
+# GitHub Pages (Jekyll) build settings.
+# ThirdParty vendor trees are source code, not site content; the Eigen
+# Tensor README contains "{{" which breaks Liquid parsing (Pages build
+# failures since 2026-11-11). Exclude them from the site build.
+exclude:
+  - vst/ym-amp/ThirdParty
