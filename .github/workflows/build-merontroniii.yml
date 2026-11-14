@@ -1,0 +1,63 @@
+name: Build MeronTronIII (macOS VST3 + Standalone)
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ['vst/merontroniii/**', '.github/workflows/build-merontroniii.yml']
+
+defaults:
+  run:
+    working-directory: vst/merontroniii
+    shell: bash
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The sound font (115 MB) is too large for the git repo, so it is
+      # kept as a release asset and fetched here, before CMake's
+      # post-build copy steps place it inside the bundles.
+      - name: Fetch sound font from release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download merontroniii-font-v1 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'MeronTronIII.sf2' --dir .
+          ls -l MeronTronIII.sf2
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build VST3 and Standalone
+        run: cmake --build build --config Release --target MeronTronIII_VST3 MeronTronIII_Standalone --parallel
+
+      # Ad-hoc signed (not notarized): the tester must clear the quarantine
+      # flag after installing — see TESTER-MAC.md, which ships inside the zip.
+      - name: Sign and package
+        run: |
+          VST3="build/MeronTronIII_artefacts/Release/VST3/MeronTronIII.vst3"
+          APP="build/MeronTronIII_artefacts/Release/Standalone/MeronTronIII.app"
+          test -d "$VST3" && test -d "$APP"
+          test -f "$VST3/Contents/Resources/MeronTronIII.sf2"
+          test -f "$APP/Contents/MacOS/MeronTronIII.sf2"
+          for B in "$VST3" "$APP"; do
+            chmod -R u+rwX,go+rX "$B"
+            codesign --force --deep --sign - "$B"
+            codesign --verify --deep --strict --verbose=2 "$B"
+          done
+          echo "vst3 architectures: $(lipo -archs "$VST3/Contents/MacOS/MeronTronIII")"
+          echo "app architectures:  $(lipo -archs "$APP/Contents/MacOS/MeronTronIII")"
+          mkdir -p dist package
+          cp -R "$VST3" package/
+          cp -R "$APP" package/
+          cp TESTER-MAC.md package/
+          (cd package && ditto -c -k . "../dist/MeronTronIII-1.0.1-macOS.zip")
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MeronTronIII-1.0.1-macOS
+          path: vst/merontroniii/dist/MeronTronIII-1.0.1-macOS.zip
