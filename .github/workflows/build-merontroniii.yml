@@ -29,7 +29,7 @@ jobs:
           ls -l MeronTronIII.sf2
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
 
       - name: Build VST3 and Standalone
         run: cmake --build build --config Release --target MeronTronIII_VST3 MeronTronIII_Standalone --parallel
@@ -48,16 +48,18 @@ jobs:
             codesign --force --deep --sign - "$B"
             codesign --verify --deep --strict --verbose=2 "$B"
           done
+          echo "min OS (app):";  vtool -show-build "$APP/Contents/MacOS/MeronTronIII" | grep -i minos
+          echo "min OS (vst3):"; vtool -show-build "$VST3/Contents/MacOS/MeronTronIII" | grep -i minos
           echo "vst3 architectures: $(lipo -archs "$VST3/Contents/MacOS/MeronTronIII")"
           echo "app architectures:  $(lipo -archs "$APP/Contents/MacOS/MeronTronIII")"
           mkdir -p dist package
           cp -R "$VST3" package/
           cp -R "$APP" package/
           cp TESTER-MAC.md package/
-          (cd package && ditto -c -k . "../dist/MeronTronIII-1.0.1-macOS.zip")
+          (cd package && ditto -c -k . "../dist/MeronTronIII-1.0.2-macOS.zip")
           ls -l dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MeronTronIII-1.0.1-macOS
-          path: vst/merontroniii/dist/MeronTronIII-1.0.1-macOS.zip
+          name: MeronTronIII-1.0.2-macOS
+          path: vst/merontroniii/dist/MeronTronIII-1.0.2-macOS.zip

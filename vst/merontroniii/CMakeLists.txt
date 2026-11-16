@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(MeronTronIII VERSION 1.0.1 LANGUAGES C CXX)
+# Build for the oldest macOS JUCE 8 supports, so older Macs (e.g. a 2018
+# Mac mini) are not refused with "OS too old": without this, the binary's
+# minimum OS silently becomes the build machine's SDK version.
+if(APPLE AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
+endif()
+
+project(MeronTronIII VERSION 1.0.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,7 +44,7 @@ FetchContent_MakeAvailable(JUCE)
 # ---------------------------------------------------------------------------
 juce_add_plugin(MeronTronIII
     PRODUCT_NAME                 "MeronTronIII"
-    VERSION                      "1.0.0"
+    VERSION                      "1.0.2"
     COMPANY_NAME                 "YM"
     BUNDLE_ID                    "jp.ym.merontroniii"
     DESCRIPTION                  "Tape replay instrument (Mellotron-style SF2 player)"
