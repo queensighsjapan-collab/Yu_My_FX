@@ -56,8 +56,8 @@ jobs:
           test -f "$APP/Contents/MacOS/YM-Kithara"
           test -f "$APP/Contents/MacOS/KitharaVstScanner"
           echo "scanner: $(lipo -archs "$APP/Contents/MacOS/KitharaVstScanner")"
-          echo "min OS (app):"; vtool -show-build "$APP/Contents/MacOS/YM-Kithara" | grep -i minos
-          echo "min OS (scanner):"; vtool -show-build "$APP/Contents/MacOS/KitharaVstScanner" | grep -i minos
+          echo "min OS (app):"; vtool -show-build "$APP/Contents/MacOS/YM-Kithara" | grep -iE "minos|version" || true
+          echo "min OS (scanner):"; vtool -show-build "$APP/Contents/MacOS/KitharaVstScanner" | grep -iE "minos|version" || true
           mkdir -p "$APP/Contents/Frameworks"
           dylibbundler -cd -of -b -x "$APP/Contents/MacOS/YM-Kithara" \
                        -d "$APP/Contents/Frameworks" \
