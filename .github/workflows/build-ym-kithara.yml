@@ -39,7 +39,7 @@ jobs:
           pkg-config --modversion libavformat libavcodec libavutil libswscale libswresample
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
 
       - name: Build app and scanner
         run: cmake --build build --config Release --parallel
@@ -56,6 +56,8 @@ jobs:
           test -f "$APP/Contents/MacOS/YM-Kithara"
           test -f "$APP/Contents/MacOS/KitharaVstScanner"
           echo "scanner: $(lipo -archs "$APP/Contents/MacOS/KitharaVstScanner")"
+          echo "min OS (app):"; vtool -show-build "$APP/Contents/MacOS/YM-Kithara" | grep -i minos
+          echo "min OS (scanner):"; vtool -show-build "$APP/Contents/MacOS/KitharaVstScanner" | grep -i minos
           mkdir -p "$APP/Contents/Frameworks"
           dylibbundler -cd -of -b -x "$APP/Contents/MacOS/YM-Kithara" \
                        -d "$APP/Contents/Frameworks" \

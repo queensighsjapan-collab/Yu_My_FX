@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 
+# Build for the oldest macOS JUCE 8 supports, so older Macs (e.g. a 2018
+# Mac mini) are not refused with "OS too old": without this, the binary's
+# minimum OS silently becomes the build machine's SDK version.
+if(APPLE AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
+endif()
+
 project(YMEcho VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)

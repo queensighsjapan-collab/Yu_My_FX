@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
 
       - name: Build VST3
         run: cmake --build build --config Release --target YMChoir_VST3 --parallel
@@ -33,6 +33,7 @@ jobs:
           codesign --force --deep --sign - "$BUNDLE"
           codesign --verify --deep --strict --verbose=2 "$BUNDLE"
           echo "architectures: $(lipo -archs "$BUNDLE/Contents/MacOS/YM Choir")"
+          echo "min OS (vst3):"; vtool -show-build "$BUNDLE/Contents/MacOS/YM Choir" | grep -i minos
           mkdir -p dist package
           cp -R "$BUNDLE" package/
           cp TESTER-MAC.md package/

@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
 
       - name: Build VST3 and Standalone
         run: cmake --build build --config Release --target YMAmp_VST3 YMAmp_Standalone --parallel
@@ -42,6 +42,7 @@ jobs:
               *arm64*x86_64*|*x86_64*arm64*) ;;
               *) echo "ERROR: not universal: $BUNDLE"; exit 1 ;;
             esac
+            echo "min OS:"; vtool -show-build "$BUNDLE/Contents/MacOS/YM Amp" | grep -i minos
           done
           mkdir -p dist package
           cp -R "$VST3" package/
