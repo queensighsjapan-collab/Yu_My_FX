@@ -7,7 +7,7 @@ if(APPLE AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 endif()
 
-project(MeronTronIII VERSION 1.0.2 LANGUAGES C CXX)
+project(MeronTronIII VERSION 1.0.3 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,13 +44,13 @@ FetchContent_MakeAvailable(JUCE)
 # ---------------------------------------------------------------------------
 juce_add_plugin(MeronTronIII
     PRODUCT_NAME                 "MeronTronIII"
-    VERSION                      "1.0.2"
+    VERSION                      "1.0.3"
     COMPANY_NAME                 "YM"
     BUNDLE_ID                    "jp.ym.merontroniii"
     DESCRIPTION                  "Tape replay instrument (Mellotron-style SF2 player)"
     PLUGIN_MANUFACTURER_CODE     "YMmg"
     PLUGIN_CODE                  "Mrn3"
-    FORMATS                      VST3 Standalone
+    FORMATS                      VST3 AU Standalone
     IS_SYNTH                     TRUE
     NEEDS_MIDI_INPUT             TRUE
     IS_MIDI_EFFECT               FALSE
@@ -95,9 +95,9 @@ target_link_libraries(MeronTronIII PRIVATE
 )
 
 # ---------------------------------------------------------------------------
-# The restored SoundFont ships next to the binaries: inside the VST3
-# bundle (Contents/Resources) and beside the standalone executable. The
-# processor searches both places at runtime (see findFontFile()).
+# The restored SoundFont ships next to the binaries: inside the VST3 and
+# AU bundles (Contents/Resources) and beside the standalone executable.
+# The processor searches those places at runtime (see findFontFile()).
 # ---------------------------------------------------------------------------
 if(TARGET MeronTronIII_VST3)
     add_custom_command(TARGET MeronTronIII_VST3 POST_BUILD
@@ -106,6 +106,15 @@ if(TARGET MeronTronIII_VST3)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${CMAKE_CURRENT_SOURCE_DIR}/MeronTronIII.sf2"
             "$<TARGET_FILE_DIR:MeronTronIII_VST3>/../Resources/MeronTronIII.sf2")
+endif()
+
+if(TARGET MeronTronIII_AU)
+    add_custom_command(TARGET MeronTronIII_AU POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "$<TARGET_FILE_DIR:MeronTronIII_AU>/../Resources"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/MeronTronIII.sf2"
+            "$<TARGET_FILE_DIR:MeronTronIII_AU>/../Resources/MeronTronIII.sf2")
 endif()
 
 if(TARGET MeronTronIII_Standalone)

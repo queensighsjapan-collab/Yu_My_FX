@@ -2,7 +2,8 @@
 
 ## MeronTronIII って何？
 
-2013年に作られたメロトロン風キーボード音源を、13年ぶりに復元したテープリプレイ楽器です（VST3プラグイン＋単体アプリ）。
+2013年に作られたメロトロン風キーボード音源を、13年ぶりに復元したテープリプレイ楽器です（VST3プラグイン＋AUプラグイン＋単体アプリ）。
+**Logic Pro をお使いの方は AU 版（MeronTronIII.component）をお使いください**（Logic は VST3 を読み込めません）。
 音色は5種類（Strings / Flute / Choir / Brass / Violin）、鍵盤は35鍵（G2〜F5）です。
 かつて音が出なかった2つの鍵（Flute の A#3、Strings の D5）も修理済みです。
 Apple Silicon / Intel 両対応のユニバーサルバイナリです。
@@ -42,6 +43,24 @@ xattr -dr com.apple.quarantine "$HOME/Library/Audio/Plug-Ins/VST3/MeronTronIII.v
 ```
 
 3. DAWを再起動（またはプラグインの再スキャン）をして、インストゥルメントとして **"MeronTronIII"** を挿してください。
+
+## AU を Logic Pro で使う場合
+
+1. **"MeronTronIII.component"** を次のフォルダにコピーしてください
+
+```
+~/Library/Audio/Plug-Ins/Components/
+```
+
+（Finder では「移動」メニュー →「フォルダへ移動...」で上記のパスを貼ると開けます）
+
+2. ターミナルで quarantine 除去を1回実行してください。
+
+```bash
+xattr -dr com.apple.quarantine "$HOME/Library/Audio/Plug-Ins/Components/MeronTronIII.component"
+```
+
+3. Logic Pro を再起動してください（AU の再スキャンが走ります）。ソフトウェア音源トラックの音源スロットで、**AU 音源 → YM → MeronTronIII** から選べます。
 
 ## 聴いてみてほしいポイント
 
