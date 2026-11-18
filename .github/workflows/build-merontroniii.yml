@@ -34,8 +34,10 @@ jobs:
       - name: Build VST3, AU and Standalone
         run: cmake --build build --config Release --target MeronTronIII_VST3 MeronTronIII_AU MeronTronIII_Standalone --parallel
 
-      # Ad-hoc signed (not notarized): the tester must clear the quarantine
-      # flag after installing — see TESTER-MAC.md, which ships inside the zip.
+      # Ad-hoc signed (not notarized): install.command, which ships inside
+      # the zip, copies the bundles into place and clears the quarantine
+      # flag. (House rule 2026-11-19: distribution packs ship bundles +
+      # install.command only — no tester-request document.)
       - name: Sign and package
         run: |
           VST3="build/MeronTronIII_artefacts/Release/VST3/MeronTronIII.vst3"
@@ -63,7 +65,7 @@ jobs:
           cp -R "$VST3" package/
           cp -R "$AU" package/
           cp -R "$APP" package/
-          cp TESTER-MAC.md package/
+          cp install.command package/
           (cd package && ditto -c -k . "../dist/MeronTronIII-1.0.3-macOS.zip")
           ls -l dist
 
